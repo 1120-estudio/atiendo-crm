@@ -30,7 +30,7 @@ de menor precedência e registre.
 
 | Doc | Para quê |
 |---|---|
-| [`README.md`](../README.md) | O que é, quickstart de 5 min, stack, roadmap. Também em [EN](../README.en.md) / [ES](../README.es.md) |
+| [`README.md`](../README.md) | O que é, quickstart de 5 min, stack, roadmap. |
 | [`VISION.md`](../VISION.md) | Posicionamento, por que self-host, para quem |
 | [`ARCHITECTURE.md`](../ARCHITECTURE.md) | Arquitetura em 1 página |
 | [`AGENTS.md`](../AGENTS.md) | Contrato para agentes de código (qualquer ferramenta) |

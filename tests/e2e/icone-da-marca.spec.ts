@@ -1,4 +1,6 @@
 import { test, expect } from "./helpers/test";
+import { traduzir } from "../../lib/i18n/dicionario";
+import { normalizarIdioma } from "../../lib/i18n/idiomas";
 
 /**
  * A aba do navegador — o único pedaço da marca que aparece em TODA tela,
@@ -57,10 +59,14 @@ test.describe("o ícone e o título carregam a marca da instalação", () => {
     // `template: "%s · ${name}"` no layout raiz: a página filha declara só
     // "Entrar" e herda o sufixo. Um layout que perdesse o template deixaria o
     // título como "Entrar" pelado, e ninguém notaria.
-    const casou = /^Entrar · (.+)$/.exec(titulo);
-    expect(casou, `título fora do formato "Entrar · <marca>": ${titulo}`).not.toBeNull();
+    const tituloDaPagina = traduzir("Entrar", normalizarIdioma(process.env.APP_LOCALE));
+    const prefixo = `${tituloDaPagina} · `;
+    expect(
+      titulo.startsWith(prefixo),
+      `título fora do formato "${prefixo}<marca>": ${titulo}`,
+    ).toBe(true);
 
-    const marcaNoTitulo = casou?.[1] ?? "";
+    const marcaNoTitulo = titulo.slice(prefixo.length);
     expect(marcaNoTitulo.length).toBeGreaterThan(0);
 
     // Cruza DUAS resoluções independentes: o título vem de `generateMetadata`

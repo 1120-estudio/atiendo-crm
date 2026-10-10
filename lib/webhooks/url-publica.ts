@@ -44,7 +44,7 @@ export function basePublicaDoWebhookMeta(req: { headers: Headers; nextUrl: URL }
 
 /**
  * A base do webhook dos canais parceiros (`/api/v1/webhooks/channel/<token>`,
- * ex.: Zernio). `CHANNEL_WEBHOOK_BASE_URL`, quando definida, troca SÓ esta URL —
+ * ex.: un proveedor externo). `CHANNEL_WEBHOOK_BASE_URL`, quando definida, troca SÓ esta URL —
  * o caso é o CRM rodando local com o painel em `localhost` e o provedor chegando
  * por um túnel (`ngrok http 3000`). Vazia = `basePublicaDaInstalacao`, como antes.
  */

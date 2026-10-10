@@ -8,7 +8,7 @@ import { idiomaDoVisitante } from "@/lib/i18n/idiomaAnonimo";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { tituloNoIdiomaDaInstalacao } from "@/lib/i18n/idiomaDaInstalacao";
 
-export const metadata = { title: tituloNoIdiomaDaInstalacao("Iniciar sesión") };
+export const metadata = { title: tituloNoIdiomaDaInstalacao("Entrar") };
 
 export default async function LoginPage({
   searchParams,
