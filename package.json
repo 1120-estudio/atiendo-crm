@@ -43,7 +43,7 @@
     "local:down": "bash scripts/local-stack.sh down",
     "local:status": "bash scripts/local-stack.sh status",
     "local:logs": "bash scripts/local-stack.sh logs",
-    "demo": "tsx --env-file=.env.local scripts/demo-local.ts",
+    "demo": "tsx --env-file-if-exists=.env.local scripts/demo-local.ts",
     "dev:crons": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/dev-crons.ts",
     "flywheel:judge": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/flywheel-judge-live.ts"
   },
