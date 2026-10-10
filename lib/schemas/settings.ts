@@ -12,6 +12,7 @@ import { ehHexValido } from "@/lib/branding/rampa";
 import { IDIOMAS } from "@/lib/i18n/idiomas";
 import { formaFiscalValida } from "@/lib/regional/catalogo";
 import { MOEDAS_SERVIDAS } from "@/lib/money";
+import { fusoValido } from "@/lib/tempo/fusos";
 
 import { conversationTagSchema } from "./messaging";
 
@@ -64,7 +65,7 @@ export const SEM_PREFERENCIA_DE_IDIOMA = "auto";
 export const profileSchema = z.object({
   full_name: z.string().min(1).max(120).nullable().optional(),
   locale: z.enum([...LOCALES, SEM_PREFERENCIA_DE_IDIOMA]),
-  timezone: z.string().min(1).max(64),
+  timezone: z.string().trim().min(1).max(64).refine(fusoValido, "Fuso horário inválido."),
   avatar_url: z
     .string()
     .url()
@@ -108,7 +109,7 @@ export const tenantSchema = z
       .nullable()
       .optional()
       .or(z.literal("").transform(() => null)),
-    timezone: z.string().min(1).max(64),
+    timezone: z.string().trim().min(1).max(64).refine(fusoValido, "Fuso horário inválido."),
     locale: z.enum(LOCALES),
     currency: z.enum(MOEDAS),
     media_retention_days: z.coerce.number().int().min(30).max(3650),

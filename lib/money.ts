@@ -136,13 +136,9 @@ export function formatCentsUSD(cents: number): string {
  * Aceitar `currency` e fixar `pt-BR` é o defeito medido: o lead em MXN sai
  * `MX$ 249,90`, com vírgula decimal brasileira, para quem opera no México.
  *
- * **As três do kanban já convergiram** — em `formatValorDoNegocio`, e não em
- * `formatCents`, porque o negócio guarda ×100 em qualquer moeda (ver a função);
- * o `maximumFractionDigits: 0` delas virou a opção `semCentavos`. Faltam o
- * inbox e o PDF de LGPD, frentes que a doutrina não deixa misturar com esta.
- * Enquanto não convergem, a duplicação fica DECLARADA aqui
- * — que é o que separa o anti-pattern 2 ("duplicação sem source of truth
- * declarado") de uma dívida com dono e endereço.
+ * Kanban, inbox e PDF de LGPD convergiram em `formatValorDoNegocio`:
+ * o negócio guarda ×100 em qualquer moeda; `semCentavos` preserva a opção
+ * de exibição do kanban. A lista acima documenta as cópias substituídas.
  *
  * `formatCentsBRL` e `formatCentsUSD` ficam pelo mesmo motivo: atendem o valor
  * do negócio no kanban e o gasto de IA, que são essas outras frentes.

@@ -13,6 +13,8 @@ import { describe, expect, it, vi } from "vitest";
  * `JSON.parse` produzia sozinho: se um campo se perder no caminho, o teste diz.
  */
 
+const { globalAuth } = vi.hoisted(() => ({ globalAuth: vi.fn(() => true) }));
+
 const SESSAO = {
   id: "sess-1",
   organization_id: "org-1",
@@ -49,6 +51,7 @@ vi.mock("@/lib/channels/archived", () => ({
 vi.mock("@/lib/audit", () => ({ audit: async () => undefined }));
 
 vi.mock("@/lib/waha/webhook-auth", () => ({
+  authenticateGlobalWahaWebhook: globalAuth,
   authenticateWahaWebhook: () => ({ ok: true, signatureVerified: true }),
 }));
 
@@ -203,6 +206,15 @@ describe("o payload fora do contrato é recusado, e o campo é nomeado", () => {
 });
 
 describe("a rota — o desfecho que o provider enxerga", () => {
+  it("recusa transporte não autenticado antes de analisar ou arquivar o corpo", async () => {
+    const before = arquivados.length;
+    const dispatchBefore = despachados.length;
+    globalAuth.mockReturnValueOnce(false);
+    const res = await POST(pedido("{json inválido"));
+    expect(res.status).toBe(401);
+    expect(arquivados).toHaveLength(before);
+    expect(despachados).toHaveLength(dispatchBefore);
+  });
   it("payload real: 200, e o dispatch recebe o envelope inteiro", async () => {
     despachados.length = 0;
     const res = await POST(pedido(REAL));

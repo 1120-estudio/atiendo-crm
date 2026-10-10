@@ -138,14 +138,22 @@ describe("credencial de enfeite não derruba a leitura (#754)", () => {
     ).toBe(EFETIVA.corpo);
   });
 
-  it("3. nenhum outro caminho de decifra no schema: todo `pgp_sym_decrypt` vive dentro de fn_decrypt_oauth", () => {
+  it("3. toda decifra vive em fn_decrypt_oauth ou no contrato protegido de documentos", () => {
     const ocorrencias = [...BASELINE.matchAll(/pgp_sym_decrypt\s*\(/g)].map((m) => m.index ?? 0);
     expect(ocorrencias.length, "sumiu o pgp_sym_decrypt do baseline?").toBeGreaterThan(0);
     for (const i of ocorrencias) {
-      const dona = DEFINICOES_BASELINE.find((d) => d.inicio < i && i < d.fim);
+      // Documentos têm outro contrato: chave do backend + sessão e papel
+      // revalidados no banco. A catraca própria mede essas guardas e a ACL.
+      const inicioDoc = BASELINE.indexOf("create or replace function public.decrypt_cpf(");
+      const fimDoc = BASELINE.indexOf("$$;", inicioDoc) + 3;
+      const dona =
+        DEFINICOES_BASELINE.find((d) => d.inicio < i && i < d.fim) ??
+        (inicioDoc >= 0 && inicioDoc < i && i < fimDoc
+          ? { inicio: inicioDoc, fim: fimDoc }
+          : undefined);
       expect(
         dona,
-        `há um pgp_sym_decrypt() fora de fn_decrypt_oauth (offset ${i}) — cifra nova, guarda nova`,
+        `há um pgp_sym_decrypt() fora dos dois contratos protegidos (offset ${i}) — cifra nova, guarda nova`,
       ).toBeDefined();
     }
   });

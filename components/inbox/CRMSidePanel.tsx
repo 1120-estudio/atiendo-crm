@@ -1,5 +1,7 @@
 "use client";
 
+import { formatValorDoNegocio } from "@/lib/money";
+
 import { RoteirosDoContato } from "@/components/contacts/RoteirosDoContato";
 import { LeadEnrichment } from "./LeadEnrichment";
 import type { ProspectEnrichment } from "@/lib/prospecting/schema";
@@ -248,15 +250,7 @@ function MarcarProximoPasso({ demandaId, onPronto }: { demandaId: string; onPron
 }
 
 function formatMoney(cents: number | null, currency: string | null): string {
-  if (cents == null) return "—";
-  const cur = currency ?? "BRL";
-  try {
-    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: cur }).format(
-      cents / 100,
-    );
-  } catch {
-    return `${(cents / 100).toFixed(2)} ${cur}`;
-  }
+  return cents == null ? "—" : formatValorDoNegocio(cents, currency ?? "BRL");
 }
 
 function shortDate(iso: string, locale: Locale): string {

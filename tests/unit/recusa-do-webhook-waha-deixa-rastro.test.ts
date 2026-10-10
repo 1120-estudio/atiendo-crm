@@ -63,6 +63,7 @@ vi.mock("@/lib/channels/archived", () => ({
 vi.mock("@/lib/audit", () => ({ audit: async () => undefined }));
 
 vi.mock("@/lib/waha/webhook-auth", () => ({
+  authenticateGlobalWahaWebhook: () => true,
   authenticateWahaWebhook: () => autenticacao,
 }));
 

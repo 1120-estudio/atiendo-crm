@@ -153,6 +153,8 @@ const schema = z.object({
   WAHA_API_BASE_URL: required("WAHA_API_BASE_URL"),
   WAHA_API_KEY: required("WAHA_API_KEY"),
   WAHA_WEBHOOK_BASE_URL: required("WAHA_WEBHOOK_BASE_URL"),
+  // Protege o webhook global mesmo quando o proxy publica todo o app.
+  WAHA_GLOBAL_WEBHOOK_REQUIRE_SECRET: z.enum(["true", "false"]).optional().default("false"),
   // Segredo com que o WAHA assina os webhooks. O compose já o entrega ao
   // contêiner do WAHA; o app precisa dele para CONFERIR a assinatura — e não o
   // declarava aqui, então nunca teve como verificar nada.

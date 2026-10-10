@@ -115,7 +115,7 @@ create table public.contacts (
 
 comment on table  public.contacts                is 'Pessoa física no escopo de um tenant. CPF criptografado at-rest (pgcrypto). is_anonymized é irreversível (regra L-04).';
 comment on column public.contacts.email_normalized is 'Coluna gerada (lower+trim) usada por todo matching e unique constraint.';
-comment on column public.contacts.cpf_encrypted   is 'Bytea com pgp_sym_encrypt(digits, current_setting(''app.cpf_key'')). Acesso via decrypt_cpf().';
+comment on column public.contacts.cpf_encrypted   is 'Bytea pgp_sym AES-256. Chave fornecida apenas pelo backend via RPC.';
 comment on column public.contacts.cpf_hash        is 'SHA256 hex dos 11 dígitos. Único por tenant. Permite match sem decrypt.';
 comment on column public.contacts.is_merged_into  is 'Tombstone de merge (§5.4). NULL = contact ativo. NOT NULL = perdedor de merge, redireciona p/ primary.';
 comment on column public.contacts.last_activity_at is 'Denormalizado pela trigger fn_update_last_activity_at em insert de crm_lead_activities.';
@@ -158,38 +158,12 @@ create trigger trg_contacts_updated_at
 
 **Helper `decrypt_cpf`:**
 
-```sql
-create or replace function public.decrypt_cpf(p_contact_id uuid)
-returns text
-language plpgsql security definer
-set search_path = public, pg_temp
-as $$
-declare
-  v_cipher bytea;
-  v_org    uuid;
-begin
-  select cpf_encrypted, organization_id into v_cipher, v_org
-    from public.contacts where id = p_contact_id;
+O contrato implementado é `decrypt_cpf(p_contact_id uuid, p_key text)` na migration
+0447. A chave vem exclusivamente do backend. A função revalida `auth.uid()` e
+membresia manager/admin aceita, não revogada, no tenant do contato. O handler
+registra propósito e resultado em auditoria sem o documento. `anon` e
+`service_role` não recebem EXECUTE para descifrar.
 
-  if v_cipher is null then return null; end if;
-
-  -- Verifica se caller tem acesso ao tenant
-  if not exists (
-    select 1 from public.fn_user_org_ids() x where x.organization_id = v_org
-  ) and not public.fn_is_platform_admin() then
-    raise exception 'forbidden_org';
-  end if;
-
-  -- Audit: toda decrypt é registrada
-  insert into public.api_audit_log (organization_id, actor_user_id, action, resource_type, resource_id, metadata)
-  values (v_org, auth.uid(), 'contact.cpf_decrypted', 'contact', p_contact_id, jsonb_build_object('purpose', current_setting('app.decrypt_purpose', true)));
-
-  return pgp_sym_decrypt(v_cipher, current_setting('app.cpf_key', true));
-end$$;
-
-comment on function public.decrypt_cpf(uuid) is
-  'Decripta CPF com check de tenancy + audit obrigatório. Setar app.decrypt_purpose antes do call.';
-```
 
 ### 2.2 Tabela `crm_pipelines`
 
@@ -1628,3 +1602,7 @@ Cada migration é idempotente (`if not exists` onde possível) e tem rollback do
 - `docs/business-rules/00-business-rules-catalog.md` — regras P-01 a P-08, L-04, L-07, L-08.
 - `docs/prd/02-prd-customer-360.md` — PRD pai.
 - `docs/specs/01-spec-platform-base.md` — RLS, audit, event_log, helpers.
+
+## Cifrado de documentos en 1120 (0447)
+
+El backend llama `encrypt_cpf(p_plaintext, p_key)` con `CPF_ENCRYPTION_KEY`, devuelve bytea pgp_sym AES-256 y guarda hash y cifra juntos. No hay fallback de hash sin cifra. `decrypt_cpf(p_contact_id, p_key)` valida `auth.uid()` y membresía manager/admin aceptada y no revocada del tenant; su ejecución está revocada para PUBLIC, anon y service_role. El propósito y resultado se auditan en el handler. La clave no se almacena en contactos ni se envía a clientes de navegador.

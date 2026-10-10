@@ -28,14 +28,21 @@ interface Resumo {
 }
 
 /** Só as fronteiras externas são dubladas; multipart, CSV e schemas são reais. */
-function banco(opcoes: {
-  existentes?: Array<{ phone_number?: string; email_normalized?: string }>;
-  falhas?: Array<{ code: string; message: string } | null>;
-  /** O país declarado pela organização; ausente/`null` é o Brasil. */
-  pais?: string | null;
-} = {}) {
+function banco(
+  opcoes: {
+    existentes?: Array<{ phone_number?: string; email_normalized?: string }>;
+    falhas?: Array<{ code: string; message: string } | null>;
+    /** O país declarado pela organização; ausente/`null` é o Brasil. */
+    pais?: string | null;
+  } = {},
+) {
   const tentativas: Record<string, unknown>[] = [];
-  const rpc = vi.fn().mockResolvedValue({ error: null });
+  const rpc = vi
+    .fn()
+    .mockImplementation(async (name: string) => ({
+      data: name === "encrypt_cpf" ? "\\xab12cd" : null,
+      error: null,
+    }));
   const from = vi.fn((tabela: string) => {
     // A régua do documento vem do PAÍS da organização (issue #1033): a rota lê a
     // organização UMA vez, na entrada. O dublê libera só essa leitura e segue
@@ -76,17 +83,18 @@ function banco(opcoes: {
 
 async function importar(linhas: string[]): Promise<Resumo> {
   const form = new FormData();
-  form.set("file", new File(
-    [["nome,telefone,email", ...linhas].join("\n")],
-    "contatos.csv",
-    { type: "text/csv" },
-  ));
-  const resposta = await POST(new NextRequest("http://localhost/api/v1/contacts/import", {
-    method: "POST",
-    body: form,
-  }));
+  form.set(
+    "file",
+    new File([["nome,telefone,email", ...linhas].join("\n")], "contatos.csv", { type: "text/csv" }),
+  );
+  const resposta = await POST(
+    new NextRequest("http://localhost/api/v1/contacts/import", {
+      method: "POST",
+      body: form,
+    }),
+  );
   expect(resposta.status).toBe(200);
-  const { data } = await resposta.json() as { data: Resumo };
+  const { data } = (await resposta.json()) as { data: Resumo };
   return data;
 }
 
@@ -111,12 +119,18 @@ beforeEach(() => {
 describe("POST /api/v1/contacts/import — desfecho por linha", () => {
   it.each([
     { caso: "telefone", linhas: [`Ana,${PHONE},`, `Ana,${PHONE},`, `Ana,${PHONE},`] },
-    { caso: "e-mail sem telefone e sem distinguir maiúsculas", linhas: [
-      "Ana,,ana@example.com", "Ana,,ANA@example.com", "Ana,,ana@example.com",
-    ] },
-    { caso: "e-mail compartilhado por telefones diferentes", linhas: [
-      `Ana,${PHONE},ana@example.com`, "Ana,+5521999998888,ana@example.com", "Ana,,ana@example.com",
-    ] },
+    {
+      caso: "e-mail sem telefone e sem distinguir maiúsculas",
+      linhas: ["Ana,,ana@example.com", "Ana,,ANA@example.com", "Ana,,ana@example.com"],
+    },
+    {
+      caso: "e-mail compartilhado por telefones diferentes",
+      linhas: [
+        `Ana,${PHONE},ana@example.com`,
+        "Ana,+5521999998888,ana@example.com",
+        "Ana,,ana@example.com",
+      ],
+    },
   ])("contabiliza todas as repetições por $caso sem repetir insert/evento", async ({ linhas }) => {
     const db = banco();
     const resumo = await importar(linhas);
@@ -124,16 +138,31 @@ describe("POST /api/v1/contacts/import — desfecho por linha", () => {
     expect(resumo).toEqual({ total_linhas: 3, imported: 1, skipped_duplicates: 2, errors: [] });
     expect(db.tentativas).toHaveLength(1);
     expect(db.tentativas[0]).toMatchObject({
-      organization_id: ORG, created_by_user_id: USER, source: "import_csv",
+      organization_id: ORG,
+      created_by_user_id: USER,
+      source: "import_csv",
     });
-    expect(db.rpc).toHaveBeenCalledExactlyOnceWith("emit_event", expect.objectContaining({
-      p_event_type: "contact.created", p_entity_id: "contato-1", p_organization_id: ORG,
-    }));
-    expect(audit).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
-      action: "contacts.imported",
-      organizationId: ORG,
-      metadata: { actor_type: "user", total_linhas: 3, imported: 1, skipped_duplicates: 2, erros: 0 },
-    }));
+    expect(db.rpc).toHaveBeenCalledExactlyOnceWith(
+      "emit_event",
+      expect.objectContaining({
+        p_event_type: "contact.created",
+        p_entity_id: "contato-1",
+        p_organization_id: ORG,
+      }),
+    );
+    expect(audit).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        action: "contacts.imported",
+        organizationId: ORG,
+        metadata: {
+          actor_type: "user",
+          total_linhas: 3,
+          imported: 1,
+          skipped_duplicates: 2,
+          erros: 0,
+        },
+      }),
+    );
   });
 
   it("uma linha rejeitada pelo schema não impede a próxima com o mesmo telefone", async () => {
@@ -144,7 +173,9 @@ describe("POST /api/v1/contacts/import — desfecho por linha", () => {
     ]);
 
     expect(resumo).toEqual({
-      total_linhas: 2, imported: 1, skipped_duplicates: 0,
+      total_linhas: 2,
+      imported: 1,
+      skipped_duplicates: 0,
       errors: [{ linha: 2, motivo: expect.any(String) }],
     });
     expect(db.tentativas).toHaveLength(1);
@@ -157,14 +188,19 @@ describe("POST /api/v1/contacts/import — desfecho por linha", () => {
     const resumo = await importar([`Primeira,${PHONE},`, `Segunda,${PHONE},`]);
 
     expect(resumo).toEqual({
-      total_linhas: 2, imported: 1, skipped_duplicates: 0,
+      total_linhas: 2,
+      imported: 1,
+      skipped_duplicates: 0,
       errors: [{ linha: 2, motivo: "Falha de gravação" }],
     });
     expect(db.tentativas).toHaveLength(2);
     expect(db.tentativas[1]).toMatchObject({ name: "Segunda", phone_number: PHONE });
-    expect(db.rpc).toHaveBeenCalledExactlyOnceWith("emit_event", expect.objectContaining({
-      p_entity_id: "contato-2",
-    }));
+    expect(db.rpc).toHaveBeenCalledExactlyOnceWith(
+      "emit_event",
+      expect.objectContaining({
+        p_entity_id: "contato-2",
+      }),
+    );
   });
 
   it("pular e-mail existente não reserva um telefone que ainda não foi importado", async () => {
@@ -233,21 +269,44 @@ describe("POST /api/v1/contacts/import — a planilha segue o PAÍS da organiza�
 
   async function importarCom(cabecalho: string, linhas: string[]) {
     const form = new FormData();
-    form.set("file", new File(
-      [[cabecalho, ...linhas].join("\n")],
-      "contatos.csv",
-      { type: "text/csv" },
-    ));
-    const resposta = await POST(new NextRequest("http://localhost/api/v1/contacts/import", {
-      method: "POST",
-      body: form,
-    }));
-    return { status: resposta.status, corpo: await resposta.json() as { data?: Resumo } };
+    form.set(
+      "file",
+      new File([[cabecalho, ...linhas].join("\n")], "contatos.csv", { type: "text/csv" }),
+    );
+    const resposta = await POST(
+      new NextRequest("http://localhost/api/v1/contacts/import", {
+        method: "POST",
+        body: form,
+      }),
+    );
+    return { status: resposta.status, corpo: (await resposta.json()) as { data?: Resumo } };
   }
+
+  it("falha de cifra informa a linha e não bloqueia as demais", async () => {
+    const db = banco({ pais: "XI" });
+    db.rpc.mockImplementation(
+      async (name: string) =>
+        ({
+          data: null,
+          error: name === "encrypt_cpf" ? { message: "cipher failure" } : null,
+        }) as never,
+    );
+    const { status, corpo } = await importarCom("nome,telefone,bilhete", [
+      `Ana,${PHONE},123456789xi000`,
+      "Bia,+5511888887777,",
+    ]);
+    expect(status).toBe(200);
+    expect(corpo.data).toMatchObject({ total_linhas: 2, imported: 1, skipped_duplicates: 0 });
+    expect(corpo.data?.errors).toEqual([{ linha: 2, motivo: expect.stringContaining("cifrar") }]);
+    expect(db.tentativas).toHaveLength(1);
+    expect(db.tentativas[0]).not.toHaveProperty("cpf_hash");
+  });
 
   it("aceita o cabeçalho do documento do país e grava o valor como o país normaliza", async () => {
     const db = banco({ pais: "XI" });
-    const { status, corpo } = await importarCom("nome,telefone,bilhete", [`Ana,${PHONE},123456789xi000`]);
+    const { status, corpo } = await importarCom("nome,telefone,bilhete", [
+      `Ana,${PHONE},123456789xi000`,
+    ]);
 
     expect(status).toBe(200);
     expect(corpo.data).toEqual({ total_linhas: 1, imported: 1, skipped_duplicates: 0, errors: [] });
@@ -255,9 +314,12 @@ describe("POST /api/v1/contacts/import — a planilha segue o PAÍS da organiza�
     // do país) é o hash — `hashCpf("123456789XI000")`, com o valor já em
     // maiúsculas e sem o que não é dígito nem letra.
     expect(db.tentativas[0]).toMatchObject({ cpf_hash: hashCpf("123456789XI000") });
-    expect(db.rpc).toHaveBeenCalledWith("emit_event", expect.objectContaining({
-      p_payload: expect.objectContaining({ has_cpf: true }),
-    }));
+    expect(db.rpc).toHaveBeenCalledWith(
+      "emit_event",
+      expect.objectContaining({
+        p_payload: expect.objectContaining({ has_cpf: true }),
+      }),
+    );
   });
 
   it("diz na mensagem a régua do país — sem prometer dígito verificado que não existe", async () => {

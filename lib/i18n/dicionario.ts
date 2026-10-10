@@ -37,6 +37,8 @@ import type { Idioma } from "./idiomas";
 type Traducoes = Record<string, Partial<Record<Exclude<Idioma, "pt-BR">, string>>>;
 
 export const DICIONARIO: Traducoes = {
+  "Fuso horário inválido.": { es: "Zona horaria inválida." },
+  "Não foi possível cifrar o documento. Confira a chave e a atualização do banco.": { es: "No se pudo cifrar el documento. Revisa la clave y la actualización de la base de datos." },
   // ─── BUSCA DENTRO DA CONVERSA (extraída do PR #1793) ───
   "Resultados nas mensagens carregadas": { es: "Resultados en los mensajes cargados" },
   "Buscar nesta conversa": { es: "Buscar en esta conversación" },

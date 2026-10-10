@@ -18,6 +18,7 @@ import type { Idioma } from "@/lib/i18n/idiomas";
 import { roleAtLeast } from "@/lib/auth/types";
 import { canonicalPhoneBR, phoneLookupVariants } from "@/lib/channels/phone-variants";
 import { encontrarContatoPorTelefone } from "@/lib/channels/contato-por-telefone";
+import { env } from "@/lib/env";
 import { hashCpf, encryptCpfSql } from "@/lib/contacts/cpf";
 import type { Contact } from "@/lib/types/contacts";
 import { ensureConversation, sessaoProntaParaEnvio } from "@/lib/automation/start-conversation";
@@ -126,7 +127,10 @@ export async function listContactsHandler(
     // ⚠️ `%` e `_` são curingas do LIKE, e `,`/`(`/`)` são delimitadores do DSL
     // do `.or()` — um nome com vírgula ("Silva, Maria") injetaria uma condição
     // extra na string do filtro. Mesmo escape de conversations/_handler.ts.
-    const s = q.search.trim().replace(/[%_]/g, (m) => `\\${m}`).replace(/[,()]/g, " ");
+    const s = q.search
+      .trim()
+      .replace(/[%_]/g, (m) => `\\${m}`)
+      .replace(/[,()]/g, " ");
     const digits = q.search.replace(/\D/g, "");
     const orParts = [
       `name.ilike.%${s}%`,
@@ -185,9 +189,7 @@ export async function listContactsHandler(
     }
     const op = asc ? "gt" : "lt";
     if (c.sort) {
-      query = query.or(
-        `${sortCol}.${op}.${c.sort},and(${sortCol}.eq.${c.sort},id.${op}.${c.id})`,
-      );
+      query = query.or(`${sortCol}.${op}.${c.sort},and(${sortCol}.eq.${c.sort},id.${op}.${c.id})`);
     } else {
       // Página na região de sort NULL (nulls last): pagina só por id.
       query = query.is(sortCol, null);
@@ -317,6 +319,7 @@ export async function getContactHandler(
       .eq("user_id", ctx.actor.id)
       .eq("organization_id", contact.organization_id)
       .is("revoked_at", null)
+      .not("accepted_at", "is", null)
       .maybeSingle();
 
     const role = membership?.role as string | undefined;
@@ -325,9 +328,11 @@ export async function getContactHandler(
     } else {
       const { data: dec, error: decErr } = await supabase.rpc("decrypt_cpf", {
         p_contact_id: input.contactId,
+        p_key: env.CPF_ENCRYPTION_KEY,
       });
       if (decErr) {
-        console.warn("[contacts.get] decrypt_cpf RPC unavailable", decErr.message);
+        // Não registrar os argumentos da RPC nem dados pessoais.
+        cpfDecryptDenied = true;
       } else if (typeof dec === "string") {
         cpfDecrypted = dec;
       }
@@ -348,9 +353,11 @@ export async function getContactHandler(
     }
   }
 
-  const { contacts: enriched, error: convErr } = await withConversas(supabase, ctx.organization_id, [
-    contact,
-  ]);
+  const { contacts: enriched, error: convErr } = await withConversas(
+    supabase,
+    ctx.organization_id,
+    [contact],
+  );
   if (convErr) {
     throw new ApiError(500, "internal_error", undefined, ctx.requestId, convErr);
   }
@@ -397,7 +404,18 @@ export async function createContactHandler(
   if (input.cpf) {
     insertRow.cpf_hash = hashCpf(input.cpf);
     const enc = await encryptCpfSql(supabase, input.cpf);
-    if (enc) insertRow.cpf_encrypted = enc;
+    if (!enc)
+      throw new ApiError(
+        503,
+        "internal_error",
+        undefined,
+        ctx.requestId,
+        traduzir(
+          "Não foi possível cifrar o documento. Confira a chave e a atualização do banco.",
+          ctx.idioma ?? "pt-BR",
+        ),
+      );
+    insertRow.cpf_encrypted = enc;
   }
 
   const { data: created, error: insErr } = await supabase
@@ -537,7 +555,9 @@ export async function patchContactHandler(
   // O banco deriva a coluna sozinho — era só não escrever nela.
   if (input.email !== undefined) patch.email = input.email;
   if (input.phone_number !== undefined) {
-    patch.phone_number = input.phone_number ? canonicalPhoneBR(input.phone_number) : input.phone_number;
+    patch.phone_number = input.phone_number
+      ? canonicalPhoneBR(input.phone_number)
+      : input.phone_number;
   }
   if (input.birthdate !== undefined) patch.birthdate = input.birthdate;
   if (input.tags !== undefined) patch.tags = input.tags;
@@ -568,7 +588,18 @@ export async function patchContactHandler(
   if (input.cpf !== undefined) {
     patch.cpf_hash = hashCpf(input.cpf);
     const enc = await encryptCpfSql(supabase, input.cpf);
-    if (enc) patch.cpf_encrypted = enc;
+    if (!enc)
+      throw new ApiError(
+        503,
+        "internal_error",
+        undefined,
+        ctx.requestId,
+        traduzir(
+          "Não foi possível cifrar o documento. Confira a chave e a atualização do banco.",
+          ctx.idioma ?? "pt-BR",
+        ),
+      );
+    patch.cpf_encrypted = enc;
   }
 
   if (Object.keys(patch).length === 0) {
@@ -581,9 +612,10 @@ export async function patchContactHandler(
     );
   }
 
-  const tagServiceOrigin = input.tags !== undefined
-    ? await observeServiceOrigin(createAdminClient(), ctx.organization_id, contactId)
-    : null;
+  const tagServiceOrigin =
+    input.tags !== undefined
+      ? await observeServiceOrigin(createAdminClient(), ctx.organization_id, contactId)
+      : null;
   patch.updated_at = new Date().toISOString();
 
   const { data: updated, error: updErr } = await supabase
@@ -797,7 +829,10 @@ export async function deleteContactHandler(
       "state_conflict",
       undefined,
       ctx.requestId,
-      traduzir("Não foi possível excluir: o contato ainda tem registros vinculados.", ctx.idioma ?? "pt-BR"),
+      traduzir(
+        "Não foi possível excluir: o contato ainda tem registros vinculados.",
+        ctx.idioma ?? "pt-BR",
+      ),
     );
   }
 

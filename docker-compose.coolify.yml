@@ -7,7 +7,7 @@ x-logging: &id001
     max-file: '3'
 services:
   app:
-    image: ghcr.io/1120-estudio/deskcommcrm@sha256:49cdd90b051e59eddc567649c50fd02299ca79e4ea32a1e486e95e3aea270224
+    image: ${APP_IMAGE:-ghcr.io/1120-estudio/deskcommcrm@sha256:49cdd90b051e59eddc567649c50fd02299ca79e4ea32a1e486e95e3aea270224}
     pull_policy: always
     mem_limit: 768m
     restart: unless-stopped
@@ -23,6 +23,7 @@ services:
       IMPERSONATE_COOKIE_SECRET: ${IMPERSONATE_COOKIE_SECRET}
       WAHA_API_KEY: ${WAHA_API_KEY}
       WAHA_HMAC_SECRET: ${WAHA_HMAC_SECRET}
+      WAHA_GLOBAL_WEBHOOK_REQUIRE_SECRET: 'true'
       NODE_ENV: production
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://1120salesagent.sagaia.cloud}
       NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_APP_URL:-https://1120salesagent.sagaia.cloud}
@@ -62,7 +63,7 @@ services:
     - internal
     - supabase
   worker:
-    image: ghcr.io/1120-estudio/deskcomm-worker@sha256:3679edbf4b7c74e74942fc12a5ceb27ddda3f1856146e455fe1dab8599bade30
+    image: ${WORKER_IMAGE:-ghcr.io/1120-estudio/deskcomm-worker@sha256:3679edbf4b7c74e74942fc12a5ceb27ddda3f1856146e455fe1dab8599bade30}
     pull_policy: always
     mem_limit: 512m
     restart: unless-stopped
@@ -78,6 +79,7 @@ services:
       IMPERSONATE_COOKIE_SECRET: ${IMPERSONATE_COOKIE_SECRET}
       WAHA_API_KEY: ${WAHA_API_KEY}
       WAHA_HMAC_SECRET: ${WAHA_HMAC_SECRET}
+      WAHA_GLOBAL_WEBHOOK_REQUIRE_SECRET: 'true'
       NODE_ENV: production
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://1120salesagent.sagaia.cloud}
       NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_APP_URL:-https://1120salesagent.sagaia.cloud}
@@ -124,9 +126,10 @@ services:
     restart: unless-stopped
     environment:
       WAHA_API_KEY: sha512:${WAHA_API_KEY_SHA512}
-      WHATSAPP_HOOK_URL: ${NEXT_PUBLIC_APP_URL:-https://1120salesagent.sagaia.cloud}/api/v1/webhooks/waha
+      WHATSAPP_HOOK_URL: http://app:3000/api/v1/webhooks/waha
       WHATSAPP_HOOK_EVENTS: message.any,message.ack,message.edited,message.revoked,session.status,state.change
-      WHATSAPP_HOOK_HMAC: ${WAHA_HMAC_SECRET}
+      WHATSAPP_HOOK_HMAC_KEY: ${WAHA_HMAC_SECRET}
+      WHATSAPP_HOOK_CUSTOM_HEADERS: "X-Waha-Webhook-Secret:${WAHA_HMAC_SECRET}"
       WHATSAPP_DEFAULT_ENGINE: ${WHATSAPP_DEFAULT_ENGINE:-NOWEB}
       WAHA_DASHBOARD_ENABLED: 'false'
       WHATSAPP_RESTART_ALL_SESSIONS: ${WHATSAPP_RESTART_ALL_SESSIONS:-True}
@@ -172,7 +175,7 @@ services:
     - internal
     mem_limit: 128m
   scheduler:
-    image: ghcr.io/1120-estudio/deskcomm-scheduler@sha256:1fa3cdcd8e0e8fdae97995a59bdb475447d894b5b6936b14ac4904512f4d701b
+    image: ${SCHEDULER_IMAGE:-ghcr.io/1120-estudio/deskcomm-scheduler@sha256:1fa3cdcd8e0e8fdae97995a59bdb475447d894b5b6936b14ac4904512f4d701b}
     pull_policy: always
     restart: unless-stopped
     depends_on:

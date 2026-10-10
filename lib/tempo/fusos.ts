@@ -109,10 +109,8 @@ export function fusoValido(tz: string): boolean {
  * uma delas esquece de validar — e o valor que o `Intl` recusa só aparece como
  * tela branca, porque `Intl.DateTimeFormat` LANÇA com fuso inválido.
  *
- * Nenhum escritor valida `organizations.timezone` nem `user_metadata.timezone`
- * (`tenantSchema` e o schema do onboarding são `z.string().max(64)` sem
- * `refine`, e a coluna não tem CHECK), então "inutilizável" não é hipótese: é
- * o campo de texto que alguém preencheu com acento.
+ * Os formulários validam com `fusoValido`, mas as colunas podem conter valores
+ * legados e não têm CHECK. A leitura continua protegida contra esses valores.
  *
  * Falha ABERTA, como `fusoDaOrganizacao`: uma hora de diferença é melhor que
  * uma tela que não abre.

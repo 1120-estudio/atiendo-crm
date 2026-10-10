@@ -24,14 +24,7 @@
       "label": "ui"
     }
   ],
-  "mainPath": [
-    "empresa",
-    "banco",
-    "perfil",
-    "contato",
-    "api",
-    "persistencia"
-  ],
+  "mainPath": ["empresa", "banco", "perfil", "contato", "api", "cifra", "persistencia"],
   "nodes": [
     {
       "id": "empresa",
@@ -112,6 +105,14 @@
       "type": "service",
       "label": "E-mail GoTrue",
       "sublabel": "confirmação e recuperação em espanhol"
+    },
+    {
+      "id": "cifra",
+      "lane": "logic",
+      "col": 6,
+      "type": "service",
+      "label": "RPC de documentos",
+      "sublabel": "0447: AES-256; sessão e papel revalidados"
     }
   ],
   "edges": [
@@ -144,16 +145,20 @@
       "to": "api"
     },
     {
-      "from": "api",
-      "to": "persistencia"
-    },
-    {
       "from": "locale",
       "to": "template"
     },
     {
       "from": "template",
       "to": "correo"
+    },
+    {
+      "from": "api",
+      "to": "cifra"
+    },
+    {
+      "from": "cifra",
+      "to": "persistencia"
     }
   ]
 }

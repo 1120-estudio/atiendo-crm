@@ -9239,6 +9239,8 @@ export type Database = {
       }
     }
     Functions: {
+      encrypt_cpf: { Args: { p_plaintext: string; p_key: string }; Returns: string }
+      decrypt_cpf: { Args: { p_contact_id: string; p_key: string }; Returns: string }
       fn_channel_routing_claim: {
         Args: {
           p_channel: string

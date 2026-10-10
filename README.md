@@ -40,7 +40,7 @@ No hace falta Docker ni servidor: todo corre en tu computadora.
 ### 1. Clonar e instalar
 
 ```bash
-git clone https://github.com/lionegmanuel/atiendo-crm.git
+git clone https://github.com/1120-estudio/atiendo-crm.git
 cd atiendo-crm
 pnpm install
 ```
@@ -143,6 +143,26 @@ Requiere que tu clave de OpenAI tenga acceso a embeddings: platform.openai.com �
 | `pnpm typecheck` · `pnpm lint` · `pnpm test:unit` | Verificaciones de código |
 
 ---
+
+## Despliegue de 1120 en Coolify
+
+La instalación de este VPS usa [`docker-compose.coolify.yml`](docker-compose.coolify.yml): imágenes publicadas, Supabase externo y WhatsApp en la red interna. No uses el compose de desarrollo para producción. La configuración y las comprobaciones están en [`docs/1120-operacion-segura.md`](docs/1120-operacion-segura.md).
+
+## Guías para asistentes de código
+
+El repositorio incluye guías de instalación y configuración. Para instalar sus enlaces locales:
+
+```bash
+bash scripts/instalar-guias.sh
+```
+
+En Codex puedes invocar `$deskcomm-instalar`; en Claude Code, `/deskcomm-instalar`. Para trabajar con las guías de este checkout, usa `bash scripts/instalar-guias.sh --fonte .`.
+
+Las copias instaladas **no se actualizan solas**. En Claude Code, la guía global **tiene prioridad sobre la del clone**. Vuelve a ejecutar el instalador para actualizarlas. Para quitar solamente lo instalado por ese script:
+
+```bash
+bash scripts/instalar-guias.sh --remover
+```
 
 ## Licencia
 
