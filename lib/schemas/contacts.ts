@@ -85,6 +85,7 @@ export function contactCreateSchemaDoPais(perfil: PerfilDoPais) {
     cpf: z
       .string()
       .refine(perfil.documento.valida, perfil.documento.mensagemInvalido)
+      .transform(perfil.documento.normaliza)
       .optional(),
   });
 }
@@ -95,6 +96,7 @@ export function contactPatchSchemaDoPais(perfil: PerfilDoPais) {
     cpf: z
       .string()
       .refine(perfil.documento.valida, perfil.documento.mensagemInvalido)
+      .transform(perfil.documento.normaliza)
       .optional(),
   });
 }

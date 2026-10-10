@@ -14,7 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { updateTenant } from "@/app/actions/settings/updateTenant";
+import { regiaoDoPais, fusosComAtual } from "@/lib/regional/catalogo";
 import { useT } from "@/hooks/i18n/useT";
+import { useIdioma } from "@/lib/i18n/IdiomaProvider";
 import { IDIOMAS_VISIVEIS } from "@/lib/i18n/registro";
 import { MOEDAS_SERVIDAS, simboloDaMoeda, type MoedaServida } from "@/lib/money";
 import { paisesOferecidos } from "@/lib/legal/perfil-do-pais";
@@ -24,19 +26,10 @@ interface Props {
   initial: TenantInput;
 }
 
-const TIMEZONES = [
-  "Africa/Luanda",
-  "America/Sao_Paulo",
-  "America/Manaus",
-  "America/Belem",
-  "America/Recife",
-  "America/Fortaleza",
-  "Europe/Lisbon",
-  "UTC",
-];
-
 export function TenantForm({ initial }: Props) {
   const t = useT();
+  const idioma = useIdioma();
+  const nomesDosPaises = new Intl.DisplayNames([idioma], { type: "region" });
   const [form, setForm] = useState<TenantInput>(initial);
   const [isPending, startTransition] = useTransition();
 
@@ -48,13 +41,13 @@ export function TenantForm({ initial }: Props) {
     e.preventDefault();
     const parsed = tenantSchema.safeParse(form);
     if (!parsed.success) {
-      toast.error(t("Dados inválidos."));
+      toast.error(t(parsed.error.issues[0]?.message ?? "Dados inválidos."));
       return;
     }
     startTransition(async () => {
       const r = await updateTenant(parsed.data);
       if (r.ok) toast.success(t("Organização atualizada."));
-      else toast.error(`${t("Erro")}: ${r.error}`);
+      else toast.error(`${t("Erro")}: ${t(r.error)}`);
     });
   }
 
@@ -81,9 +74,11 @@ export function TenantForm({ initial }: Props) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cnpj">{t("CNPJ")}</Label>
+            <Label htmlFor="cnpj">{regiaoDoPais(form.country).fiscal}</Label>
             <Input
               id="cnpj"
+              placeholder={regiaoDoPais(form.country).exemploFiscal}
+              maxLength={32}
               value={form.cnpj ?? ""}
               onChange={(e) => set("cnpj", e.target.value || null)}
             />
@@ -104,7 +99,7 @@ export function TenantForm({ initial }: Props) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {TIMEZONES.map((tz) => (
+                {fusosComAtual(form.timezone).map((tz) => (
                   <SelectItem key={tz} value={tz}>
                     {tz}
                   </SelectItem>
@@ -114,10 +109,7 @@ export function TenantForm({ initial }: Props) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="locale">{t("Idioma")}</Label>
-            <Select
-              value={form.locale}
-              onValueChange={(v) => set("locale", v as Locale)}
-            >
+            <Select value={form.locale} onValueChange={(v) => set("locale", v as Locale)}>
               <SelectTrigger id="locale">
                 <SelectValue />
               </SelectTrigger>
@@ -132,10 +124,7 @@ export function TenantForm({ initial }: Props) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="currency">{t("Moeda")}</Label>
-            <Select
-              value={form.currency}
-              onValueChange={(v) => set("currency", v as MoedaServida)}
-            >
+            <Select value={form.currency} onValueChange={(v) => set("currency", v as MoedaServida)}>
               <SelectTrigger id="currency">
                 <SelectValue />
               </SelectTrigger>
@@ -148,7 +137,9 @@ export function TenantForm({ initial }: Props) {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {t("Vale para todo preço do catálogo. Produto já cadastrado guarda a moeda com que nasceu.")}
+              {t(
+                "Vale para todo preço do catálogo. Produto já cadastrado guarda a moeda com que nasceu.",
+              )}
             </p>
           </div>
           <div className="space-y-2">
@@ -160,14 +151,14 @@ export function TenantForm({ initial }: Props) {
               <SelectContent>
                 {paisesOferecidos().map((pais) => (
                   <SelectItem key={pais.codigo} value={pais.codigo}>
-                    {pais.nome}
+                    {nomesDosPaises.of(pais.codigo) ?? pais.nome}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
               {t(
-                "De onde saem o documento do contato, a lei citada no documento de acesso e o prazo em dias úteis. Só aparecem países com a lei revisada — a lista é curta de propósito.",
+                "Define os documentos e o prefixo telefônico padrão. Os novos países não incluem revisão jurídica nem feriados locais.",
               )}
             </p>
           </div>

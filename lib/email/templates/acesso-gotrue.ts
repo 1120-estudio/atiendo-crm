@@ -1,3 +1,6 @@
+import { traduzir } from "@/lib/i18n/dicionario";
+import { IDIOMA_PADRAO, type Idioma } from "@/lib/i18n/idiomas";
+
 import { NEUTROS_DE_SAIDA, type MarcaDeSaida } from "@/lib/branding/saida";
 
 /**
@@ -39,7 +42,16 @@ export type ModeloDeAcesso = "confirmation" | "recovery";
 export const MODELOS_DE_ACESSO: readonly ModeloDeAcesso[] = ["confirmation", "recovery"];
 
 /** O texto de cada modelo. Assunto entra no `GOTRUE_MAILER_SUBJECTS_*`. */
-const COPIA: Record<ModeloDeAcesso, { assunto: (marca: string) => string; titulo: string; corpo: (marca: string) => string; botao: string; rodape: string }> = {
+const COPIA: Record<
+  ModeloDeAcesso,
+  {
+    assunto: (marca: string) => string;
+    titulo: string;
+    corpo: (marca: string) => string;
+    botao: string;
+    rodape: string;
+  }
+> = {
   confirmation: {
     assunto: (marca) => `Confirme seu e-mail · ${marca}`,
     titulo: "Confirme seu e-mail",
@@ -54,13 +66,16 @@ const COPIA: Record<ModeloDeAcesso, { assunto: (marca: string) => string; titulo
     corpo: (marca) =>
       `Recebemos um pedido para redefinir a senha da sua conta no ${marca}. Clique no botão abaixo para escolher uma nova.`,
     botao: "Definir nova senha",
-    rodape:
-      "Se não foi você quem pediu, ignore este e-mail — sua senha continua a mesma.",
+    rodape: "Se não foi você quem pediu, ignore este e-mail — sua senha continua a mesma.",
   },
 };
 
-export function assuntoDoModelo(modelo: ModeloDeAcesso, marca: MarcaDeSaida): string {
-  return COPIA[modelo].assunto(marca.nome);
+export function assuntoDoModelo(
+  modelo: ModeloDeAcesso,
+  marca: MarcaDeSaida,
+  idioma: Idioma = IDIOMA_PADRAO,
+): string {
+  return `${traduzir(COPIA[modelo].titulo, idioma)} · ${marca.nome}`;
 }
 
 /**
@@ -70,7 +85,11 @@ export function assuntoDoModelo(modelo: ModeloDeAcesso, marca: MarcaDeSaida): st
  * de `invite.ts` — inclusive a dimensão no atributo, que o Outlook desktop
  * exige porque descarta `height` de style em imagem.
  */
-export function montarTemplateDeAcesso(modelo: ModeloDeAcesso, marca: MarcaDeSaida): string {
+export function montarTemplateDeAcesso(
+  modelo: ModeloDeAcesso,
+  marca: MarcaDeSaida,
+  idioma: Idioma = IDIOMA_PADRAO,
+): string {
   const t = COPIA[modelo];
   const nome = escapeHtml(marca.nome);
 
@@ -82,27 +101,27 @@ export function montarTemplateDeAcesso(modelo: ModeloDeAcesso, marca: MarcaDeSai
   const destino = "{{ .RedirectTo }}&token_hash={{ .TokenHash }}";
 
   return `<!doctype html>
-<html lang="pt-BR">
+<html lang="${idioma}">
 <body style="margin:0;padding:0;background:${NEUTROS_DE_SAIDA.fundo};font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:${NEUTROS_DE_SAIDA.texto}">
   <div style="max-width:560px;margin:0 auto;padding:32px 24px">
     ${logo}
     <h1 style="font-size:22px;line-height:1.3;margin:0 0 16px;color:${NEUTROS_DE_SAIDA.texto}">
-      ${escapeHtml(t.titulo)}
+      ${escapeHtml(traduzir(t.titulo, idioma))}
     </h1>
     <p style="margin:0 0 16px;font-size:15px;line-height:1.5">
-      ${escapeHtml(t.corpo(marca.nome))}
+      ${escapeHtml(traduzir(t.corpo("{marca}"), idioma).replace("{marca}", marca.nome))}
     </p>
     <p style="margin:24px 0">
       <a href="${destino}" style="display:inline-block;padding:12px 24px;background:${marca.accent};color:${marca.accentFg};border-radius:6px;text-decoration:none;font-weight:600">
-        ${escapeHtml(t.botao)}
+        ${escapeHtml(traduzir(t.botao, idioma))}
       </a>
     </p>
     <p style="margin:0 0 8px;font-size:13px;color:${NEUTROS_DE_SAIDA.suave}">
-      Ou copie e cole este link no navegador:<br>
+      ${escapeHtml(traduzir("Ou copie e cole este link no navegador:", idioma))}<br>
       <span style="word-break:break-all;color:${marca.accent}">${destino}</span>
     </p>
     <p style="margin:24px 0 0;font-size:13px;color:${NEUTROS_DE_SAIDA.suave}">
-      ${escapeHtml(t.rodape)}
+      ${escapeHtml(traduzir(t.rodape, idioma))}
     </p>
   </div>
 </body>

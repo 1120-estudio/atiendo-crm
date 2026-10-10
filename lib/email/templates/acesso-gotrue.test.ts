@@ -82,3 +82,23 @@ describe("moldes de acesso do GoTrue", () => {
     expect(publico("/email-templates/confirmation/x")).toBe(false);
   });
 });
+
+describe("acesso em espanhol", () => {
+  it("traduz confirmação, sem alterar token nem escape da marca", () => {
+    const html = montarTemplateDeAcesso("confirmation", MARCA, "es");
+    expect(html).toContain('<html lang="es">');
+    expect(html).toContain("Confirma tu correo");
+    expect(html).toContain("Tu cuenta en Acme &quot;Test&quot; &amp; Cia está casi lista.");
+    expect(html).toContain("{{ .RedirectTo }}&token_hash={{ .TokenHash }}");
+    expect(html).not.toContain("Sua conta");
+  });
+  it("traduz recuperação, incluindo botão e alternativa de copiar enlace", () => {
+    const html = montarTemplateDeAcesso("recovery", MARCA, "es");
+    expect(html).toContain("Restablecer tu contraseña");
+    expect(html).toContain("O copia y pega este enlace en tu navegador:");
+    expect(html).not.toContain("Recebemos um pedido");
+    expect(assuntoDoModelo("recovery", MARCA, "es")).toBe(
+      `Restablecer tu contraseña · ${MARCA.nome}`,
+    );
+  });
+});

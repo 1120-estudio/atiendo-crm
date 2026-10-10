@@ -14,24 +14,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { updateProfile } from "@/app/actions/settings/updateProfile";
+import { fusosComAtual } from "@/lib/regional/catalogo";
 import { useT } from "@/hooks/i18n/useT";
 import { IDIOMAS_VISIVEIS } from "@/lib/i18n/registro";
-import {
-  profileSchema,
-  SEM_PREFERENCIA_DE_IDIOMA,
-  type Locale,
-} from "@/lib/schemas/settings";
-
-const TIMEZONES = [
-  "Africa/Luanda",
-  "America/Sao_Paulo",
-  "America/Manaus",
-  "America/Belem",
-  "America/Recife",
-  "America/Fortaleza",
-  "Europe/Lisbon",
-  "UTC",
-];
+import { profileSchema, SEM_PREFERENCIA_DE_IDIOMA, type Locale } from "@/lib/schemas/settings";
 
 interface Props {
   email: string;
@@ -70,7 +56,7 @@ export function ProfileForm({
     startTransition(async () => {
       const r = await updateProfile(parsed.data);
       if (r.ok) toast.success(t("Perfil atualizado."));
-      else toast.error(`${t("Erro")}: ${r.error}`);
+      else toast.error(`${t("Erro")}: ${t(r.error)}`);
     });
   }
 
@@ -80,9 +66,7 @@ export function ProfileForm({
         <div className="space-y-2">
           <Label htmlFor="email">{t("Email")}</Label>
           <Input id="email" value={email} disabled />
-          <p className="text-xs text-muted-foreground">
-            {t("Trocar email — em breve.")}
-          </p>
+          <p className="text-xs text-muted-foreground">{t("Trocar email — em breve.")}</p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="full_name">{t("Nome completo")}</Label>
@@ -123,7 +107,7 @@ export function ProfileForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {TIMEZONES.map((tz) => (
+                {fusosComAtual(timezone).map((tz) => (
                   <SelectItem key={tz} value={tz}>
                     {tz}
                   </SelectItem>

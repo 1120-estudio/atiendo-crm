@@ -10,7 +10,11 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export function normalizeCpf(raw: string): string {
-  return raw.replace(/\D/g, "");
+  const compacto = raw.toUpperCase().replace(/[.\s]/g, "");
+  // Os CPFs existentes mantêm o hash. Em cédulas estruturadas, os hífens
+  // distinguem números diferentes (8-12-345 não é 8-123-45).
+  if (/^\d{9}-\d{2}$/.test(compacto)) return compacto.replace(/-/g, "");
+  return compacto.replace(/[^A-Z0-9-]/g, "");
 }
 
 /**

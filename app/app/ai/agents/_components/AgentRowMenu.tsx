@@ -61,7 +61,7 @@ export function AgentRowMenu({ agent }: Props) {
           const message =
             res.error === "cannot_archive_default"
               ? t("O agent padrão da organização não pode ser arquivado.")
-              : res.message ?? `${t("Falha")}: ${res.error ?? "unknown"}`;
+              : (res.message ? t(res.message) : null) ?? `${t("Falha")}: ${res.error ?? "unknown"}`;
           toast.error(message);
         }
       } catch {

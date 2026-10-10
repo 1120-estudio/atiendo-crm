@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import { ehHexValido } from "@/lib/branding/rampa";
 import { IDIOMAS } from "@/lib/i18n/idiomas";
+import { formaFiscalValida } from "@/lib/regional/catalogo";
 import { MOEDAS_SERVIDAS } from "@/lib/money";
 
 import { conversationTagSchema } from "./messaging";
@@ -81,50 +82,55 @@ export type ProfileInput = z.infer<typeof profileSchema>;
  */
 const MOEDAS = MOEDAS_SERVIDAS;
 
-export const tenantSchema = z.object({
-  display_name: z.string().min(1).max(120),
-  legal_name: z.string().min(1).max(200),
-  cnpj: z
-    .string()
-    .max(20)
-    .nullable()
-    .optional()
-    .or(z.literal("").transform(() => null)),
-  /**
-   * O país da organização (issue #1033): ISO-3166 alpha-2, maiúsculas, `null` =
-   * Brasil. É a MESMA régua do CHECK `organizations_country_check` da migration
-   * 0277 — a validação de aplicação e a do banco não podem divergir, ou a tela
-   * aceita o que o banco recusa (e o erro chega como 500 em vez de formulário).
-   * Aqui NÃO se valida se o país tem perfil revisado: quem oferece a lista é
-   * `paisesOferecidos()` (`lib/legal/perfil-do-pais.ts`), e o valor que chega é
-   * conferido contra ela um degrau antes de gravar — país sem lei revisada não
-   * entra nem por API.
-   */
-  country: z
-    .string()
-    .regex(/^[A-Z]{2}$/)
-    .nullable()
-    .optional()
-    .or(z.literal("").transform(() => null)),
-  timezone: z.string().min(1).max(64),
-  locale: z.enum(LOCALES),
-  currency: z.enum(MOEDAS),
-  media_retention_days: z.coerce.number().int().min(30).max(3650),
-  dpo_email: z
-    .string()
-    .email()
-    .max(200)
-    .nullable()
-    .optional()
-    .or(z.literal("").transform(() => null)),
-  privacy_policy_url: z
-    .string()
-    .url()
-    .max(2048)
-    .nullable()
-    .optional()
-    .or(z.literal("").transform(() => null)),
-});
+export const tenantSchema = z
+  .object({
+    display_name: z.string().min(1).max(120),
+    legal_name: z.string().min(1).max(200),
+    cnpj: z
+      .string()
+      .max(32)
+      .nullable()
+      .optional()
+      .or(z.literal("").transform(() => null)),
+    /**
+     * O país da organização (issue #1033): ISO-3166 alpha-2, maiúsculas, `null` =
+     * Brasil. É a MESMA régua do CHECK `organizations_country_check` da migration
+     * 0277 — a validação de aplicação e a do banco não podem divergir, ou a tela
+     * aceita o que o banco recusa (e o erro chega como 500 em vez de formulário).
+     * Aqui NÃO se valida se o país tem perfil revisado: quem oferece a lista é
+     * `paisesOferecidos()` (`lib/legal/perfil-do-pais.ts`), e o valor que chega é
+     * conferido contra ela um degrau antes de gravar. Perfis operacionais do
+     * fork podem ser escolhidos sem citação legal revisada.
+     */
+    country: z
+      .string()
+      .regex(/^[A-Z]{2}$/)
+      .nullable()
+      .optional()
+      .or(z.literal("").transform(() => null)),
+    timezone: z.string().min(1).max(64),
+    locale: z.enum(LOCALES),
+    currency: z.enum(MOEDAS),
+    media_retention_days: z.coerce.number().int().min(30).max(3650),
+    dpo_email: z
+      .string()
+      .email()
+      .max(200)
+      .nullable()
+      .optional()
+      .or(z.literal("").transform(() => null)),
+    privacy_policy_url: z
+      .string()
+      .url()
+      .max(2048)
+      .nullable()
+      .optional()
+      .or(z.literal("").transform(() => null)),
+  })
+  .refine((v) => !v.cnpj || formaFiscalValida(v.cnpj, v.country), {
+    path: ["cnpj"],
+    message: "Identificador fiscal inválido: confira o formato.",
+  });
 export type TenantInput = z.infer<typeof tenantSchema>;
 
 export const NOTIFICATION_CATEGORIES = [
@@ -187,9 +193,7 @@ export const customFieldSchema = z.object({
       ao_perder: z.boolean().optional(),
     })
     .optional(),
-  options: z
-    .array(z.object({ value: z.string().min(1), label: z.string().min(1) }))
-    .optional(),
+  options: z.array(z.object({ value: z.string().min(1), label: z.string().min(1) })).optional(),
 });
 export type CustomFieldDef = z.infer<typeof customFieldSchema>;
 
@@ -314,24 +318,32 @@ export const marcaDaOrganizacaoSchema = z.object({
 export type MarcaDaOrganizacaoInput = z.infer<typeof marcaDaOrganizacaoSchema>;
 
 /** Prazos por organização. Leitura legada degrada; escrita usa schema estrito. */
-export const agendaSettingsWriteSchema = z.strictObject({
-  confirmation_delay_minutes: z.number().int().min(1).max(10080),
-  unknown_protection_minutes: z.number().int().min(1).max(10080),
-  /**
-   * Quanto tempo um pedido não confirmado segura o horário.
-   *
-   * ⚠️ `.default()` e não obrigatório: este schema é `strictObject`, e torná-lo
-   * exigido faria TODO PATCH já escrito (que manda só os dois campos de cima)
-   * passar a falhar — o tipo de mudança que a doutrina de packaging proíbe,
-   * porque quebra quem já instalou sem nenhum aviso.
-   *
-   * 24h é o default porque quem confere a fila uma vez por dia não pode perder
-   * pedido. O mínimo é 15 minutos: abaixo disso a expiração corre com quem está
-   * decidindo naquele instante.
-   */
-  pending_expires_after_minutes: z.number().int().min(15).max(10080).default(1440),
-}).refine(v => v.unknown_protection_minutes >= v.confirmation_delay_minutes, {message:"O prazo de proteção deve ser maior que o prazo de confirmação."});
-export const agendaSettingsSchema = agendaSettingsWriteSchema.catch({confirmation_delay_minutes:10,unknown_protection_minutes:1440,pending_expires_after_minutes:1440});
+export const agendaSettingsWriteSchema = z
+  .strictObject({
+    confirmation_delay_minutes: z.number().int().min(1).max(10080),
+    unknown_protection_minutes: z.number().int().min(1).max(10080),
+    /**
+     * Quanto tempo um pedido não confirmado segura o horário.
+     *
+     * ⚠️ `.default()` e não obrigatório: este schema é `strictObject`, e torná-lo
+     * exigido faria TODO PATCH já escrito (que manda só os dois campos de cima)
+     * passar a falhar — o tipo de mudança que a doutrina de packaging proíbe,
+     * porque quebra quem já instalou sem nenhum aviso.
+     *
+     * 24h é o default porque quem confere a fila uma vez por dia não pode perder
+     * pedido. O mínimo é 15 minutos: abaixo disso a expiração corre com quem está
+     * decidindo naquele instante.
+     */
+    pending_expires_after_minutes: z.number().int().min(15).max(10080).default(1440),
+  })
+  .refine((v) => v.unknown_protection_minutes >= v.confirmation_delay_minutes, {
+    message: "O prazo de proteção deve ser maior que o prazo de confirmação.",
+  });
+export const agendaSettingsSchema = agendaSettingsWriteSchema.catch({
+  confirmation_delay_minutes: 10,
+  unknown_protection_minutes: 1440,
+  pending_expires_after_minutes: 1440,
+});
 
 /**
  * `organizations.settings.crm` — regras de CRM que cada organização liga para si.

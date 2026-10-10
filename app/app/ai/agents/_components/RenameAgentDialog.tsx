@@ -43,7 +43,7 @@ export function RenameAgentDialog({ agent, open, onOpenChange }: Props) {
         onOpenChange(false);
         router.refresh();
       } else {
-        toast.error(res.message ?? `${t("Falha")}: ${res.error}`);
+        toast.error((res.message ? t(res.message) : null) ?? `${t("Falha")}: ${res.error}`);
       }
     });
   };

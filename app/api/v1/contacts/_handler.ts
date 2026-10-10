@@ -164,8 +164,8 @@ export async function listContactsHandler(
         if (d && d !== digits) orParts.push(`phone_number.ilike.%${d}%`);
       }
     }
-    if (digits.length === 11) {
-      orParts.push(`cpf_hash.eq.${hashCpf(digits)}`);
+    if (/^[A-Z0-9.\s-]+$/i.test(q.search) && /\d/.test(q.search)) {
+      orParts.push(`cpf_hash.eq.${hashCpf(q.search)}`);
     }
     query = query.or(orParts.join(","));
   }

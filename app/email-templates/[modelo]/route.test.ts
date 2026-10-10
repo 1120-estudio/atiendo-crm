@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
+import { idiomaDaInstalacao } from "@/lib/i18n/idiomaDaInstalacao";
+
+vi.mock("@/lib/i18n/idiomaDaInstalacao", () => ({ idiomaDaInstalacao: vi.fn(() => "pt-BR") }));
+
 import { marcaDaSaida } from "@/lib/branding/saida";
 
 /**
@@ -10,9 +14,7 @@ import { marcaDaSaida } from "@/lib/branding/saida";
  */
 
 vi.mock("@/lib/branding/saida", async () => {
-  const real = await vi.importActual<typeof import("@/lib/branding/saida")>(
-    "@/lib/branding/saida",
-  );
+  const real = await vi.importActual<typeof import("@/lib/branding/saida")>("@/lib/branding/saida");
   return { ...real, marcaDaSaida: vi.fn() };
 });
 
@@ -34,6 +36,7 @@ const chamar = (modelo: string) =>
 describe("GET /email-templates/[modelo]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(idiomaDaInstalacao).mockReturnValue("pt-BR");
     vi.mocked(marcaDaSaida).mockResolvedValue(MARCA);
   });
 
@@ -70,4 +73,13 @@ describe("GET /email-templates/[modelo]", () => {
     expect(res.headers.get("cache-control")).toMatch(/max-age=\d+/);
     expect(res.headers.get("x-robots-tag")).toContain("noindex");
   });
+});
+
+it("serve recuperação no idioma declarado pela instalação, sem cookie de usuário", async () => {
+  vi.mocked(idiomaDaInstalacao).mockReturnValue("es");
+  vi.mocked(marcaDaSaida).mockResolvedValue(MARCA);
+  const corpo = await (await chamar("recovery")).text();
+  expect(corpo).toContain('<html lang="es">');
+  expect(corpo).toContain("Restablecer tu contraseña");
+  expect(corpo).toContain("{{ .TokenHash }}");
 });

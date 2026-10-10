@@ -25,6 +25,8 @@ import { describe, expect, it } from "vitest";
  * A LISTA impede o erro de digitação, que é a origem. A CHECAGEM defende a API,
  * que aceita qualquer cliente e não passa pela tela.
  */
+import { fusosComAtual } from "@/lib/regional/catalogo";
+
 import { DICIONARIO } from "@/lib/i18n/dicionario";
 import { availabilityScheduleSchema } from "@/lib/schemas/routing";
 import { FUSOS_OFERECIDOS, FUSO_PADRAO, fusoValido } from "@/lib/tempo/fusos";
@@ -118,7 +120,8 @@ describe("os fusos OFERECIDOS — a lista, não o padrão", () => {
   it("oferece Luanda, e a tela da empresa também", () => {
     expect(FUSOS_OFERECIDOS.map((f) => f.codigo)).toContain("Africa/Luanda");
     const formulario = readFileSync("app/app/settings/tenant/_form.tsx", "utf8");
-    expect(formulario).toContain("Africa/Luanda");
+    expect(formulario).toContain("fusosComAtual");
+    expect(fusosComAtual("UTC")).toContain("Africa/Luanda");
   });
 
   // As quatro listas são três fontes: `FUSOS_OFERECIDOS` (jornada e janela de
@@ -127,7 +130,8 @@ describe("os fusos OFERECIDOS — a lista, não o padrão", () => {
   it("oferece Lisboa nas três fontes", () => {
     expect(FUSOS_OFERECIDOS.map((f) => f.codigo)).toContain("Europe/Lisbon");
     for (const arquivo of ["app/app/settings/tenant/_form.tsx", "app/app/settings/profile/_form.tsx"]) {
-      expect(readFileSync(arquivo, "utf8"), arquivo).toContain('"Europe/Lisbon"');
+      expect(readFileSync(arquivo, "utf8"), arquivo).toContain("fusosComAtual");
+      expect(fusosComAtual("UTC")).toContain("Europe/Lisbon");
     }
   });
 
