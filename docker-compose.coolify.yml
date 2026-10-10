@@ -60,6 +60,7 @@ services:
     logging: *id001
     networks:
     - internal
+    - supabase
     build:
       context: .
       dockerfile: Dockerfile
@@ -119,6 +120,7 @@ services:
     logging: *id001
     networks:
     - internal
+    - supabase
     depends_on:
       app:
         condition: service_healthy
@@ -204,3 +206,6 @@ volumes:
 networks:
   internal:
     driver: bridge
+  supabase:
+    external: true
+    name: pslkgetwjyaalqwbv0eueqem
