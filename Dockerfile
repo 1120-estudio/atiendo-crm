@@ -38,7 +38,7 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
 
 # Usar Webpack en este VPS tras la saturacion observada con Turbopack.
 # La compilacion puede tardar mas; requiere verificar consumo en el servidor.
-RUN pnpm exec next build --webpack
+RUN pnpm build
 
 # `outputFileTracingIncludes` (next.config.ts) copia o CONTEÚDO de pdfjs-dist e
 # @napi-rs/canvas pro standalone, mas não os DOIS SYMLINKS que pnpm cria e que a
