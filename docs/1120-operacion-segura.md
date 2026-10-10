@@ -41,3 +41,9 @@ su motor y contexto existentes. La opción de protección global se ve y cambia
 en las variables de Coolify; su ausencia de credencial responde 401 antes del
 registro del mensaje. Una ruta de autenticación fallida no necesita follow-up:
 no acepta una demanda de cliente hasta autenticar el transporte.
+
+El compose de Coolify mantiene seis servicios y usa el proxy del panel. El
+compose de producción general conserva Caddy para la instalación tradicional;
+el override single-server conecta app y worker a Supabase sin reintroducir
+servicios de telefonía ausentes. No combines el compose tradicional con el de
+Coolify.

@@ -34,7 +34,8 @@ import { describe, expect, it } from "vitest";
  *
  * ─── ESCOPO ──────────────────────────────────────────────────────────────────
  *
- * Instalação 1120: seis serviços, com proxy da hospedagem e sem telefonia.
+ * Coolify usa seis serviços; o compose tradicional acrescenta Caddy.
+ * Ambos preservam a fronteira privada e não incluem telefonia.
  * As portas e labels continuam vigiadas; a ausência de voz é explícita.
  * `docker-compose.prod.yml` e `docker-compose.traefik.yml` — os que rodam na
  * VPS do cliente. O `docker-compose.yml` (dev) está FORA de propósito: publicar
@@ -165,6 +166,7 @@ describe("a fronteira de rede do que o cliente instala", () => {
     expect([...SERVICOS.get("docker-compose.prod.yml")!.keys()].sort()).toEqual(
       [
         "app",
+        "caddy",
         "redis",
         "scheduler",
         "srh",
@@ -176,6 +178,16 @@ describe("a fronteira de rede do que o cliente instala", () => {
     const traefik = [...SERVICOS.get("docker-compose.traefik.yml")!.keys()];
     expect(traefik, "o override do Traefik parou de declarar serviços").toContain("app");
     expect(traefik).toContain("caddy");
+  });
+
+  it.each(["single-server", "traefik", "npm", "build"])("override %s não referencia serviço removido", (mode) => {
+    const base = SERVICOS.get("docker-compose.prod.yml")!;
+    const override = lerServicos(fs.readFileSync(path.join(RAIZ, `docker-compose.${mode}.yml`), "utf8"));
+    expect(override.size).toBeGreaterThan(0);
+    expect([...override.keys()].filter((name) => !base.has(name))).toEqual([]);
+    if (mode === "single-server") {
+      for (const name of ["app", "worker"]) expect(override.get(name)).toContain("supabase_private");
+    }
   });
 
   it("só o proxy reverso publica porta no host", () => {

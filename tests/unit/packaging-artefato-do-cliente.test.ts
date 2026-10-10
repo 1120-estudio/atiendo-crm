@@ -80,7 +80,7 @@ const servicos = lerServicos(compose);
 const NOSSOS = ["app", "worker", "scheduler"] as const;
 
 describe("packaging — o artefato que o cliente instala", () => {
-  it("o parser enxerga os seis serviços do compose de produção 1120", () => {
+  it("o parser enxerga os sete serviços do compose de produção 1120", () => {
     // Guarda do próprio instrumento: se o parser parar de enxergar os serviços,
     // todos os testes abaixo passariam vazios — verde por não ter medido nada.
     //
@@ -90,6 +90,7 @@ describe("packaging — o artefato que o cliente instala", () => {
     expect([...servicos.keys()].sort()).toEqual(
       [
         "app",
+        "caddy",
         "redis",
         "scheduler",
         "srh",
