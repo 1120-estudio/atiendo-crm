@@ -1,0 +1,37 @@
+
+/workspace/scratch/6dc3b2c014e3/atiendo-regional/app/app/ai/agents/[id]/_components/AgentForm.tsx
+  479:6  warning  React Hook React.useMemo has a missing dependency: 'props.provedoresDaInstalacao'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/workspace/scratch/6dc3b2c014e3/atiendo-regional/app/app/ai/agents/_components/RenameAgentDialog.tsx
+  34:15  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/workspace/scratch/6dc3b2c014e3/atiendo-regional/app/app/ai/agents/_components/RenameAgentDialog.tsx:34:15
+  32 |
+  33 |   useEffect(() => {
+> 34 |     if (open) setName(agent.name);
+     |               ^^^^^^^ Avoid calling setState() directly within an effect
+  35 |   }, [open, agent.name]);
+  36 |
+  37 |   const onSubmit = (e: React.FormEvent) => {  react-hooks/set-state-in-effect
+
+/workspace/scratch/6dc3b2c014e3/atiendo-regional/app/email-templates/[modelo]/route.test.ts
+  17:45  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+/workspace/scratch/6dc3b2c014e3/atiendo-regional/app/legal/privacy/page.tsx
+  1:15  warning  'Metadata' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/workspace/scratch/6dc3b2c014e3/atiendo-regional/app/legal/terms/page.tsx
+  1:15  warning  'Metadata' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/workspace/scratch/6dc3b2c014e3/atiendo-regional/lib/contacts/csv.ts
+  121:3  warning  Unused eslint-disable directive (no problems were reported from 'no-control-regex')
+
+✖ 6 problems (0 errors, 6 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

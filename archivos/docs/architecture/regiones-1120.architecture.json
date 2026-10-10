@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Regiões e acesso em espanhol — fork 1120",
+    "output": "regiones-1120.html",
+    "quality_profile": "standard"
+  },
+  "lanes": [
+    {
+      "id": "config",
+      "label": "config"
+    },
+    {
+      "id": "data",
+      "label": "data"
+    },
+    {
+      "id": "logic",
+      "label": "logic"
+    },
+    {
+      "id": "ui",
+      "label": "ui"
+    }
+  ],
+  "mainPath": [
+    "empresa",
+    "banco",
+    "perfil",
+    "contato",
+    "api",
+    "persistencia"
+  ],
+  "nodes": [
+    {
+      "id": "empresa",
+      "lane": "config",
+      "col": 0,
+      "type": "service",
+      "label": "Configurações › Empresa",
+      "sublabel": "TenantForm/updateTenant"
+    },
+    {
+      "id": "banco",
+      "lane": "data",
+      "col": 1,
+      "type": "service",
+      "label": "organizations",
+      "sublabel": "country, currency, timezone, cnpj existentes"
+    },
+    {
+      "id": "perfil",
+      "lane": "logic",
+      "col": 2,
+      "type": "service",
+      "label": "Perfil do país",
+      "sublabel": "documento e PII; lei null em perfis operacionais"
+    },
+    {
+      "id": "layout",
+      "lane": "logic",
+      "col": 3,
+      "type": "service",
+      "label": "AppLayout/RegiaoProvider",
+      "sublabel": "país da organização ativa"
+    },
+    {
+      "id": "contato",
+      "lane": "ui",
+      "col": 4,
+      "type": "service",
+      "label": "Novo contato",
+      "sublabel": "documento e seletor de prefixo"
+    },
+    {
+      "id": "api",
+      "lane": "logic",
+      "col": 5,
+      "type": "service",
+      "label": "API e CSV",
+      "sublabel": "schema por país + normalização"
+    },
+    {
+      "id": "persistencia",
+      "lane": "data",
+      "col": 6,
+      "type": "service",
+      "label": "Contato cifrado/auditado",
+      "sublabel": "cpf_encrypted/cpf_hash existentes"
+    },
+    {
+      "id": "locale",
+      "lane": "config",
+      "col": 7,
+      "type": "service",
+      "label": "APP_LOCALE",
+      "sublabel": "idioma da instalação"
+    },
+    {
+      "id": "template",
+      "lane": "logic",
+      "col": 8,
+      "type": "service",
+      "label": "Template de acesso",
+      "sublabel": "montarTemplateDeAcesso"
+    },
+    {
+      "id": "correo",
+      "lane": "ui",
+      "col": 9,
+      "type": "service",
+      "label": "E-mail GoTrue",
+      "sublabel": "confirmação e recuperação em espanhol"
+    }
+  ],
+  "edges": [
+    {
+      "from": "empresa",
+      "to": "banco"
+    },
+    {
+      "from": "banco",
+      "to": "perfil"
+    },
+    {
+      "from": "banco",
+      "to": "layout"
+    },
+    {
+      "from": "perfil",
+      "to": "contato"
+    },
+    {
+      "from": "layout",
+      "to": "contato"
+    },
+    {
+      "from": "contato",
+      "to": "api"
+    },
+    {
+      "from": "perfil",
+      "to": "api"
+    },
+    {
+      "from": "api",
+      "to": "persistencia"
+    },
+    {
+      "from": "locale",
+      "to": "template"
+    },
+    {
+      "from": "template",
+      "to": "correo"
+    }
+  ]
+}
