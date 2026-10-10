@@ -1,0 +1,228 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+  - ESM syntax in a file loaded as CommonJS (vitest.cercas.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+  - ESM syntax in a file loaded as CommonJS (vitest.cercas.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+  - ESM syntax in a file loaded as CommonJS (vitest.cercas.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /workspace/scratch/6dc3b2c014e3/atiendo-regional-base
+
+ ❯ |cercas| tests/unit/portas-do-compose.test.ts (6 tests | 3 failed) 13ms
+     × o parser enxerga os serviços dos dois compose 8ms
+     × o serviço de chamada de voz nasce num profile desligado 0ms
+     × app e worker não dependem de um serviço que vive em profile 2ms
+ ❯ |cercas| tests/unit/packaging-artefato-do-cliente.test.ts (14 tests | 4 failed) 16ms
+     × o parser enxerga os 10 serviços de produção 8ms
+     × o serviço 'voice-agent' declara image: — nunca só build: 1ms
+     × o pull_policy acompanha a mutabilidade da tag, nos dois sentidos 1ms
+     × nenhum serviço nosso cai em `latest` quando o .env não tem a chave 0ms
+ ❯ |cercas| tests/unit/playbook-cita-a-ferramenta.test.ts (5 tests | 1 failed) 11ms
+     × todo playbook declarado cita as ferramentas que falam da mesma ação 7ms
+ ❯ |cercas| tests/unit/documentacao-aponta-para-o-que-existe.test.ts (4 tests | 1 failed) 42ms
+     × nenhum link relativo aponta para arquivo que não existe 16ms
+ ❯ |cercas| tests/unit/inventario-de-telas.test.ts (6 tests | 1 failed) 11ms
+     × caso 5 — a lista de não-construído só encolhe 6ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |cercas| tests/unit/documentacao-aponta-para-o-que-existe.test.ts > documentação — o que ela aponta existe > nenhum link relativo aponta para arquivo que não existe
+AssertionError: link(s) para arquivo inexistente:
+docs/index.md → ../README.en.md
+docs/index.md → ../README.es.md: expected [ …(2) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "docs/index.md → ../README.en.md",
++   "docs/index.md → ../README.es.md",
++ ]
+
+ ❯ tests/unit/documentacao-aponta-para-o-que-existe.test.ts:132:79
+    130|     }
+    131|
+    132|     expect(mortos, `link(s) para arquivo inexistente:\n${mortos.join("…
+       |                                                                               ^
+    133|   });
+    134|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯
+
+ FAIL  |cercas| tests/unit/inventario-de-telas.test.ts > inventário de telas > caso 5 — a lista de não-construído só encolhe
+AssertionError: Estas rotas estão listadas como "planejado e ainda não construído" e JÁ existem
+no disco. Apague-as da lista em docs/design-system/screen-flow/03-screen-inventory.md
+(marcador `inventario:nao-construido`) — a catraca não afrouxa.: expected [ '/app/ai/knowledge' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "/app/ai/knowledge",
++ ]
+
+ ❯ tests/unit/inventario-de-telas.test.ts:142:7
+    140|         `no disco. Apague-as da lista em docs/design-system/screen-flo…
+    141|         `(marcador \`inventario:nao-construido\`) — a catraca não afro…
+    142|     ).toEqual([]);
+       |       ^
+    143|   });
+    144|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯
+
+ FAIL  |cercas| tests/unit/packaging-artefato-do-cliente.test.ts > packaging — o artefato que o cliente instala > o parser enxerga os 10 serviços de produção
+AssertionError: expected [ 'app', 'redis', 'scheduler', …(3) ] to deeply equal [ 'app', 'asterisk', 'caddy', …(7) ]
+
+- Expected
++ Received
+
+  [
+    "app",
+-   "asterisk",
+-   "caddy",
+    "redis",
+    "scheduler",
+    "srh",
+-   "voice-agent",
+-   "wacalls",
+    "waha",
+    "worker",
+  ]
+
+ ❯ tests/unit/packaging-artefato-do-cliente.test.ts:98:41
+     96|     // divisão: `asterisk` é upstream, pinado por digest e fora de `NO…
+     97|     // `voice-agent` é código nosso, publicado pelo CI, e está em `NOS…
+     98|     expect([...servicos.keys()].sort()).toEqual(
+       |                                         ^
+     99|       [
+    100|         "app",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯
+
+ FAIL  |cercas| tests/unit/packaging-artefato-do-cliente.test.ts > packaging — o artefato que o cliente instala > o serviço 'voice-agent' declara image: — nunca só build:
+AssertionError: serviço 'voice-agent' sumiu do compose de produção: expected undefined to be defined
+ ❯ tests/unit/packaging-artefato-do-cliente.test.ts:116:69
+    114|   it.each(NOSSOS)("o serviço '%s' declara image: — nunca só build:", (…
+    115|     const bloco = servicos.get(nome);
+    116|     expect(bloco, `serviço '${nome}' sumiu do compose de produção`).to…
+       |                                                                     ^
+    117|
+    118|     const temImage = /^\s{4}image:\s*\S/m.test(bloco!);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL  |cercas| tests/unit/packaging-artefato-do-cliente.test.ts > packaging — o artefato que o cliente instala > o pull_policy acompanha a mutabilidade da tag, nos dois sentidos
+TypeError: Cannot read properties of undefined (reading 'match')
+ ❯ tests/unit/packaging-artefato-do-cliente.test.ts:183:30
+    181|     for (const nome of NOSSOS) {
+    182|       const bloco = servicos.get(nome)!;
+    183|       const politica = bloco.match(/^\s{4}pull_policy:\s*(\S+)/m)?.[1];
+       |                              ^
+    184|       expect(politica, `'${nome}' não declara pull_policy`).toBeDefine…
+    185|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ FAIL  |cercas| tests/unit/packaging-artefato-do-cliente.test.ts > packaging — o artefato que o cliente instala > nenhum serviço nosso cai em `latest` quando o .env não tem a chave
+TypeError: Cannot read properties of undefined (reading 'match')
+ ❯ tests/unit/packaging-artefato-do-cliente.test.ts:221:28
+    219|     for (const nome of NOSSOS) {
+    220|       const bloco = servicos.get(nome)!;
+    221|       const imagem = bloco.match(/^\s{4}image:\s*(\S+)/m)?.[1] ?? "";
+       |                            ^
+    222|       const padrao = imagem.replace(/^\$\{[A-Z_]+:-(.+)\}$/, "$1");
+    223|       const tag = padrao.split(":").pop();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯
+
+ FAIL  |cercas| tests/unit/playbook-cita-a-ferramenta.test.ts > playbook semeado cita a ferramenta que fala da mesma ação > todo playbook declarado cita as ferramentas que falam da mesma ação
+AssertionError: Playbook semeado fala de uma ação para a qual existe ferramenta, e não a nomeia. Os dois textos chegam ao modelo na MESMA janela (tools + system em `serializeStablePrefix`), e o playbook que não conhece a ferramenta manda o modelo fazer à mão o que ele tem capacidade de fazer — ou, pior, manda o CONTRÁRIO. ⚠️ Citar não é concordar: este gate pega a OMISSÃO, não a contradição.: expected [ …(4) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "agendamento → não cita crm_find_free_slots",
++   "agendamento → não cita crm_book_appointment",
++   "agendamento → não cita crm_reschedule_appointment",
++   "agendamento → não cita crm_cancel_appointment",
++ ]
+
+ ❯ tests/unit/playbook-cita-a-ferramenta.test.ts:190:7
+    188|         "fazer à mão o que ele tem capacidade de fazer — ou, pior, man…
+    189|         "⚠️ Citar não é concordar: este gate pega a OMISSÃO, não a con…
+    190|     ).toEqual([]);
+       |       ^
+    191|   });
+    192| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯
+
+ FAIL  |cercas| tests/unit/portas-do-compose.test.ts > a fronteira de rede do que o cliente instala > o parser enxerga os serviços dos dois compose
+AssertionError: expected [ 'app', 'redis', 'scheduler', …(3) ] to deeply equal [ 'app', 'asterisk', 'caddy', …(7) ]
+
+- Expected
++ Received
+
+  [
+    "app",
+-   "asterisk",
+-   "caddy",
+    "redis",
+    "scheduler",
+    "srh",
+-   "voice-agent",
+-   "wacalls",
+    "waha",
+    "worker",
+  ]
+
+ ❯ tests/unit/portas-do-compose.test.ts:143:73
+    141|     // todos os casos abaixo verdes por não terem medido nada — que é …
+    142|     // mais silenciosa de um gate morrer.
+    143|     expect([...SERVICOS.get("docker-compose.prod.yml")!.keys()].sort()…
+       |                                                                         ^
+    144|       [
+    145|         "app",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯
+
+ FAIL  |cercas| tests/unit/portas-do-compose.test.ts > a fronteira de rede do que o cliente instala > o serviço de chamada de voz nasce num profile desligado
+AssertionError: o serviço 'wacalls' sumiu do compose de produção: expected undefined to be defined
+ ❯ tests/unit/portas-do-compose.test.ts:270:71
+    268|     // parque um contêiner a mais em toda instalação, ligado por padrã…
+    269|     const bloco = SERVICOS.get("docker-compose.prod.yml")!.get("wacall…
+    270|     expect(bloco, "o serviço 'wacalls' sumiu do compose de produção").…
+       |                                                                       ^
+    271|     expect(
+    272|       semComentarios(bloco!),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯
+
+ FAIL  |cercas| tests/unit/portas-do-compose.test.ts > a fronteira de rede do que o cliente instala > app e worker não dependem de um serviço que vive em profile
+AssertionError: nenhum serviço em profile — a régua deste caso está vazia: expected [] to include 'wacalls'
+ ❯ tests/unit/portas-do-compose.test.ts:289:84
+    287|       .map(([nome]) => nome);
+    288|
+    289|     expect(emProfile, "nenhum serviço em profile — a régua deste caso …
+       |                                                                                    ^
+    290|       "wacalls",
+    291|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/10]⎯
+
+
+ Test Files  5 failed (5)
+      Tests  10 failed | 25 passed (35)
+   Start at  18:17:21
+   Duration  986ms (transform 150ms, setup 609ms, import 160ms, tests 93ms, environment 1ms)
+

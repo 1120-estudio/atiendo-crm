@@ -226,7 +226,7 @@ O plano tem **95** linhas; o disco tem **92** páginas; e a interseção é meno
 Isso não é defeito do produto — é o que acontece com um plano de 2026-04-28 depois de quatro
 meses de construção. É defeito quando ninguém escreve, e era esse o estado até esta passada.
 
-### Planejado e ainda não construído (42 rotas)
+### Planejado e ainda não construído
 
 Catraca: esta lista **só encolhe**. Rota daqui que passar a existir no disco reprova
 `tests/unit/inventario-de-telas.test.ts` até ser apagada — é assim que a lista não vira
@@ -249,7 +249,6 @@ não.
 - `/app/contacts/merge-queue/[mergeId]` (#29)
 - `/app/orders` (#30)
 - `/app/orders/[id]` (#31)
-- `/app/ai/knowledge` (#35) — só a lista de fontes existe (`/app/ai/knowledge/sources`)
 - `/app/ai/knowledge/sources/faq` (#37)
 - `/app/ai/knowledge/sources/policies` (#38)
 - `/app/ai/knowledge/sources/catalog` (#39)

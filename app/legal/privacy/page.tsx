@@ -47,7 +47,7 @@ export default async function PrivacyPage() {
         <h2 className="text-base font-semibold">{t("1. Quem é o controlador")}</h2>
         <p>
           {t("O controlador dos dados tratados aqui é")} <strong>{operador}</strong>
-          {op.cnpj ? ` (CNPJ ${op.cnpj})` : ""} —{" "}
+          {op.cnpj ? ` (${t("Identificador fiscal")} ${op.cnpj})` : ""} —{" "}
           {t(
             "quem instalou e opera este sistema. Os autores do software não têm acesso a este servidor nem aos dados guardados nele, e não são controladores nem operadores desses dados.",
           )}

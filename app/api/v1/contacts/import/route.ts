@@ -148,7 +148,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   for (let i = 0; i < dataRows.length; i++) {
     const linha = i + 2; // 1-based contando o cabeçalho — bate com o editor de planilhas.
-    const { contato, motivo } = mapLinha(dataRows[i]!, indices, t, doc);
+    const { contato, motivo } = mapLinha(dataRows[i]!, indices, t, doc, perfil.codigo);
     if (motivo !== null) {
       errors.push({ linha, motivo });
       continue;
@@ -212,8 +212,12 @@ export async function POST(req: NextRequest): Promise<Response> {
       .from("contacts")
       .select("email_normalized")
       .eq("organization_id", orgId)
-      .in("email_normalized", emails.map((e) => e.toLowerCase()));
-    for (const r of data ?? []) existentes.add(`email:${(r as { email_normalized: string }).email_normalized}`);
+      .in(
+        "email_normalized",
+        emails.map((e) => e.toLowerCase()),
+      );
+    for (const r of data ?? [])
+      existentes.add(`email:${(r as { email_normalized: string }).email_normalized}`);
   }
 
   // ─── Insert linha a linha com desfecho individual ─────────────────────────
@@ -252,7 +256,16 @@ export async function POST(req: NextRequest): Promise<Response> {
       // LGPD: além do hash (dedupe), grava a versão cifrada — igual ao create
       // unitário, senão o contato importado nasce sem CPF recuperável.
       const enc = await encryptCpfSql(supabase, contato.cpf as string);
-      if (enc) insertRow.cpf_encrypted = enc;
+      if (!enc) {
+        errors.push({
+          linha,
+          motivo: t(
+            "Não foi possível cifrar o documento. Confira a chave e a atualização do banco.",
+          ),
+        });
+        continue;
+      }
+      insertRow.cpf_encrypted = enc;
     }
 
     const { data: criado, error: insErr } = await supabase

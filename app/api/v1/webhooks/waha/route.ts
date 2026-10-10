@@ -21,7 +21,7 @@ import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { conferirContratoWaha, lerRoteamentoWaha } from "@/lib/waha/envelope";
 import { processarEventoWaha, REENTREGA_EM_SEGUNDOS } from "@/lib/waha/desfecho-do-webhook";
-import { authenticateWahaWebhook } from "@/lib/waha/webhook-auth";
+import { authenticateGlobalWahaWebhook, authenticateWahaWebhook } from "@/lib/waha/webhook-auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -30,6 +30,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const requestId = randomUUID();
 
   const rawBody = await req.text();
+  if (
+    !authenticateGlobalWahaWebhook({
+      rawBody,
+      signatureHeader: req.headers.get("x-webhook-hmac"),
+      transportSecretHeader: req.headers.get("x-waha-webhook-secret"),
+    })
+  )
+    return fail("unauthenticated", "webhook_auth_required", 401, { requestId });
   // ─── O contrato do fio, em DOIS momentos ─────────────────────────────────
   //
   // Isto era `JSON.parse(rawBody) as WahaEnvelope`: um cast, que não checa nada
@@ -157,6 +165,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   req.headers.forEach((value, key) => {
     if (key.toLowerCase().startsWith("authorization")) return;
     if (key.toLowerCase() === "cookie") return;
+    if (key.toLowerCase() === "x-waha-webhook-secret") return;
     headersJson[key] = value;
   });
   // Estágio 2: o resto do contrato. Conferido ANTES do INSERT para a linha já
@@ -165,24 +174,28 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // falhar) em que a recusa fica com a mesma palavra de um evento que deu certo.
   const contrato = conferirContratoWaha(roteado);
 
-  const { data: arquivo } = await admin.from("webhook_events_log").insert({
-    organization_id: session.organization_id,
-    channel_session_id: session.id,
-    provider: "waha",
-    webhook_path_token: null,
-    http_method: "POST",
-    headers: headersJson,
-    raw_body: rawBody,
-    payload_parsed: roteado as unknown as Record<string, unknown>,
-    signature_header: sigHeader ?? null,
-    valid_signature: validSignature,
-    event_type: eventType,
-    external_id: externalId,
-    status: contrato.ok ? "received" : "error",
-    // Só os NOMES dos campos: o valor recusado é dado de cliente.
-    error_message: contrato.ok ? null : `${contrato.motivo}: ${contrato.campos.join(", ")}`,
-    attempts: 0,
-  }).select("id").maybeSingle();
+  const { data: arquivo } = await admin
+    .from("webhook_events_log")
+    .insert({
+      organization_id: session.organization_id,
+      channel_session_id: session.id,
+      provider: "waha",
+      webhook_path_token: null,
+      http_method: "POST",
+      headers: headersJson,
+      raw_body: rawBody,
+      payload_parsed: roteado as unknown as Record<string, unknown>,
+      signature_header: sigHeader ?? null,
+      valid_signature: validSignature,
+      event_type: eventType,
+      external_id: externalId,
+      status: contrato.ok ? "received" : "error",
+      // Só os NOMES dos campos: o valor recusado é dado de cliente.
+      error_message: contrato.ok ? null : `${contrato.motivo}: ${contrato.campos.join(", ")}`,
+      attempts: 0,
+    })
+    .select("id")
+    .maybeSingle();
 
   if (!contrato.ok) {
     logger.error("[waha.webhook] payload fora do contrato do canal", {

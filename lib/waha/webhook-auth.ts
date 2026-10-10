@@ -17,7 +17,7 @@
  *  2. `WAHA_WEBHOOK_REQUIRE_SIGNATURE=true` ⇒ exige assinatura válida em tudo.
  *     Fica desligado por padrão porque o WAHA **Core** não assina: medido nesta
  *     VPS (2026.7.2 CORE), os eventos reais chegam sem header algum mesmo com
- *     `WHATSAPP_HOOK_HMAC` configurado no contêiner. Ligar isso por default
+ *     `WHATSAPP_HOOK_HMAC_KEY` configurado no contêiner. Ligar isso por default
  *     derrubaria a ingestão de mensagens de todo mundo — remédio pior que a
  *     doença. Quem roda WAHA Plus (ou um proxy que assina) liga e ganha a
  *     verificação forte.
@@ -28,14 +28,33 @@
  * A defesa que não depende do WAHA saber assinar é de rede: a rota global (sem
  * token) deixa de ser publicada pelo Caddy, porque o WAHA fala com o app pela
  * rede interna do Docker e nunca precisou dela pela internet. Ver Caddyfile.
+ * No Coolify, WAHA_GLOBAL_WEBHOOK_REQUIRE_SECRET protege a rota no app:
+ * assinatura ou credencial de transporte, sem arquivar o header secreto.
  */
 import { env } from "@/lib/env";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { exigirAssinaturaNoWebhookDaInstalacao } from "@/lib/instalacao/comportamento";
 
 import { verifyHmacSha512 } from "./ingest";
 
 /** Curto demais para ser segredo de verdade — é placeholder ou lixo de decrypt. */
 const MIN_SECRET_LEN = 16;
+
+/** O header é credencial de transporte; não é prova de assinatura do corpo. */
+export function authenticateGlobalWahaWebhook(input: {
+  rawBody: string;
+  signatureHeader: string | null;
+  transportSecretHeader: string | null;
+}): boolean {
+  if (env.WAHA_GLOBAL_WEBHOOK_REQUIRE_SECRET !== "true") return true;
+  const secret = (env.WAHA_HMAC_SECRET ?? "").trim();
+  if (secret.length < MIN_SECRET_LEN) return false;
+  if (input.signatureHeader && verifyHmacSha512(input.rawBody, input.signatureHeader, secret))
+    return true;
+  if (!input.transportSecretHeader) return false;
+  const digest = (value: string) => createHash("sha256").update(value).digest();
+  return timingSafeEqual(digest(secret), digest(input.transportSecretHeader));
+}
 
 export type WahaWebhookAuth =
   | { ok: true; signatureVerified: boolean }

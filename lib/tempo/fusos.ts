@@ -38,6 +38,18 @@ export const FUSOS_OFERECIDOS: { codigo: string; rotulo: string }[] = [
   { codigo: "America/La_Paz", rotulo: "La Paz (Bolívia)" },
   { codigo: "America/Lima", rotulo: "Lima (Peru)" },
   { codigo: "America/Bogota", rotulo: "Bogotá (Colômbia)" },
+  { codigo: "America/Costa_Rica", rotulo: "San José (Costa Rica)" },
+  { codigo: "America/Panama", rotulo: "Cidade do Panamá (Panamá)" },
+  { codigo: "America/New_York", rotulo: "Nova York (Estados Unidos)" },
+  { codigo: "America/Chicago", rotulo: "Chicago (Estados Unidos)" },
+  { codigo: "America/Denver", rotulo: "Denver (Estados Unidos)" },
+  { codigo: "America/Los_Angeles", rotulo: "Los Angeles (Estados Unidos)" },
+  { codigo: "America/Phoenix", rotulo: "Phoenix (Estados Unidos)" },
+  { codigo: "America/Anchorage", rotulo: "Anchorage (Estados Unidos)" },
+  { codigo: "Pacific/Honolulu", rotulo: "Honolulu (Estados Unidos)" },
+  { codigo: "America/Cuiaba", rotulo: "Cuiabá (Brasil)" },
+  { codigo: "America/Rio_Branco", rotulo: "Rio Branco (Brasil)" },
+  { codigo: "Europe/Madrid", rotulo: "Madri (Espanha)" },
   { codigo: "America/Mexico_City", rotulo: "Cidade do México (México)" },
   { codigo: "America/Sao_Paulo", rotulo: "São Paulo (Brasil)" },
   { codigo: "America/Manaus", rotulo: "Manaus (Brasil)" },
@@ -97,10 +109,8 @@ export function fusoValido(tz: string): boolean {
  * uma delas esquece de validar — e o valor que o `Intl` recusa só aparece como
  * tela branca, porque `Intl.DateTimeFormat` LANÇA com fuso inválido.
  *
- * Nenhum escritor valida `organizations.timezone` nem `user_metadata.timezone`
- * (`tenantSchema` e o schema do onboarding são `z.string().max(64)` sem
- * `refine`, e a coluna não tem CHECK), então "inutilizável" não é hipótese: é
- * o campo de texto que alguém preencheu com acento.
+ * Os formulários validam com `fusoValido`, mas as colunas podem conter valores
+ * legados e não têm CHECK. A leitura continua protegida contra esses valores.
  *
  * Falha ABERTA, como `fusoDaOrganizacao`: uma hora de diferença é melhor que
  * uma tela que não abre.

@@ -164,9 +164,9 @@ describe("pipelineConfigPatchSchema — reabertura (#1538)", () => {
 
   it("recusa modo desconhecido e campo fora da lista", () => {
     expect(pipelineConfigPatchSchema.safeParse({ reabertura: "NOVO_NEGOCIO" }).success).toBe(false);
-    expect(pipelineConfigPatchSchema.safeParse({ reabertura_campos: ["external_id"] }).success).toBe(
-      false,
-    );
+    expect(
+      pipelineConfigPatchSchema.safeParse({ reabertura_campos: ["external_id"] }).success,
+    ).toBe(false);
   });
 });
 
@@ -181,30 +181,78 @@ describe("pipelineConfigPatchSchema — motivos de perda com categoria (#1537)",
       lost_reasons: ["Adiou", { label: "Não tinha o perfil", categoria: "Mérito" }],
     });
     expect(r.success).toBe(true);
-    if (r.success) expect(r.data.lost_reasons?.[1]).toEqual({ label: "Não tinha o perfil", categoria: "Mérito" });
+    if (r.success)
+      expect(r.data.lost_reasons?.[1]).toEqual({
+        label: "Não tinha o perfil",
+        categoria: "Mérito",
+      });
   });
 
   it("recusa rótulo vazio/longo e categoria fora do teto", () => {
-    expect(pipelineConfigPatchSchema.safeParse({ lost_reasons: [{ label: "" }] }).success).toBe(false);
+    expect(pipelineConfigPatchSchema.safeParse({ lost_reasons: [{ label: "" }] }).success).toBe(
+      false,
+    );
     expect(
       pipelineConfigPatchSchema.safeParse({ lost_reasons: [{ label: "x".repeat(81) }] }).success,
     ).toBe(false);
     expect(
-      pipelineConfigPatchSchema.safeParse({ lost_reasons: [{ label: "ok", categoria: "" }] }).success,
+      pipelineConfigPatchSchema.safeParse({ lost_reasons: [{ label: "ok", categoria: "" }] })
+        .success,
     ).toBe(false);
     expect(
-      pipelineConfigPatchSchema.safeParse({ lost_reasons: [{ label: "ok", categoria: "x".repeat(41) }] })
-        .success,
+      pipelineConfigPatchSchema.safeParse({
+        lost_reasons: [{ label: "ok", categoria: "x".repeat(41) }],
+      }).success,
     ).toBe(false);
   });
 
   it("recusa objeto sem label e o teto de 50 motivos continua valendo", () => {
-    expect(pipelineConfigPatchSchema.safeParse({ lost_reasons: [{ categoria: "Cliente" }] }).success).toBe(
-      false,
-    );
     expect(
-      pipelineConfigPatchSchema.safeParse({ lost_reasons: Array.from({ length: 51 }, (_, i) => `m${i}`) })
-        .success,
+      pipelineConfigPatchSchema.safeParse({ lost_reasons: [{ categoria: "Cliente" }] }).success,
+    ).toBe(false);
+    expect(
+      pipelineConfigPatchSchema.safeParse({
+        lost_reasons: Array.from({ length: 51 }, (_, i) => `m${i}`),
+      }).success,
     ).toBe(false);
   });
+});
+
+describe("zonas horárias de perfil e empresa", () => {
+  it.each([
+    "America/Bogota",
+    "America/Costa_Rica",
+    "America/Panama",
+    "America/New_York",
+    "UTC",
+    "Europe/London",
+  ])("aceita fuso IANA real, inclusive fora da lista: %s", (timezone) => {
+    expect(profileSchema.safeParse({ locale: "es", timezone }).success).toBe(true);
+    expect(
+      tenantSchema.safeParse({
+        display_name: "1120",
+        legal_name: "1120",
+        timezone,
+        locale: "es",
+        currency: "USD",
+        media_retention_days: 90,
+      }).success,
+    ).toBe(true);
+  });
+  it.each(["America/Bogotá", "Bogota", "fuso-inexistente"])(
+    "recusa %s nas duas portas",
+    (timezone) => {
+      expect(profileSchema.safeParse({ locale: "es", timezone }).success).toBe(false);
+      expect(
+        tenantSchema.safeParse({
+          display_name: "1120",
+          legal_name: "1120",
+          timezone,
+          locale: "es",
+          currency: "COP",
+          media_retention_days: 90,
+        }).success,
+      ).toBe(false);
+    },
+  );
 });

@@ -15,9 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { normalizarTags } from "@/lib/contacts/tag-normalizada";
-import { contactCreateSchema, type ContactCreate } from "@/lib/schemas/contacts";
+import { contactCreateSchemaDoPais, type ContactCreate } from "@/lib/schemas/contacts";
 import type { Contact } from "@/lib/types/contacts";
 import { useCreateContact } from "@/hooks/contacts/useCreateContact";
+
+import { perfilDoPais, paisesOferecidos } from "@/lib/legal/perfil-do-pais";
+import { normalizaTelefoneDoPais, regiaoDoPais } from "@/lib/regional/catalogo";
+import { usePaisDaOrganizacao } from "@/lib/regional/RegiaoProvider";
 
 interface FormShape {
   name?: string;
@@ -49,6 +53,9 @@ interface Props {
 export function NewContactDialog({ open, onOpenChange, nomeInicial, onCriado }: Props) {
   const t = useT();
   const create = useCreateContact();
+  const pais = usePaisDaOrganizacao();
+  const perfil = perfilDoPais(pais);
+  const [paisTelefone, setPaisTelefone] = useState(pais ?? "BR");
   const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<FormShape>({
@@ -64,14 +71,23 @@ export function NewContactDialog({ open, onOpenChange, nomeInicial, onCriado }: 
     const payload: Record<string, unknown> = { source: "manual" };
     if (values.name?.trim()) payload.name = values.name.trim();
     if (values.email?.trim()) payload.email = values.email.trim();
-    if (values.phone_number?.trim()) payload.phone_number = values.phone_number.trim();
+    if (values.phone_number?.trim()) {
+      const telefone = normalizaTelefoneDoPais(values.phone_number, paisTelefone);
+      if (!telefone) {
+        setServerError(
+          t("Telefone inválido: informe o prefixo internacional ou selecione o país."),
+        );
+        return;
+      }
+      payload.phone_number = telefone;
+    }
     if (values.cpf?.trim()) payload.cpf = values.cpf.trim();
     if (tags.length) payload.tags = tags;
 
-    const parsed = contactCreateSchema.safeParse(payload);
+    const parsed = contactCreateSchemaDoPais(perfil).safeParse(payload);
     if (!parsed.success) {
       const first = parsed.error.issues[0];
-      setServerError(first?.message ?? t("Dados inválidos"));
+      setServerError(t(first?.message ?? "Dados inválidos"));
       return;
     }
 
@@ -111,23 +127,35 @@ export function NewContactDialog({ open, onOpenChange, nomeInicial, onCriado }: 
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone_number">{t("Telefone (E.164)")}</Label>
+            <select
+              aria-label={t("País do telefone")}
+              value={paisTelefone}
+              onChange={(e) => setPaisTelefone(e.target.value)}
+              className="w-full rounded-md border bg-background p-2"
+            >
+              {paisesOferecidos().map((p) => (
+                <option key={p.codigo} value={p.codigo}>
+                  {p.codigo} · +{regiaoDoPais(p.codigo).prefixo}
+                </option>
+              ))}
+            </select>
             <Input
               id="phone_number"
-              placeholder="+5511999998888"
+              placeholder={regiaoDoPais(paisTelefone).exemploTelefone}
               {...form.register("phone_number")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cpf">{t("CPF (opcional)")}</Label>
-            <Input id="cpf" placeholder="00000000000" {...form.register("cpf")} />
+            <Label htmlFor="cpf">
+              {perfil.documento.rotulo} · {t("opcional")}
+            </Label>
+            <Input id="cpf" placeholder={perfil.documento.exemplo} {...form.register("cpf")} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="tagsRaw">{t("Tags (separadas por vírgula)")}</Label>
             <Input id="tagsRaw" placeholder="vip, recompra" {...form.register("tagsRaw")} />
           </div>
-          {serverError && (
-            <p className="text-sm text-error-fg">{serverError}</p>
-          )}
+          {serverError && <p className="text-sm text-error-fg">{serverError}</p>}
           <DialogFooter>
             <Button
               type="button"

@@ -125,7 +125,28 @@ services:
     networks:
       - internal
 
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data           # certificados Let's Encrypt (persistir!)
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    logging: *default-logging
+    networks: [internal]
+
 volumes:
+  caddy-data:
+  caddy-config:
   waha-data:
   waha-media:
 

@@ -1,0 +1,4 @@
+
+> atiendo-crm@0.1.0 typecheck /workspace/scratch/6dc3b2c014e3/atiendo-regional
+> tsc --noEmit -p tsconfig.typecheck.json
+

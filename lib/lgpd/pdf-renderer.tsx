@@ -1,3 +1,4 @@
+import { formatValorDoNegocio } from "@/lib/money";
 /**
  * LGPD export PDF renderer (PT-BR).
  *
@@ -105,9 +106,7 @@ function fmtDate(s: string | null | undefined): string {
 }
 
 function fmtMoney(cents: number | null | undefined, currency: string | null | undefined): string {
-  if (cents == null) return "—";
-  const v = cents / 100;
-  return `${currency ?? "BRL"} ${v.toFixed(2)}`;
+  return cents == null ? "—" : formatValorDoNegocio(cents, currency ?? "BRL");
 }
 
 /**
@@ -281,8 +280,7 @@ export function LgpdExportPdf({ data, unsignedWarning }: Props): React.ReactElem
                 Conversa #{c.id.slice(0, 8)} · {c.channel} · {c.status}
               </Text>
               <Text style={styles.small}>
-                Última mensagem: {fmtDate(c.last_message_at)} · Criada em{" "}
-                {fmtDate(c.created_at)}
+                Última mensagem: {fmtDate(c.last_message_at)} · Criada em {fmtDate(c.created_at)}
               </Text>
             </View>
           ))}
@@ -310,8 +308,7 @@ export function LgpdExportPdf({ data, unsignedWarning }: Props): React.ReactElem
             {data.leads.map((l) => (
               <View key={l.id} style={styles.itemBlock}>
                 <Text>
-                  {l.title ?? "(sem título)"} · {l.status} ·{" "}
-                  {fmtMoney(l.value_cents, l.currency)}
+                  {l.title ?? "(sem título)"} · {l.status} · {fmtMoney(l.value_cents, l.currency)}
                 </Text>
                 <Text style={styles.small}>Criado em {fmtDate(l.created_at)}</Text>
               </View>
@@ -326,8 +323,8 @@ export function LgpdExportPdf({ data, unsignedWarning }: Props): React.ReactElem
             {data.orders.map((o) => (
               <View key={o.id} style={styles.itemBlock}>
                 <Text>
-                  {o.external_provider ?? "—"} #{o.external_id ?? o.id.slice(0, 8)} ·{" "}
-                  {o.status} · {fmtMoney(o.total_cents, o.currency)}
+                  {o.external_provider ?? "—"} #{o.external_id ?? o.id.slice(0, 8)} · {o.status} ·{" "}
+                  {fmtMoney(o.total_cents, o.currency)}
                 </Text>
                 <Text style={styles.small}>Pedido em {fmtDate(o.ordered_at)}</Text>
               </View>
@@ -353,7 +350,9 @@ export function LgpdExportPdf({ data, unsignedWarning }: Props): React.ReactElem
                 </Text>
                 {c.description ? <Text style={styles.small}>{c.description}</Text> : null}
                 {c.notes ? <Text style={styles.small}>Anotação: {c.notes}</Text> : null}
-                {c.meeting_url ? <Text style={styles.small}>Link da reunião: {c.meeting_url}</Text> : null}
+                {c.meeting_url ? (
+                  <Text style={styles.small}>Link da reunião: {c.meeting_url}</Text>
+                ) : null}
                 {c.cancellation_reason ? (
                   <Text style={styles.small}>Cancelado: {c.cancellation_reason}</Text>
                 ) : null}
@@ -367,17 +366,23 @@ export function LgpdExportPdf({ data, unsignedWarning }: Props): React.ReactElem
         {data.reply_drafts?.length ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Sugestões e respostas revisadas</Text>
-            {data.reply_drafts.map(reply=><View key={reply.id} style={styles.itemBlock}>
-              <Text>Estado: {reply.status}</Text>
-              {reply.original_body?<Text>Sugestão: {reply.original_body}</Text>:null}
-              {reply.edited_body&&reply.edited_body!==reply.original_body?<Text>Edição: {reply.edited_body}</Text>:null}
-              {reply.approved_body?<Text>Texto aprovado: {reply.approved_body}</Text>:null}
-              {reply.feedback?<Text>Revisão: {JSON.stringify(reply.feedback)}</Text>:null}
-              {Array.isArray(reply.proposals)&&reply.proposals.length?<Text>Propostas: {JSON.stringify(reply.proposals)}</Text>:null}
-              <Text style={styles.small}>Criado em {fmtDate(reply.created_at)}</Text>
-            </View>)}
+            {data.reply_drafts.map((reply) => (
+              <View key={reply.id} style={styles.itemBlock}>
+                <Text>Estado: {reply.status}</Text>
+                {reply.original_body ? <Text>Sugestão: {reply.original_body}</Text> : null}
+                {reply.edited_body && reply.edited_body !== reply.original_body ? (
+                  <Text>Edição: {reply.edited_body}</Text>
+                ) : null}
+                {reply.approved_body ? <Text>Texto aprovado: {reply.approved_body}</Text> : null}
+                {reply.feedback ? <Text>Revisão: {JSON.stringify(reply.feedback)}</Text> : null}
+                {Array.isArray(reply.proposals) && reply.proposals.length ? (
+                  <Text>Propostas: {JSON.stringify(reply.proposals)}</Text>
+                ) : null}
+                <Text style={styles.small}>Criado em {fmtDate(reply.created_at)}</Text>
+              </View>
+            ))}
           </View>
-        ):null}
+        ) : null}
 
         {data.meeting_deliveries?.length ? (
           <View style={styles.section}>
@@ -390,7 +395,8 @@ export function LgpdExportPdf({ data, unsignedWarning }: Props): React.ReactElem
                   Compromisso: {delivery.appointment_id ?? "referência indisponível"}
                 </Text>
                 <Text style={styles.small}>
-                  Criado em {fmtDate(delivery.created_at)} · Programado para {fmtDate(delivery.run_after)}
+                  Criado em {fmtDate(delivery.created_at)} · Programado para{" "}
+                  {fmtDate(delivery.run_after)}
                 </Text>
               </View>
             ))}
@@ -402,7 +408,9 @@ export function LgpdExportPdf({ data, unsignedWarning }: Props): React.ReactElem
             <Text style={styles.sectionTitle}>Avisos sobre compromissos</Text>
             {data.appointment_notices.map((notice) => (
               <View key={notice.id} style={styles.itemBlock}>
-                <Text>{notice.title} · {noticeStatus[notice.status] ?? notice.status}</Text>
+                <Text>
+                  {notice.title} · {noticeStatus[notice.status] ?? notice.status}
+                </Text>
                 {notice.body ? <Text>{notice.body}</Text> : null}
                 <Text style={styles.small}>Registro: {notice.id}</Text>
                 <Text style={styles.small}>
@@ -460,9 +468,8 @@ export function LgpdExportPdf({ data, unsignedWarning }: Props): React.ReactElem
         {unsignedWarning ? (
           <View style={styles.warningBanner}>
             <Text>
-              ASSINATURA DIGITAL PAdES PENDENTE — chave LGPD_SIGNING_KEY não
-              configurada. A integridade do documento é garantida por hash SHA-256
-              registrado em log auditável.
+              ASSINATURA DIGITAL PAdES PENDENTE — chave LGPD_SIGNING_KEY não configurada. A
+              integridade do documento é garantida por hash SHA-256 registrado em log auditável.
             </Text>
           </View>
         ) : null}
@@ -471,8 +478,8 @@ export function LgpdExportPdf({ data, unsignedWarning }: Props): React.ReactElem
         {/* CONTROLADOR, nunca marca — ver o cabeçalho deste arquivo. */}
         <View style={styles.footer} fixed>
           <Text>
-            Controlador: {data.organization_legal_name || "—"} · Relatório de Acesso aos
-            Dados{data.lei_citada ? ` — ${data.lei_citada}` : ""} · Encarregado (DPO):{" "}
+            Controlador: {data.organization_legal_name || "—"} · Relatório de Acesso aos Dados
+            {data.lei_citada ? ` — ${data.lei_citada}` : ""} · Encarregado (DPO):{" "}
             {encarregado(data)} · Validade do link de download conforme e-mail recebido
           </Text>
         </View>

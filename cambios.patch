@@ -1,0 +1,1851 @@
+diff --git a/.changes/regiones-1120-espanhol.md b/.changes/regiones-1120-espanhol.md
+new file mode 100644
+index 0000000..ba3b0af
+--- /dev/null
++++ b/.changes/regiones-1120-espanhol.md
+@@ -0,0 +1,6 @@
++---
++impacto: capacidade_nova
++secao: adicionado
++titulo: Documentos, moedas e fusos para Colômbia, Costa Rica, Panamá e Estados Unidos
++---
++A empresa pode escolher os quatro países, COP/CRC/USD e seus fusos. O cadastro e a importação de contatos reconhecem documentos pessoais e telefones locais; o documento fiscal da empresa usa o nome regional. Os e-mails de confirmação e recuperação seguem APP_LOCALE, e mensagens de configuração dos agentes passam pela tradução. País operacional não afirma revisão jurídica nem inclui feriados locais. Dados e escolhas existentes permanecem guardados; a região precisa ser escolhida em Configurações › Empresa.
+diff --git a/app/api/v1/contacts/_handler.ts b/app/api/v1/contacts/_handler.ts
+index 2b2bcb6..5dd41c9 100644
+--- a/app/api/v1/contacts/_handler.ts
++++ b/app/api/v1/contacts/_handler.ts
+@@ -164,8 +164,8 @@ export async function listContactsHandler(
+         if (d && d !== digits) orParts.push(`phone_number.ilike.%${d}%`);
+       }
+     }
+-    if (digits.length === 11) {
+-      orParts.push(`cpf_hash.eq.${hashCpf(digits)}`);
++    if (/^[A-Z0-9.\s-]+$/i.test(q.search) && /\d/.test(q.search)) {
++      orParts.push(`cpf_hash.eq.${hashCpf(q.search)}`);
+     }
+     query = query.or(orParts.join(","));
+   }
+diff --git a/app/api/v1/contacts/import/route.ts b/app/api/v1/contacts/import/route.ts
+index 674d947..dacc980 100644
+--- a/app/api/v1/contacts/import/route.ts
++++ b/app/api/v1/contacts/import/route.ts
+@@ -148,7 +148,7 @@ export async function POST(req: NextRequest): Promise<Response> {
+ 
+   for (let i = 0; i < dataRows.length; i++) {
+     const linha = i + 2; // 1-based contando o cabeçalho — bate com o editor de planilhas.
+-    const { contato, motivo } = mapLinha(dataRows[i]!, indices, t, doc);
++    const { contato, motivo } = mapLinha(dataRows[i]!, indices, t, doc, perfil.codigo);
+     if (motivo !== null) {
+       errors.push({ linha, motivo });
+       continue;
+diff --git a/app/app/ai/agents/[id]/_components/AgentForm.tsx b/app/app/ai/agents/[id]/_components/AgentForm.tsx
+index 81cc118..11a51dd 100644
+--- a/app/app/ai/agents/[id]/_components/AgentForm.tsx
++++ b/app/app/ai/agents/[id]/_components/AgentForm.tsx
+@@ -536,7 +536,7 @@ export function AgentForm(props: Props) {
+   async function handleSave() {
+     if (!isValid) {
+       const first = Object.values(validation)[0];
+-      toast.error(first ?? t("Formulário inválido."));
++      toast.error((first ? t(first) : null) ?? t("Formulário inválido."));
+       return;
+     }
+     setSaving(true);
+@@ -558,7 +558,7 @@ export function AgentForm(props: Props) {
+           cadastro.data,
+         );
+         if (!res.ok) {
+-          toast.error(res.message ?? `${t("Erro")}: ${res.error}`);
++          toast.error((res.message ? t(res.message) : null) ?? `${t("Erro")}: ${res.error}`);
+           return;
+         }
+         toast.success(`${t("Rascunho")} v${res.data!.version_number} ${t("salvo.")}`);
+@@ -577,7 +577,7 @@ export function AgentForm(props: Props) {
+         }
+         const res = await createMcpAgentAction(validated.data);
+         if (!res.ok) {
+-          toast.error(res.message ?? `${t("Erro")}: ${res.error}`);
++          toast.error((res.message ? t(res.message) : null) ?? `${t("Erro")}: ${res.error}`);
+           return;
+         }
+         toast.success(t("Agent criado."));
+diff --git a/app/app/ai/agents/[id]/_components/ProposalsPanel.tsx b/app/app/ai/agents/[id]/_components/ProposalsPanel.tsx
+index 35a6b42..3f89161 100644
+--- a/app/app/ai/agents/[id]/_components/ProposalsPanel.tsx
++++ b/app/app/ai/agents/[id]/_components/ProposalsPanel.tsx
+@@ -47,7 +47,7 @@ export function ProposalsPanel({
+           : t("Proposta aplicada como versão nova do agente."),
+       );
+     } catch (err) {
+-      toast.error(err instanceof ApiError ? err.message : t("Não foi possível aplicar a proposta."));
++      toast.error(err instanceof ApiError ? t(err.message) : t("Não foi possível aplicar a proposta."));
+     }
+   };
+ 
+diff --git a/app/app/ai/agents/[id]/_components/VersionHistory.tsx b/app/app/ai/agents/[id]/_components/VersionHistory.tsx
+index f3ccda4..dc4394a 100644
+--- a/app/app/ai/agents/[id]/_components/VersionHistory.tsx
++++ b/app/app/ai/agents/[id]/_components/VersionHistory.tsx
+@@ -120,7 +120,7 @@ export function VersionHistory({ agentId, versions, readOnly }: Props) {
+     try {
+       const res = await revertToVersionAction(agentId, revertTarget.id);
+       if (!res.ok) {
+-        toast.error(res.message ?? `${t("Erro")}: ${res.error}`);
++        toast.error((res.message ? t(res.message) : null) ?? `${t("Erro")}: ${res.error}`);
+         return;
+       }
+       toast.success(
+diff --git a/app/app/ai/agents/_components/AgentRowMenu.tsx b/app/app/ai/agents/_components/AgentRowMenu.tsx
+index 5734a88..fdeb571 100644
+--- a/app/app/ai/agents/_components/AgentRowMenu.tsx
++++ b/app/app/ai/agents/_components/AgentRowMenu.tsx
+@@ -61,7 +61,7 @@ export function AgentRowMenu({ agent }: Props) {
+           const message =
+             res.error === "cannot_archive_default"
+               ? t("O agent padrão da organização não pode ser arquivado.")
+-              : res.message ?? `${t("Falha")}: ${res.error ?? "unknown"}`;
++              : (res.message ? t(res.message) : null) ?? `${t("Falha")}: ${res.error ?? "unknown"}`;
+           toast.error(message);
+         }
+       } catch {
+diff --git a/app/app/ai/agents/_components/RenameAgentDialog.tsx b/app/app/ai/agents/_components/RenameAgentDialog.tsx
+index a134c21..fe5397d 100644
+--- a/app/app/ai/agents/_components/RenameAgentDialog.tsx
++++ b/app/app/ai/agents/_components/RenameAgentDialog.tsx
+@@ -43,7 +43,7 @@ export function RenameAgentDialog({ agent, open, onOpenChange }: Props) {
+         onOpenChange(false);
+         router.refresh();
+       } else {
+-        toast.error(res.message ?? `${t("Falha")}: ${res.error}`);
++        toast.error((res.message ? t(res.message) : null) ?? `${t("Falha")}: ${res.error}`);
+       }
+     });
+   };
+diff --git a/app/app/layout.tsx b/app/app/layout.tsx
+index 0d8382b..bcb30cd 100644
+--- a/app/app/layout.tsx
++++ b/app/app/layout.tsx
+@@ -25,6 +25,8 @@ import { VoiceCallProvider } from "@/components/voice/VoiceCallContext";
+ import { ProvedorDaOcupacaoDoRodape } from "@/lib/ui/rodape-ocupado";
+ import { acessoFoiRevogado } from "@/lib/auth/vinculo-revogado";
+ 
++import { RegiaoProvider } from "@/lib/regional/RegiaoProvider";
++
+ export default async function AppLayout({ children }: { children: React.ReactNode }) {
+   const user = await loadAuthUser();
+   if (!user) redirect("/login");
+@@ -55,6 +57,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
+    * e não aqui: a precedência é regra do produto, não detalhe deste layout.
+    */
+   let cssDaOrganizacao: string | null = null;
++  let paisDaOrganizacao: string | null = null;
+ 
+   // EPIC-02: gate /app/* on completed onboarding.
+   // EPIC-11: gate /app/* on org not being suspended (S-11.08).
+@@ -91,7 +94,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
+     const [orgRes, conexoes, isEnrolled, mfaRequired, modulos] = await Promise.all([
+       admin
+         .from("organizations")
+-        .select("onboarded_at, status, settings")
++        .select("onboarded_at, status, settings, country")
+         .eq("id", activeOrg.orgId)
+         .maybeSingle(),
+       listarConexoesCaidas(admin, activeOrg.orgId),
+@@ -107,6 +110,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
+     ]);
+ 
+     const orgRow = orgRes.data;
++    paisDaOrganizacao = orgRow?.country ?? null;
+     conexoesCaidas = conexoes;
+     enrolled = isEnrolled;
+     needsMfaGate = mfaRequired;
+@@ -217,6 +221,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
+     // pergunta quem está logado. Ver `lib/i18n/IdiomaProvider`: foi o
+     // acoplamento com a autenticação que derrubou 32 casos.
+     <IdiomaProvider locale={user.idioma}>
++    <RegiaoProvider pais={paisDaOrganizacao}>
+     <AuthProvider user={user} activeOrg={activeOrg}>
+       {/*
+         A COR DA ETIQUETA, uma leitura por tela.
+@@ -262,6 +267,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
+       </div>
+       </ProvedorDeCoresDasEtiquetas>
+     </AuthProvider>
++    </RegiaoProvider>
+     </IdiomaProvider>
+   );
+ }
+diff --git a/app/app/settings/profile/_form.tsx b/app/app/settings/profile/_form.tsx
+index 5721084..0644434 100644
+--- a/app/app/settings/profile/_form.tsx
++++ b/app/app/settings/profile/_form.tsx
+@@ -14,24 +14,10 @@ import {
+   SelectValue,
+ } from "@/components/ui/select";
+ import { updateProfile } from "@/app/actions/settings/updateProfile";
++import { fusosComAtual } from "@/lib/regional/catalogo";
+ import { useT } from "@/hooks/i18n/useT";
+ import { IDIOMAS_VISIVEIS } from "@/lib/i18n/registro";
+-import {
+-  profileSchema,
+-  SEM_PREFERENCIA_DE_IDIOMA,
+-  type Locale,
+-} from "@/lib/schemas/settings";
+-
+-const TIMEZONES = [
+-  "Africa/Luanda",
+-  "America/Sao_Paulo",
+-  "America/Manaus",
+-  "America/Belem",
+-  "America/Recife",
+-  "America/Fortaleza",
+-  "Europe/Lisbon",
+-  "UTC",
+-];
++import { profileSchema, SEM_PREFERENCIA_DE_IDIOMA, type Locale } from "@/lib/schemas/settings";
+ 
+ interface Props {
+   email: string;
+@@ -70,7 +56,7 @@ export function ProfileForm({
+     startTransition(async () => {
+       const r = await updateProfile(parsed.data);
+       if (r.ok) toast.success(t("Perfil atualizado."));
+-      else toast.error(`${t("Erro")}: ${r.error}`);
++      else toast.error(`${t("Erro")}: ${t(r.error)}`);
+     });
+   }
+ 
+@@ -80,9 +66,7 @@ export function ProfileForm({
+         <div className="space-y-2">
+           <Label htmlFor="email">{t("Email")}</Label>
+           <Input id="email" value={email} disabled />
+-          <p className="text-xs text-muted-foreground">
+-            {t("Trocar email — em breve.")}
+-          </p>
++          <p className="text-xs text-muted-foreground">{t("Trocar email — em breve.")}</p>
+         </div>
+         <div className="space-y-2">
+           <Label htmlFor="full_name">{t("Nome completo")}</Label>
+@@ -123,7 +107,7 @@ export function ProfileForm({
+                 <SelectValue />
+               </SelectTrigger>
+               <SelectContent>
+-                {TIMEZONES.map((tz) => (
++                {fusosComAtual(timezone).map((tz) => (
+                   <SelectItem key={tz} value={tz}>
+                     {tz}
+                   </SelectItem>
+diff --git a/app/app/settings/tenant/_form.tsx b/app/app/settings/tenant/_form.tsx
+index 2111a5f..174f3e0 100644
+--- a/app/app/settings/tenant/_form.tsx
++++ b/app/app/settings/tenant/_form.tsx
+@@ -14,7 +14,9 @@ import {
+   SelectValue,
+ } from "@/components/ui/select";
+ import { updateTenant } from "@/app/actions/settings/updateTenant";
++import { regiaoDoPais, fusosComAtual } from "@/lib/regional/catalogo";
+ import { useT } from "@/hooks/i18n/useT";
++import { useIdioma } from "@/lib/i18n/IdiomaProvider";
+ import { IDIOMAS_VISIVEIS } from "@/lib/i18n/registro";
+ import { MOEDAS_SERVIDAS, simboloDaMoeda, type MoedaServida } from "@/lib/money";
+ import { paisesOferecidos } from "@/lib/legal/perfil-do-pais";
+@@ -24,19 +26,10 @@ interface Props {
+   initial: TenantInput;
+ }
+ 
+-const TIMEZONES = [
+-  "Africa/Luanda",
+-  "America/Sao_Paulo",
+-  "America/Manaus",
+-  "America/Belem",
+-  "America/Recife",
+-  "America/Fortaleza",
+-  "Europe/Lisbon",
+-  "UTC",
+-];
+-
+ export function TenantForm({ initial }: Props) {
+   const t = useT();
++  const idioma = useIdioma();
++  const nomesDosPaises = new Intl.DisplayNames([idioma], { type: "region" });
+   const [form, setForm] = useState<TenantInput>(initial);
+   const [isPending, startTransition] = useTransition();
+ 
+@@ -48,13 +41,13 @@ export function TenantForm({ initial }: Props) {
+     e.preventDefault();
+     const parsed = tenantSchema.safeParse(form);
+     if (!parsed.success) {
+-      toast.error(t("Dados inválidos."));
++      toast.error(t(parsed.error.issues[0]?.message ?? "Dados inválidos."));
+       return;
+     }
+     startTransition(async () => {
+       const r = await updateTenant(parsed.data);
+       if (r.ok) toast.success(t("Organização atualizada."));
+-      else toast.error(`${t("Erro")}: ${r.error}`);
++      else toast.error(`${t("Erro")}: ${t(r.error)}`);
+     });
+   }
+ 
+@@ -81,9 +74,11 @@ export function TenantForm({ initial }: Props) {
+             />
+           </div>
+           <div className="space-y-2">
+-            <Label htmlFor="cnpj">{t("CNPJ")}</Label>
++            <Label htmlFor="cnpj">{regiaoDoPais(form.country).fiscal}</Label>
+             <Input
+               id="cnpj"
++              placeholder={regiaoDoPais(form.country).exemploFiscal}
++              maxLength={32}
+               value={form.cnpj ?? ""}
+               onChange={(e) => set("cnpj", e.target.value || null)}
+             />
+@@ -104,7 +99,7 @@ export function TenantForm({ initial }: Props) {
+                 <SelectValue />
+               </SelectTrigger>
+               <SelectContent>
+-                {TIMEZONES.map((tz) => (
++                {fusosComAtual(form.timezone).map((tz) => (
+                   <SelectItem key={tz} value={tz}>
+                     {tz}
+                   </SelectItem>
+@@ -114,10 +109,7 @@ export function TenantForm({ initial }: Props) {
+           </div>
+           <div className="space-y-2">
+             <Label htmlFor="locale">{t("Idioma")}</Label>
+-            <Select
+-              value={form.locale}
+-              onValueChange={(v) => set("locale", v as Locale)}
+-            >
++            <Select value={form.locale} onValueChange={(v) => set("locale", v as Locale)}>
+               <SelectTrigger id="locale">
+                 <SelectValue />
+               </SelectTrigger>
+@@ -132,10 +124,7 @@ export function TenantForm({ initial }: Props) {
+           </div>
+           <div className="space-y-2">
+             <Label htmlFor="currency">{t("Moeda")}</Label>
+-            <Select
+-              value={form.currency}
+-              onValueChange={(v) => set("currency", v as MoedaServida)}
+-            >
++            <Select value={form.currency} onValueChange={(v) => set("currency", v as MoedaServida)}>
+               <SelectTrigger id="currency">
+                 <SelectValue />
+               </SelectTrigger>
+@@ -148,7 +137,9 @@ export function TenantForm({ initial }: Props) {
+               </SelectContent>
+             </Select>
+             <p className="text-xs text-muted-foreground">
+-              {t("Vale para todo preço do catálogo. Produto já cadastrado guarda a moeda com que nasceu.")}
++              {t(
++                "Vale para todo preço do catálogo. Produto já cadastrado guarda a moeda com que nasceu.",
++              )}
+             </p>
+           </div>
+           <div className="space-y-2">
+@@ -160,14 +151,14 @@ export function TenantForm({ initial }: Props) {
+               <SelectContent>
+                 {paisesOferecidos().map((pais) => (
+                   <SelectItem key={pais.codigo} value={pais.codigo}>
+-                    {pais.nome}
++                    {nomesDosPaises.of(pais.codigo) ?? pais.nome}
+                   </SelectItem>
+                 ))}
+               </SelectContent>
+             </Select>
+             <p className="text-xs text-muted-foreground">
+               {t(
+-                "De onde saem o documento do contato, a lei citada no documento de acesso e o prazo em dias úteis. Só aparecem países com a lei revisada — a lista é curta de propósito.",
++                "Define os documentos e o prefixo telefônico padrão. Os novos países não incluem revisão jurídica nem feriados locais.",
+               )}
+             </p>
+           </div>
+diff --git a/app/email-templates/[modelo]/route.test.ts b/app/email-templates/[modelo]/route.test.ts
+index 4993dc5..a8391db 100644
+--- a/app/email-templates/[modelo]/route.test.ts
++++ b/app/email-templates/[modelo]/route.test.ts
+@@ -1,6 +1,10 @@
+ import { beforeEach, describe, expect, it, vi } from "vitest";
+ import { NextRequest } from "next/server";
+ 
++import { idiomaDaInstalacao } from "@/lib/i18n/idiomaDaInstalacao";
++
++vi.mock("@/lib/i18n/idiomaDaInstalacao", () => ({ idiomaDaInstalacao: vi.fn(() => "pt-BR") }));
++
+ import { marcaDaSaida } from "@/lib/branding/saida";
+ 
+ /**
+@@ -10,9 +14,7 @@ import { marcaDaSaida } from "@/lib/branding/saida";
+  */
+ 
+ vi.mock("@/lib/branding/saida", async () => {
+-  const real = await vi.importActual<typeof import("@/lib/branding/saida")>(
+-    "@/lib/branding/saida",
+-  );
++  const real = await vi.importActual<typeof import("@/lib/branding/saida")>("@/lib/branding/saida");
+   return { ...real, marcaDaSaida: vi.fn() };
+ });
+ 
+@@ -34,6 +36,7 @@ const chamar = (modelo: string) =>
+ describe("GET /email-templates/[modelo]", () => {
+   beforeEach(() => {
+     vi.clearAllMocks();
++    vi.mocked(idiomaDaInstalacao).mockReturnValue("pt-BR");
+     vi.mocked(marcaDaSaida).mockResolvedValue(MARCA);
+   });
+ 
+@@ -71,3 +74,12 @@ describe("GET /email-templates/[modelo]", () => {
+     expect(res.headers.get("x-robots-tag")).toContain("noindex");
+   });
+ });
++
++it("serve recuperação no idioma declarado pela instalação, sem cookie de usuário", async () => {
++  vi.mocked(idiomaDaInstalacao).mockReturnValue("es");
++  vi.mocked(marcaDaSaida).mockResolvedValue(MARCA);
++  const corpo = await (await chamar("recovery")).text();
++  expect(corpo).toContain('<html lang="es">');
++  expect(corpo).toContain("Restablecer tu contraseña");
++  expect(corpo).toContain("{{ .TokenHash }}");
++});
+diff --git a/app/email-templates/[modelo]/route.ts b/app/email-templates/[modelo]/route.ts
+index 97a3a52..d869843 100644
+--- a/app/email-templates/[modelo]/route.ts
++++ b/app/email-templates/[modelo]/route.ts
+@@ -1,5 +1,7 @@
+ import { NextResponse, type NextRequest } from "next/server";
+ 
++import { idiomaDaInstalacao } from "@/lib/i18n/idiomaDaInstalacao";
++
+ import { marcaDaSaida } from "@/lib/branding/saida";
+ import {
+   MODELOS_DE_ACESSO,
+@@ -68,7 +70,7 @@ export async function GET(
+   // do produto, que é uma instalação funcionando.
+   const marca = await marcaDaSaida(null);
+ 
+-  return new NextResponse(montarTemplateDeAcesso(modelo as ModeloDeAcesso, marca), {
++  return new NextResponse(montarTemplateDeAcesso(modelo as ModeloDeAcesso, marca, idiomaDaInstalacao()), {
+     status: 200,
+     headers: {
+       "content-type": "text/html; charset=utf-8",
+diff --git a/app/legal/privacy/page.tsx b/app/legal/privacy/page.tsx
+index 065e733..dfe36ab 100644
+--- a/app/legal/privacy/page.tsx
++++ b/app/legal/privacy/page.tsx
+@@ -47,7 +47,7 @@ export default async function PrivacyPage() {
+         <h2 className="text-base font-semibold">{t("1. Quem é o controlador")}</h2>
+         <p>
+           {t("O controlador dos dados tratados aqui é")} <strong>{operador}</strong>
+-          {op.cnpj ? ` (CNPJ ${op.cnpj})` : ""} —{" "}
++          {op.cnpj ? ` (${t("Identificador fiscal")} ${op.cnpj})` : ""} —{" "}
+           {t(
+             "quem instalou e opera este sistema. Os autores do software não têm acesso a este servidor nem aos dados guardados nele, e não são controladores nem operadores desses dados.",
+           )}
+diff --git a/app/legal/terms/page.tsx b/app/legal/terms/page.tsx
+index b56d276..d24aaa0 100644
+--- a/app/legal/terms/page.tsx
++++ b/app/legal/terms/page.tsx
+@@ -40,7 +40,7 @@ export default async function TermsPage() {
+         <p>
+           {t("O")} {op.sistema} {t("é um software de código aberto instalado e operado por")}{" "}
+           <strong>{operador}</strong>
+-          {op.cnpj ? ` (CNPJ ${op.cnpj})` : ""}, {t("daqui em diante")}{" "}
++          {op.cnpj ? ` (${t("Identificador fiscal")} ${op.cnpj})` : ""}, {t("daqui em diante")}{" "}
+           <strong>{t("o operador")}</strong>.{" "}
+           {t(
+             "É o operador quem mantém este servidor, decide como o sistema é usado e responde pelos dados tratados aqui.",
+diff --git a/app/onboarding/welcome/_form.tsx b/app/onboarding/welcome/_form.tsx
+index e467429..4313783 100644
+--- a/app/onboarding/welcome/_form.tsx
++++ b/app/onboarding/welcome/_form.tsx
+@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
+ import { toast } from "sonner";
+ import { useT } from "@/hooks/i18n/useT";
+ 
++import { FUSOS_OFERECIDOS } from "@/lib/tempo/fusos";
++
+ import { acceptWelcome } from "@/app/actions/onboarding/acceptWelcome";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+@@ -21,20 +23,7 @@ import {
+  * "America/Fortaleza" e esperava que a pessoa soubesse em qual delas mora — o
+  * identificador é do sistema, o que ela reconhece é a cidade.
+  */
+-const FUSOS: { id: string; cidade: string }[] = [
+-  { id: "America/Sao_Paulo", cidade: "São Paulo, Rio, Brasília, Sul e Sudeste" },
+-  { id: "America/Recife", cidade: "Recife, Salvador, Fortaleza e Nordeste" },
+-  { id: "America/Belem", cidade: "Belém e Pará" },
+-  { id: "America/Manaus", cidade: "Manaus e Amazonas" },
+-  { id: "America/Cuiaba", cidade: "Cuiabá e Mato Grosso" },
+-  { id: "America/Rio_Branco", cidade: "Rio Branco e Acre" },
+-  { id: "America/Argentina/Buenos_Aires", cidade: "Buenos Aires" },
+-  { id: "Europe/Lisbon", cidade: "Lisboa" },
+-  { id: "Europe/Madrid", cidade: "Madri" },
+-  { id: "America/New_York", cidade: "Nova York" },
+-  { id: "America/Los_Angeles", cidade: "Los Angeles" },
+-  { id: "UTC", cidade: "Outro (horário universal)" },
+-];
++const FUSOS = FUSOS_OFERECIDOS.map((f) => ({ id: f.codigo, cidade: f.rotulo }));
+ 
+ export function WelcomeForm({ defaultOrgName }: { defaultOrgName: string }) {
+   const t = useT();
+@@ -55,7 +44,7 @@ export function WelcomeForm({ defaultOrgName }: { defaultOrgName: string }) {
+         startTransition(async () => {
+           const res = await acceptWelcome(formData);
+           if (res && !res.ok) {
+-            toast.error(`Falha: ${res.error}`);
++            toast.error(`${t("Falha:")} ${t(res.error)}`);
+           }
+         });
+       }}
+diff --git a/components/contacts/NewContactDialog.criado.test.tsx b/components/contacts/NewContactDialog.criado.test.tsx
+index e1e49ba..18e74e2 100644
+--- a/components/contacts/NewContactDialog.criado.test.tsx
++++ b/components/contacts/NewContactDialog.criado.test.tsx
+@@ -99,7 +99,7 @@ describe("NewContactDialog · onCriado", () => {
+       <NewContactDialog open onOpenChange={vi.fn()} nomeInicial="Joana Prado" onCriado={onCriado} />,
+     );
+ 
+-    await user.type(screen.getByLabelText(/Telefone/i), "+5511999998888");
++    await user.type(screen.getByRole("textbox", { name: /Telefone/i }), "+5511999998888");
+     await user.click(screen.getByRole("button", { name: /Criar contato/i }));
+ 
+     await waitFor(() => expect(onCriado).toHaveBeenCalledTimes(1));
+@@ -129,7 +129,7 @@ describe("NewContactDialog · onCriado", () => {
+     const user = userEvent.setup();
+     envolver(<NewContactDialog open onOpenChange={vi.fn()} onCriado={onCriado} />);
+ 
+-    await user.type(screen.getByLabelText(/Telefone/i), "+5511999998888");
++    await user.type(screen.getByRole("textbox", { name: /Telefone/i }), "+5511999998888");
+     await user.click(screen.getByRole("button", { name: /Criar contato/i }));
+ 
+     await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+diff --git a/components/contacts/NewContactDialog.tsx b/components/contacts/NewContactDialog.tsx
+index 7cb4b2c..c842133 100644
+--- a/components/contacts/NewContactDialog.tsx
++++ b/components/contacts/NewContactDialog.tsx
+@@ -15,10 +15,14 @@ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { normalizarTags } from "@/lib/contacts/tag-normalizada";
+-import { contactCreateSchema, type ContactCreate } from "@/lib/schemas/contacts";
++import { contactCreateSchemaDoPais, type ContactCreate } from "@/lib/schemas/contacts";
+ import type { Contact } from "@/lib/types/contacts";
+ import { useCreateContact } from "@/hooks/contacts/useCreateContact";
+ 
++import { perfilDoPais, paisesOferecidos } from "@/lib/legal/perfil-do-pais";
++import { normalizaTelefoneDoPais, regiaoDoPais } from "@/lib/regional/catalogo";
++import { usePaisDaOrganizacao } from "@/lib/regional/RegiaoProvider";
++
+ interface FormShape {
+   name?: string;
+   email?: string;
+@@ -49,6 +53,9 @@ interface Props {
+ export function NewContactDialog({ open, onOpenChange, nomeInicial, onCriado }: Props) {
+   const t = useT();
+   const create = useCreateContact();
++  const pais = usePaisDaOrganizacao();
++  const perfil = perfilDoPais(pais);
++  const [paisTelefone, setPaisTelefone] = useState(pais ?? "BR");
+   const [serverError, setServerError] = useState<string | null>(null);
+ 
+   const form = useForm<FormShape>({
+@@ -64,14 +71,23 @@ export function NewContactDialog({ open, onOpenChange, nomeInicial, onCriado }:
+     const payload: Record<string, unknown> = { source: "manual" };
+     if (values.name?.trim()) payload.name = values.name.trim();
+     if (values.email?.trim()) payload.email = values.email.trim();
+-    if (values.phone_number?.trim()) payload.phone_number = values.phone_number.trim();
++    if (values.phone_number?.trim()) {
++      const telefone = normalizaTelefoneDoPais(values.phone_number, paisTelefone);
++      if (!telefone) {
++        setServerError(
++          t("Telefone inválido: informe o prefixo internacional ou selecione o país."),
++        );
++        return;
++      }
++      payload.phone_number = telefone;
++    }
+     if (values.cpf?.trim()) payload.cpf = values.cpf.trim();
+     if (tags.length) payload.tags = tags;
+ 
+-    const parsed = contactCreateSchema.safeParse(payload);
++    const parsed = contactCreateSchemaDoPais(perfil).safeParse(payload);
+     if (!parsed.success) {
+       const first = parsed.error.issues[0];
+-      setServerError(first?.message ?? t("Dados inválidos"));
++      setServerError(t(first?.message ?? "Dados inválidos"));
+       return;
+     }
+ 
+@@ -111,23 +127,35 @@ export function NewContactDialog({ open, onOpenChange, nomeInicial, onCriado }:
+           </div>
+           <div className="space-y-2">
+             <Label htmlFor="phone_number">{t("Telefone (E.164)")}</Label>
++            <select
++              aria-label={t("País do telefone")}
++              value={paisTelefone}
++              onChange={(e) => setPaisTelefone(e.target.value)}
++              className="w-full rounded-md border bg-background p-2"
++            >
++              {paisesOferecidos().map((p) => (
++                <option key={p.codigo} value={p.codigo}>
++                  {p.codigo} · +{regiaoDoPais(p.codigo).prefixo}
++                </option>
++              ))}
++            </select>
+             <Input
+               id="phone_number"
+-              placeholder="+5511999998888"
++              placeholder={regiaoDoPais(paisTelefone).exemploTelefone}
+               {...form.register("phone_number")}
+             />
+           </div>
+           <div className="space-y-2">
+-            <Label htmlFor="cpf">{t("CPF (opcional)")}</Label>
+-            <Input id="cpf" placeholder="00000000000" {...form.register("cpf")} />
++            <Label htmlFor="cpf">
++              {perfil.documento.rotulo} · {t("opcional")}
++            </Label>
++            <Input id="cpf" placeholder={perfil.documento.exemplo} {...form.register("cpf")} />
+           </div>
+           <div className="space-y-2">
+             <Label htmlFor="tagsRaw">{t("Tags (separadas por vírgula)")}</Label>
+             <Input id="tagsRaw" placeholder="vip, recompra" {...form.register("tagsRaw")} />
+           </div>
+-          {serverError && (
+-            <p className="text-sm text-error-fg">{serverError}</p>
+-          )}
++          {serverError && <p className="text-sm text-error-fg">{serverError}</p>}
+           <DialogFooter>
+             <Button
+               type="button"
+diff --git a/docs/1120-regiones-espanol.md b/docs/1120-regiones-espanol.md
+new file mode 100644
+index 0000000..05cfd60
+--- /dev/null
++++ b/docs/1120-regiones-espanol.md
+@@ -0,0 +1,57 @@
++# Español y regiones de 1120
++
++Destino: núcleo del fork. Configuración transversal, disponible sin activar extensiones.
++Base de trabajo: `1120-estudio/atiendo-crm`, main `c6fd38ef107bfa25b2de6e09248c2cd7ab481c6c`.
++
++## Cambios implementados
++
++| País | Moneda | Zona principal | Prefijo | Documento personal | Identificador fiscal de la empresa |
++|---|---|---|---|---|---|
++| Colombia | COP | America/Bogota | +57 | Cédula / CE / pasaporte | NIT |
++| Costa Rica | CRC | America/Costa_Rica | +506 | Cédula / DIMEX / pasaporte | Cédula jurídica / NITE |
++| Panamá | USD | America/Panama | +507 | Cédula / pasaporte | RUC / DV |
++| Estados Unidos | USD | America/New_York | +1 | SSN / ITIN / pasaporte | EIN |
++
++Estados Unidos también dispone de Chicago, Denver, Los Ángeles, Phoenix, Anchorage y Honolulu. El catálogo de zonas `lib/tempo/fusos.ts` alimenta empresa, perfil, bienvenida, disponibilidad y ventana de envío. Las reglas de horario de verano vienen de IANA/Intl; no se fijan desplazamientos UTC manuales.
++
++Las plantillas de confirmación y recuperación se sirven en `APP_LOCALE`, sin depender de cookies ni del idioma del proceso GoTrue. Conservan `{{ .RedirectTo }}&token_hash={{ .TokenHash }}` y el escape de datos de marca. Los asuntos se configuran por separado en GoTrue.
++
++Las alertas dinámicas de edición, publicación e historial de agentes pasan por `t()`; se añadió la traducción de “Conclua a configuração e publique uma versão.”. Los formularios de recuperación y nueva contraseña existentes se comprobaron en español.
++
++## Datos y compatibilidad
++
++No hay ALTER de tablas: `organizations.country` acepta códigos de dos letras y `organizations.currency` códigos de tres letras. El identificador fiscal usa la columna histórica `organizations.cnpj`; el documento personal usa `contacts.cpf_encrypted` y `cpf_hash`. No se cambia el nombre de esas columnas ni los permisos.
++
++Los documentos se validan por forma; no se consulta un emisor, no se certifica titularidad y no se comprueba la situación fiscal. La validación de CPF brasileño conserva su checksum. El hash conserva las letras de pasaportes y los separadores de cédulas estructuradas; el hash de CPF brasileño existente se conserva. Las nuevas escrituras de la API normalizan antes de cifrar.
++
++El país del teléfono puede elegirse independientemente del país de la empresa. Un + explícito se respeta. La importación usa el país de la empresa para números locales. Los documentos personales usan el país de la empresa: no se añade un país ni un tipo de documento independiente a cada contacto, ni un segundo identificador fiscal por contacto. El identificador fiscal implementado aquí es el de la empresa.
++
++Los nuevos perfiles tienen `lei: null` y calendario sin días festivos locales. El PDF no cita la LGPD brasileña para estos países. Esto no convierte los plazos de privacidad existentes en plazos legalmente revisados para los cuatro países.
++
++La anonimización reconoce documentos rotulados y SSN con separadores. No cubre todos los documentos sin rótulo; los nombres siguen la lista de nombres existente. El patrón no es un detector universal de PII.
++
++La preferencia de idioma existente se conserva. Textos libres guardados por operadores, prompts, nombres de etapas y mensajes de clientes no se reescriben automáticamente. No se afirma haber traducido toda respuesta de todas las API.
++
++## Fuentes de identificación consultadas
++
++- Colombia: https://www.dian.gov.co/tramitesservicios/tramites-y-servicios/tributarios/Paginas/RUT.aspx
++- Costa Rica: https://www.hacienda.go.cr/docs/FacturaElectronica.pdf y https://www.hacienda.go.cr/docs/MH-DGA-CIR-0005-2026.pdf (consecutivo jurídico alfanumérico).
++- Panamá: https://dgi.mef.gob.pa/Ruc/Ruc
++- Estados Unidos: https://www.irs.gov/tin/taxpayer-identification-numbers-tin
++
++## Living System Checklist
++
++1. Entrada: `TenantForm` → `updateTenant` → `organizations.country`; `AppLayout` lee la organización activa validada y entrega el país a `RegiaoProvider`. Correo: `APP_LOCALE` → `idiomaDaInstalacao`.
++2. Salida: `NewContactDialog`, `contactCreateSchemaDoPais`, `contactPatchSchemaDoPais`, CSV, `padroesDePii`, `formatCents`, `FUSOS_OFERECIDOS` y plantillas GoTrue.
++3. Registro: las escrituras conservan `org.updated`, `contact.created` y la auditoría existente de contactos/importación. Traducción y catálogos puros no generan mutaciones.
++4. Pantalla: Configuraciones › Empresa/Perfil; Contactos › Nuevo contacto/Importar; recuperación de contraseña y correos de acceso.
++5. Puerta: destinos existentes de `lib/navigation/catalogo.ts`; no se añade una pantalla sin navegación.
++6. Continuidad de demanda: no se cambia el motor de atención. Validación fallida muestra error y conserva el formulario para corregirlo.
++7. Configuración: país/moneda/zona en Empresa, zona en Perfil, idioma de instalación en `APP_LOCALE`; plantilla vacía en GoTrue sigue requiriendo configurar su URL.
++8. IA/humano: se conserva la entrega y autorización existentes; el cambio no añade envíos ni autonomía.
++9. Retorno: una validación inválida impide guardar y permite corregir y reintentar; ninguna decisión automática nueva necesita aprendizaje.
++10. Mapa: `docs/architecture/regiones-1120.architecture.json` conecta configuración, registro, formularios, API/importación y correos.
++
++## Validación y límites
++
++Los resultados finales y los pasos de instalación se entregan en `LEEME-1120.txt` dentro del paquete. No se ha desplegado esta versión ni probado contra el VPS del usuario. Sin Docker/Supabase local no se ha ejecutado la jornada completa en una instalación fresca. El diagnóstico de la IA que dejó de responder sigue pendiente y no está resuelto por esta actualización.
+diff --git a/docs/architecture/regiones-1120.architecture.json b/docs/architecture/regiones-1120.architecture.json
+new file mode 100644
+index 0000000..c951c9d
+--- /dev/null
++++ b/docs/architecture/regiones-1120.architecture.json
+@@ -0,0 +1,159 @@
++{
++  "schema_version": 1,
++  "diagram_type": "architecture",
++  "meta": {
++    "title": "Regiões e acesso em espanhol — fork 1120",
++    "output": "regiones-1120.html",
++    "quality_profile": "standard"
++  },
++  "lanes": [
++    {
++      "id": "config",
++      "label": "config"
++    },
++    {
++      "id": "data",
++      "label": "data"
++    },
++    {
++      "id": "logic",
++      "label": "logic"
++    },
++    {
++      "id": "ui",
++      "label": "ui"
++    }
++  ],
++  "mainPath": [
++    "empresa",
++    "banco",
++    "perfil",
++    "contato",
++    "api",
++    "persistencia"
++  ],
++  "nodes": [
++    {
++      "id": "empresa",
++      "lane": "config",
++      "col": 0,
++      "type": "service",
++      "label": "Configurações › Empresa",
++      "sublabel": "TenantForm/updateTenant"
++    },
++    {
++      "id": "banco",
++      "lane": "data",
++      "col": 1,
++      "type": "service",
++      "label": "organizations",
++      "sublabel": "country, currency, timezone, cnpj existentes"
++    },
++    {
++      "id": "perfil",
++      "lane": "logic",
++      "col": 2,
++      "type": "service",
++      "label": "Perfil do país",
++      "sublabel": "documento e PII; lei null em perfis operacionais"
++    },
++    {
++      "id": "layout",
++      "lane": "logic",
++      "col": 3,
++      "type": "service",
++      "label": "AppLayout/RegiaoProvider",
++      "sublabel": "país da organização ativa"
++    },
++    {
++      "id": "contato",
++      "lane": "ui",
++      "col": 4,
++      "type": "service",
++      "label": "Novo contato",
++      "sublabel": "documento e seletor de prefixo"
++    },
++    {
++      "id": "api",
++      "lane": "logic",
++      "col": 5,
++      "type": "service",
++      "label": "API e CSV",
++      "sublabel": "schema por país + normalização"
++    },
++    {
++      "id": "persistencia",
++      "lane": "data",
++      "col": 6,
++      "type": "service",
++      "label": "Contato cifrado/auditado",
++      "sublabel": "cpf_encrypted/cpf_hash existentes"
++    },
++    {
++      "id": "locale",
++      "lane": "config",
++      "col": 7,
++      "type": "service",
++      "label": "APP_LOCALE",
++      "sublabel": "idioma da instalação"
++    },
++    {
++      "id": "template",
++      "lane": "logic",
++      "col": 8,
++      "type": "service",
++      "label": "Template de acesso",
++      "sublabel": "montarTemplateDeAcesso"
++    },
++    {
++      "id": "correo",
++      "lane": "ui",
++      "col": 9,
++      "type": "service",
++      "label": "E-mail GoTrue",
++      "sublabel": "confirmação e recuperação em espanhol"
++    }
++  ],
++  "edges": [
++    {
++      "from": "empresa",
++      "to": "banco"
++    },
++    {
++      "from": "banco",
++      "to": "perfil"
++    },
++    {
++      "from": "banco",
++      "to": "layout"
++    },
++    {
++      "from": "perfil",
++      "to": "contato"
++    },
++    {
++      "from": "layout",
++      "to": "contato"
++    },
++    {
++      "from": "contato",
++      "to": "api"
++    },
++    {
++      "from": "perfil",
++      "to": "api"
++    },
++    {
++      "from": "api",
++      "to": "persistencia"
++    },
++    {
++      "from": "locale",
++      "to": "template"
++    },
++    {
++      "from": "template",
++      "to": "correo"
++    }
++  ]
++}
+diff --git a/lib/contacts/cpf.ts b/lib/contacts/cpf.ts
+index d580395..89207cb 100644
+--- a/lib/contacts/cpf.ts
++++ b/lib/contacts/cpf.ts
+@@ -10,7 +10,11 @@ import { createHash } from "node:crypto";
+ import type { SupabaseClient } from "@supabase/supabase-js";
+ 
+ export function normalizeCpf(raw: string): string {
+-  return raw.replace(/\D/g, "");
++  const compacto = raw.toUpperCase().replace(/[.\s]/g, "");
++  // Os CPFs existentes mantêm o hash. Em cédulas estruturadas, os hífens
++  // distinguem números diferentes (8-12-345 não é 8-123-45).
++  if (/^\d{9}-\d{2}$/.test(compacto)) return compacto.replace(/-/g, "");
++  return compacto.replace(/[^A-Z0-9-]/g, "");
+ }
+ 
+ /**
+diff --git a/lib/contacts/csv.ts b/lib/contacts/csv.ts
+index 20c2557..c13b320 100644
+--- a/lib/contacts/csv.ts
++++ b/lib/contacts/csv.ts
+@@ -1,4 +1,5 @@
+ import { perfilDoPais, type DocumentoDoTitular } from "@/lib/legal/perfil-do-pais";
++import { normalizaTelefoneDoPais } from "@/lib/regional/catalogo";
+ import { normalizePhoneBR } from "@/lib/webhooks/inbound";
+ import { normalizarTags } from "@/lib/contacts/tag-normalizada";
+ /**
+@@ -386,6 +387,7 @@ export function mapLinha(
+   indices: Record<string, number>,
+   t?: (text: string) => string,
+   documento?: DocumentoDoTitular,
++  pais?: string,
+ ): { contato: LinhaNormalizada; motivo: string | null } {
+   const _t = t || ((x) => x);
+   const doc = documento ?? perfilDoPais(null).documento;
+@@ -411,7 +413,7 @@ export function mapLinha(
+ 
+   const phoneRaw = get("phone_number");
+   if (phoneRaw !== "") {
+-    const phone = normalizaTelefone(phoneRaw);
++    const phone = pais && pais !== "BR" ? normalizaTelefoneDoPais(phoneRaw, pais) : normalizaTelefone(phoneRaw);
+     if (phone === null) {
+       return {
+         contato: {},
+diff --git a/lib/email/templates/acesso-gotrue.test.ts b/lib/email/templates/acesso-gotrue.test.ts
+index 8086eeb..4497a14 100644
+--- a/lib/email/templates/acesso-gotrue.test.ts
++++ b/lib/email/templates/acesso-gotrue.test.ts
+@@ -82,3 +82,23 @@ describe("moldes de acesso do GoTrue", () => {
+     expect(publico("/email-templates/confirmation/x")).toBe(false);
+   });
+ });
++
++describe("acesso em espanhol", () => {
++  it("traduz confirmação, sem alterar token nem escape da marca", () => {
++    const html = montarTemplateDeAcesso("confirmation", MARCA, "es");
++    expect(html).toContain('<html lang="es">');
++    expect(html).toContain("Confirma tu correo");
++    expect(html).toContain("Tu cuenta en Acme &quot;Test&quot; &amp; Cia está casi lista.");
++    expect(html).toContain("{{ .RedirectTo }}&token_hash={{ .TokenHash }}");
++    expect(html).not.toContain("Sua conta");
++  });
++  it("traduz recuperação, incluindo botão e alternativa de copiar enlace", () => {
++    const html = montarTemplateDeAcesso("recovery", MARCA, "es");
++    expect(html).toContain("Restablecer tu contraseña");
++    expect(html).toContain("O copia y pega este enlace en tu navegador:");
++    expect(html).not.toContain("Recebemos um pedido");
++    expect(assuntoDoModelo("recovery", MARCA, "es")).toBe(
++      `Restablecer tu contraseña · ${MARCA.nome}`,
++    );
++  });
++});
+diff --git a/lib/email/templates/acesso-gotrue.ts b/lib/email/templates/acesso-gotrue.ts
+index cfa9f64..4a615f2 100644
+--- a/lib/email/templates/acesso-gotrue.ts
++++ b/lib/email/templates/acesso-gotrue.ts
+@@ -1,3 +1,6 @@
++import { traduzir } from "@/lib/i18n/dicionario";
++import { IDIOMA_PADRAO, type Idioma } from "@/lib/i18n/idiomas";
++
+ import { NEUTROS_DE_SAIDA, type MarcaDeSaida } from "@/lib/branding/saida";
+ 
+ /**
+@@ -39,7 +42,16 @@ export type ModeloDeAcesso = "confirmation" | "recovery";
+ export const MODELOS_DE_ACESSO: readonly ModeloDeAcesso[] = ["confirmation", "recovery"];
+ 
+ /** O texto de cada modelo. Assunto entra no `GOTRUE_MAILER_SUBJECTS_*`. */
+-const COPIA: Record<ModeloDeAcesso, { assunto: (marca: string) => string; titulo: string; corpo: (marca: string) => string; botao: string; rodape: string }> = {
++const COPIA: Record<
++  ModeloDeAcesso,
++  {
++    assunto: (marca: string) => string;
++    titulo: string;
++    corpo: (marca: string) => string;
++    botao: string;
++    rodape: string;
++  }
++> = {
+   confirmation: {
+     assunto: (marca) => `Confirme seu e-mail · ${marca}`,
+     titulo: "Confirme seu e-mail",
+@@ -54,13 +66,16 @@ const COPIA: Record<ModeloDeAcesso, { assunto: (marca: string) => string; titulo
+     corpo: (marca) =>
+       `Recebemos um pedido para redefinir a senha da sua conta no ${marca}. Clique no botão abaixo para escolher uma nova.`,
+     botao: "Definir nova senha",
+-    rodape:
+-      "Se não foi você quem pediu, ignore este e-mail — sua senha continua a mesma.",
++    rodape: "Se não foi você quem pediu, ignore este e-mail — sua senha continua a mesma.",
+   },
+ };
+ 
+-export function assuntoDoModelo(modelo: ModeloDeAcesso, marca: MarcaDeSaida): string {
+-  return COPIA[modelo].assunto(marca.nome);
++export function assuntoDoModelo(
++  modelo: ModeloDeAcesso,
++  marca: MarcaDeSaida,
++  idioma: Idioma = IDIOMA_PADRAO,
++): string {
++  return `${traduzir(COPIA[modelo].titulo, idioma)} · ${marca.nome}`;
+ }
+ 
+ /**
+@@ -70,7 +85,11 @@ export function assuntoDoModelo(modelo: ModeloDeAcesso, marca: MarcaDeSaida): st
+  * de `invite.ts` — inclusive a dimensão no atributo, que o Outlook desktop
+  * exige porque descarta `height` de style em imagem.
+  */
+-export function montarTemplateDeAcesso(modelo: ModeloDeAcesso, marca: MarcaDeSaida): string {
++export function montarTemplateDeAcesso(
++  modelo: ModeloDeAcesso,
++  marca: MarcaDeSaida,
++  idioma: Idioma = IDIOMA_PADRAO,
++): string {
+   const t = COPIA[modelo];
+   const nome = escapeHtml(marca.nome);
+ 
+@@ -82,27 +101,27 @@ export function montarTemplateDeAcesso(modelo: ModeloDeAcesso, marca: MarcaDeSai
+   const destino = "{{ .RedirectTo }}&token_hash={{ .TokenHash }}";
+ 
+   return `<!doctype html>
+-<html lang="pt-BR">
++<html lang="${idioma}">
+ <body style="margin:0;padding:0;background:${NEUTROS_DE_SAIDA.fundo};font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:${NEUTROS_DE_SAIDA.texto}">
+   <div style="max-width:560px;margin:0 auto;padding:32px 24px">
+     ${logo}
+     <h1 style="font-size:22px;line-height:1.3;margin:0 0 16px;color:${NEUTROS_DE_SAIDA.texto}">
+-      ${escapeHtml(t.titulo)}
++      ${escapeHtml(traduzir(t.titulo, idioma))}
+     </h1>
+     <p style="margin:0 0 16px;font-size:15px;line-height:1.5">
+-      ${escapeHtml(t.corpo(marca.nome))}
++      ${escapeHtml(traduzir(t.corpo("{marca}"), idioma).replace("{marca}", marca.nome))}
+     </p>
+     <p style="margin:24px 0">
+       <a href="${destino}" style="display:inline-block;padding:12px 24px;background:${marca.accent};color:${marca.accentFg};border-radius:6px;text-decoration:none;font-weight:600">
+-        ${escapeHtml(t.botao)}
++        ${escapeHtml(traduzir(t.botao, idioma))}
+       </a>
+     </p>
+     <p style="margin:0 0 8px;font-size:13px;color:${NEUTROS_DE_SAIDA.suave}">
+-      Ou copie e cole este link no navegador:<br>
++      ${escapeHtml(traduzir("Ou copie e cole este link no navegador:", idioma))}<br>
+       <span style="word-break:break-all;color:${marca.accent}">${destino}</span>
+     </p>
+     <p style="margin:24px 0 0;font-size:13px;color:${NEUTROS_DE_SAIDA.suave}">
+-      ${escapeHtml(t.rodape)}
++      ${escapeHtml(traduzir(t.rodape, idioma))}
+     </p>
+   </div>
+ </body>
+diff --git a/lib/i18n/dicionario.ts b/lib/i18n/dicionario.ts
+index ae9795b..456d43f 100644
+--- a/lib/i18n/dicionario.ts
++++ b/lib/i18n/dicionario.ts
+@@ -12856,6 +12856,41 @@ export const DICIONARIO: Traducoes = {
+     {
+       es: "Guía para agendar o reprogramar citas (consulta, visita, sesión): ofrece opciones concretas de la agenda real, nunca inventa disponibilidad y confirma por escrito antes de cerrar.",
+     },
++  // Región y acceso en español — fork 1120.
++  "Sua conta no {marca} está quase pronta. Clique no botão abaixo para confirmar seu e-mail e ativar sua conta.": { es: "Tu cuenta en {marca} está casi lista. Haz clic en el botón para confirmar tu correo electrónico y activar tu cuenta." },
++  "Confirmar e-mail": { es: "Confirmar correo electrónico" },
++  "Se você não criou esta conta, ignore este e-mail.": { es: "Si no creaste esta cuenta, ignora este correo." },
++  "Redefinir sua senha": { es: "Restablecer tu contraseña" },
++  "Recebemos um pedido para redefinir a senha da sua conta no {marca}. Clique no botão abaixo para escolher uma nova.": { es: "Recibimos una solicitud para restablecer la contraseña de tu cuenta en {marca}. Haz clic en el botón para elegir una nueva." },
++  "Se não foi você quem pediu, ignore este e-mail — sua senha continua a mesma.": { es: "Si no solicitaste el cambio, ignora este correo. Tu contraseña seguirá siendo la misma." },
++  "Ou copie e cole este link no navegador:": { es: "O copia y pega este enlace en tu navegador:" },
++  "Define os documentos e o prefixo telefônico padrão. Os novos países não incluem revisão jurídica nem feriados locais.": { es: "Define los documentos y el prefijo telefónico predeterminado. Los nuevos países no incluyen revisión jurídica ni días festivos locales." },
++  "Telefone inválido: informe o prefixo internacional ou selecione o país.": { es: "Teléfono inválido: escribe el prefijo internacional o selecciona el país." },
++  "País do telefone": { es: "País del teléfono" },
++  "Identificador fiscal inválido: confira o formato.": { es: "Identificador fiscal inválido: revisa el formato." },
++  "Documento inválido: confira o formato; a validação não comprova a identidade.": { es: "Documento inválido: revisa el formato; la validación no comprueba la identidad." },
++  "Conclua a configuração e publique uma versão.": { es: "Completa la configuración y publica una versión." },
++  "Bogotá · Colombia": { es: "Bogotá · Colombia" },
++  "San José · Costa Rica": { es: "San José · Costa Rica" },
++  "Ciudad de Panamá": { es: "Ciudad de Panamá" },
++  "Chicago": { es: "Chicago" },
++  "Denver": { es: "Denver" },
++  "Phoenix": { es: "Phoenix" },
++  "Anchorage": { es: "Anchorage" },
++  "Honolulu": { es: "Honolulu" },
++  "Identificador fiscal": { es: "Identificador fiscal" },
++  "San José (Costa Rica)": { es: "San José (Costa Rica)" },
++  "Cidade do Panamá (Panamá)": { es: "Ciudad de Panamá (Panamá)" },
++  "Nova York (Estados Unidos)": { es: "Nueva York (Estados Unidos)" },
++  "Chicago (Estados Unidos)": { es: "Chicago (Estados Unidos)" },
++  "Denver (Estados Unidos)": { es: "Denver (Estados Unidos)" },
++  "Los Angeles (Estados Unidos)": { es: "Los Ángeles (Estados Unidos)" },
++  "Phoenix (Estados Unidos)": { es: "Phoenix (Estados Unidos)" },
++  "Anchorage (Estados Unidos)": { es: "Anchorage (Estados Unidos)" },
++  "Honolulu (Estados Unidos)": { es: "Honolulu (Estados Unidos)" },
++  "Cuiabá (Brasil)": { es: "Cuiabá (Brasil)" },
++  "Rio Branco (Brasil)": { es: "Rio Branco (Brasil)" },
++  "Madri (Espanha)": { es: "Madrid (España)" },
+ };
+ 
+ /**
+diff --git a/lib/legal/perfil-do-pais.ts b/lib/legal/perfil-do-pais.ts
+index e5b2497..6d38251 100644
+--- a/lib/legal/perfil-do-pais.ts
++++ b/lib/legal/perfil-do-pais.ts
+@@ -29,9 +29,9 @@
+  *     lei nenhuma. Não há fallback para a lei brasileira: afirmar a LGPD para
+  *     um titular em Angola é exatamente a citação errada;
+  *   • `paisesOferecidos()` — a lista que o seletor de Configurações mostra —
+- *     só inclui país com citação revisada. O registro pode conhecer mais
+- *     países do que a lista oferece; é o que permite preparar o trabalho sem
+- *     publicar o que ninguém revisou.
++ *     inclui também perfis operacionais habilitados no fork. Isso permite
++ *     escolher documentos e região sem declarar uma revisão jurídica.
++ *     Estes perfis mantêm `lei: null` e não citam a LGPD brasileira.
+  *
+  * ─── A separação documento × forma (regra adotada do #928) ────────────────
+  *
+@@ -42,6 +42,8 @@
+  */
+ import type { SupabaseClient } from "@supabase/supabase-js";
+ 
++import { perfisRegionais } from "@/lib/regional/documentos";
++
+ import { HOLIDAYS_BR_ISO } from "@/lib/lgpd/holidays-br";
+ 
+ /** ISO-3166 alpha-2, em maiúsculas. `null`/vazio na coluna significa Brasil. */
+@@ -126,6 +128,8 @@ export interface CalendarioDeDiasUteis {
+ export interface PerfilDoPais {
+   /** ISO-3166 alpha-2, maiúsculas. */
+   codigo: CodigoDePais;
++  /** Seleção operacional explicitamente habilitada pelo fork, sem revisão jurídica. */
++  operacional?: boolean;
+   /** Nome do país como o operador o lê. */
+   nome: string;
+   documento: DocumentoDoTitular;
+@@ -205,7 +209,7 @@ const PERFIL_BR: PerfilDoPais = {
+  * O registro de países conhecidos.
+  *
+  * ⚠️ Conhecer ≠ oferecer. A lista que o operador escolhe é
+- * `paisesOferecidos()`, e ela exige `lei.revisada`. Entram aqui, à medida do
++ * `paisesOferecidos()`: revisão legal ou habilitação operacional explícita. Entram aqui, à medida do
+  * trabalho de cada país: documento (forma, e checksum só quando é público),
+  * lei com citação revisada, calendário de feriados e padrões de PII. País
+  * incompleto mora aqui com o que já tem — nunca meio perfil publicado.
+@@ -215,6 +219,7 @@ const PERFIL_BR: PerfilDoPais = {
+  */
+ export const PERFIS_DO_PAIS: Record<CodigoDePais, PerfilDoPais> = {
+   BR: PERFIL_BR,
++  ...perfisRegionais(),
+ };
+ 
+ /** O perfil de um código; vazio ou desconhecido degrada para o Brasil. */
+@@ -227,7 +232,7 @@ export function perfilDoPais(codigo: CodigoDePais | null | undefined): PerfilDoP
+ /** O que o seletor de Configurações › Empresa oferece. */
+ export function paisesOferecidos(): PerfilDoPais[] {
+   return Object.values(PERFIS_DO_PAIS)
+-    .filter((p) => p.lei?.revisada === true)
++    .filter((p) => p.operacional === true || p.lei?.revisada === true)
+     .sort((a, b) => a.nome.localeCompare(b.nome));
+ }
+ 
+diff --git a/lib/money.ts b/lib/money.ts
+index e2e6e6f..9dfe10b 100644
+--- a/lib/money.ts
++++ b/lib/money.ts
+@@ -305,7 +305,7 @@ export function formatValorDoNegocio(
+  * ABERTO que a doutrina de modelagem descreve. O conjunto vive só aqui, no
+  * TypeScript.
+  *
+- * As cinco têm subunidade de 2 casas, então nenhuma esbarra na ressalva de
++ * As moedas servidas têm subunidade de 2 casas, então nenhuma esbarra na ressalva de
+  * unidades menores de `formatCents`. Acrescentar JPY ou CLP funciona — o
+  * formatador já os cobre —, mas exige olhar `precoParaCentavos`, que ainda
+  * multiplica por 100 na leitura do que a pessoa digita.
+@@ -322,7 +322,7 @@ export function formatValorDoNegocio(
+  * `LOCALE_DA_MOEDA_SEM_PAIS`): sem a exceção, `formatCents(24990, "EUR")`
+  * sairia `€249.90`, e a varredura de degradação deixaria passar.
+  */
+-export const MOEDAS_SERVIDAS = ["AOA", "BRL", "EUR", "MXN", "USD"] as const;
++export const MOEDAS_SERVIDAS = ["AOA", "BRL", "COP", "CRC", "EUR", "MXN", "USD"] as const;
+ export type MoedaServida = (typeof MOEDAS_SERVIDAS)[number];
+ 
+ /** O que o `default` da coluna grava quando ninguém escolheu. */
+diff --git a/lib/regional/RegiaoProvider.tsx b/lib/regional/RegiaoProvider.tsx
+new file mode 100644
+index 0000000..830683e
+--- /dev/null
++++ b/lib/regional/RegiaoProvider.tsx
+@@ -0,0 +1,9 @@
++"use client";
++import { createContext, useContext, type ReactNode } from "react";
++const Contexto = createContext<string | null>(null);
++export function RegiaoProvider({ pais, children }: { pais: string | null; children: ReactNode }) {
++  return <Contexto.Provider value={pais}>{children}</Contexto.Provider>;
++}
++export function usePaisDaOrganizacao(): string | null {
++  return useContext(Contexto);
++}
+diff --git a/lib/regional/catalogo.ts b/lib/regional/catalogo.ts
+new file mode 100644
+index 0000000..fcc1e96
+--- /dev/null
++++ b/lib/regional/catalogo.ts
+@@ -0,0 +1,93 @@
++import { FUSOS_OFERECIDOS } from "@/lib/tempo/fusos";
++
++/** Configuração operacional; não declara legislação nem validade da identidade. */
++export const REGIOES = {
++  BR: {
++    moeda: "BRL",
++    fuso: "America/Sao_Paulo",
++    prefixo: "55",
++    digitosLocais: [10, 11],
++    exemploTelefone: "+5511999998888",
++    fiscal: "CNPJ",
++    exemploFiscal: "00.000.000/0001-00",
++  },
++  CO: {
++    moeda: "COP",
++    fuso: "America/Bogota",
++    prefixo: "57",
++    digitosLocais: [10],
++    exemploTelefone: "+573001234567",
++    fiscal: "NIT",
++    exemploFiscal: "900123456-8",
++  },
++  CR: {
++    moeda: "CRC",
++    fuso: "America/Costa_Rica",
++    prefixo: "506",
++    digitosLocais: [8],
++    exemploTelefone: "+50688881234",
++    fiscal: "Cédula jurídica / NITE",
++    exemploFiscal: "3-101-123456",
++  },
++  PA: {
++    moeda: "USD",
++    fuso: "America/Panama",
++    prefixo: "507",
++    digitosLocais: [7, 8],
++    exemploTelefone: "+50761234567",
++    fiscal: "RUC / DV",
++    exemploFiscal: "123456-1-123456 DV 00",
++  },
++  US: {
++    moeda: "USD",
++    fuso: "America/New_York",
++    prefixo: "1",
++    digitosLocais: [10],
++    exemploTelefone: "+12025550123",
++    fiscal: "EIN",
++    exemploFiscal: "12-3456789",
++  },
++} as const;
++export type PaisRegional = keyof typeof REGIOES;
++export function regiaoDoPais(pais: string | null | undefined) {
++  return REGIOES[pais as PaisRegional] ?? REGIOES.BR;
++}
++
++/** Identificadores IANA, que incluem as regras de horário de verão. */
++export const FUSOS_SERVIDOS = FUSOS_OFERECIDOS.map((f) => f.codigo);
++export function fusosComAtual(atual: string): readonly string[] {
++  return (FUSOS_SERVIDOS as readonly string[]).includes(atual)
++    ? FUSOS_SERVIDOS
++    : [...FUSOS_SERVIDOS, atual];
++}
++
++/** O + explícito é respeitado: não se troca o país de um cliente internacional. */
++export function normalizaTelefoneDoPais(
++  raw: string,
++  pais: string | null | undefined,
++): string | null {
++  const texto = raw.trim();
++  if (!texto || !/^\+?[\d\s().-]+$/.test(texto)) return null;
++  const numeros = texto.replace(/\D/g, "");
++  if (texto.startsWith("+")) return /^[1-9]\d{7,14}$/.test(numeros) ? `+${numeros}` : null;
++  const regiao = regiaoDoPais(pais);
++  if ((regiao.digitosLocais as readonly number[]).includes(numeros.length))
++    return `+${regiao.prefixo}${numeros}`;
++  if (
++    numeros.startsWith(regiao.prefixo) &&
++    (regiao.digitosLocais as readonly number[]).includes(numeros.length - regiao.prefixo.length)
++  )
++    return `+${numeros}`;
++  return null;
++}
++
++/** Forma apenas. Não consulta órgão emissor nem verifica situação fiscal. */
++export function formaFiscalValida(raw: string, pais: string | null | undefined): boolean {
++  if (!raw.trim()) return true;
++  if (pais === "CO") return /^\d{1,15}(?:-\d)?$/.test(raw.replace(/[.\s]/g, ""));
++  if (pais === "CR")
++    return /^(?:\d{4}[A-Z0-9]{6}|\d{10}|\d{11,12})$/.test(raw.toUpperCase().replace(/[\s-]/g, ""));
++  if (pais === "US") return /^\d{9}$/.test(raw.replace(/[\s-]/g, ""));
++  if (pais === "PA") return /^(?=.*\d)[A-Z0-9][A-Z0-9 .-]{1,31}$/i.test(raw.trim());
++  return raw.length <= 20; // preserva o contrato brasileiro anterior
++}
+diff --git a/lib/regional/documentos.ts b/lib/regional/documentos.ts
+new file mode 100644
+index 0000000..e25c5f4
+--- /dev/null
++++ b/lib/regional/documentos.ts
+@@ -0,0 +1,110 @@
++import type { DocumentoDoTitular, PerfilDoPais } from "@/lib/legal/perfil-do-pais";
++
++/** Uma validação de forma nunca prova emissão, titularidade ou situação fiscal. */
++function documento(
++  rotulo: string,
++  exemplo: string,
++  apelidos: string[],
++  valida: (valor: string) => boolean,
++  normaliza = (valor: string) => valor.toUpperCase().replace(/[.\s-]/g, ""),
++): DocumentoDoTitular {
++  return {
++    rotulo,
++    exemplo,
++    apelidosDoCabecalho: ["documento", "documento_personal", ...apelidos],
++    regra: "forma; não confere emissão nem dígito verificador",
++    mensagemInvalido:
++      "Documento inválido: confira o formato; a validação não comprova a identidade.",
++    confereDigito: false,
++    normaliza,
++    valida,
++  };
++}
++const compacto = (valor: string) => valor.toUpperCase().replace(/[.\s-]/g, "");
++const passaporte = (valor: string) => /^(?=.*[A-Z])[A-Z0-9]{6,20}$/.test(compacto(valor));
++
++const rotulosDeDocumento = [
++  "SSN",
++  "ITIN",
++  "CC",
++  "CE",
++  "CPF",
++  "cedula",
++  "cédula",
++  "DIMEX",
++  "pasaporte",
++  "passport",
++  "NIT",
++  "RUC",
++  "EIN",
++]
++  .map((rotulo) =>
++    [...rotulo].map((letra) => `[${letra.toUpperCase()}${letra.toLowerCase()}]`).join(""),
++  )
++  .join("|");
++
++export function perfisRegionais(): Record<string, PerfilDoPais> {
++  const docs = {
++    CO: documento(
++      "Cédula / CE / pasaporte",
++      "1234567890",
++      ["cedula", "cc", "ce", "pasaporte"],
++      (v) => /^\d{1,12}$/.test(compacto(v)) || passaporte(v),
++    ),
++    CR: documento(
++      "Cédula / DIMEX / pasaporte",
++      "1-1234-1234",
++      ["cedula", "cedula_fisica", "dimex", "pasaporte"],
++      (v) => /^(?:\d{9}|\d{11,12})$/.test(compacto(v)) || passaporte(v),
++    ),
++    PA: documento(
++      "Cédula / pasaporte",
++      "8-123-4567",
++      ["cedula", "cedula_de_identidad", "pasaporte"],
++      (v) =>
++        /^[A-Z0-9]{1,6}-\d{1,5}-\d{1,6}$/i.test(v.trim()) ||
++        /^(?:PE|E|N)[- ]?\d{1,9}$/i.test(v.trim()) ||
++        passaporte(v),
++      (v) => v.toUpperCase().replace(/[.\s]/g, ""),
++    ),
++    US: documento(
++      "SSN / ITIN / pasaporte",
++      "123-45-6789",
++      ["ssn", "itin", "passport", "pasaporte"],
++      (v) => /^\d{9}$/.test(compacto(v)) || passaporte(v),
++    ),
++  };
++  const nomes = { CO: "Colombia", CR: "Costa Rica", PA: "Panamá", US: "Estados Unidos" };
++  return Object.fromEntries(
++    Object.entries(docs).map(([codigo, doc]) => [
++      codigo,
++      {
++        codigo,
++        nome: nomes[codigo as keyof typeof nomes],
++        operacional: true,
++        documento: doc,
++        lei: null,
++        calendario: { feriados: [], rotulo: "segunda a sexta; feriados locais não configurados" },
++        padroesDePii: [
++          {
++            tipo: "documento",
++            marcador: "[DOCUMENTO]",
++            fonte: `\\b(?:${rotulosDeDocumento})[ \t]*[:#-]?[ \t]*[A-Za-z0-9][A-Za-z0-9.-]{3,30}\\b`,
++            naoCobre:
++              "documento sem rótulo, fora dos formatos reconhecidos; não identifica titularidade",
++          },
++          ...(codigo === "US"
++            ? [
++                {
++                  tipo: "ssn",
++                  marcador: "[SSN]",
++                  fonte: "\\b\\d{3}-\\d{2}-\\d{4}\\b",
++                  naoCobre: "SSN sem separadores e passaporte sem rótulo",
++                },
++              ]
++            : []),
++        ],
++      },
++    ]),
++  );
++}
+diff --git a/lib/regional/interfaz-es.test.tsx b/lib/regional/interfaz-es.test.tsx
+new file mode 100644
+index 0000000..70ff606
+--- /dev/null
++++ b/lib/regional/interfaz-es.test.tsx
+@@ -0,0 +1,82 @@
++import { fireEvent, render, screen, waitFor, cleanup } from "@testing-library/react";
++import { afterEach, describe, expect, it, vi } from "vitest";
++import { IdiomaProvider } from "@/lib/i18n/IdiomaProvider";
++import { RegiaoProvider } from "./RegiaoProvider";
++import { NewContactDialog } from "@/components/contacts/NewContactDialog";
++import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
++import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm";
++
++const { criar } = vi.hoisted(() => ({ criar: vi.fn(async () => ({})) }));
++vi.mock("@/hooks/contacts/useCreateContact", () => ({
++  useCreateContact: () => ({ mutateAsync: criar, isPending: false }),
++}));
++vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
++vi.mock("@/app/actions/auth/requestPasswordReset", () => ({ requestPasswordReset: vi.fn() }));
++vi.mock("@/app/actions/auth/updatePassword", () => ({ updatePassword: vi.fn() }));
++afterEach(() => {
++  cleanup();
++  vi.clearAllMocks();
++});
++
++describe("formulários em espanhol", () => {
++  it("cria contato colombiano com telefone local e cédula, sem exigir CPF", async () => {
++    render(
++      <IdiomaProvider locale="es">
++        <RegiaoProvider pais="CO">
++          <NewContactDialog open onOpenChange={() => {}} />
++        </RegiaoProvider>
++      </IdiomaProvider>,
++    );
++    expect(screen.getByLabelText("País del teléfono")).toHaveValue("CO");
++    fireEvent.change(screen.getByRole("textbox", { name: /Teléfono/ }), {
++      target: { value: "3001234567" },
++    });
++    fireEvent.change(screen.getByRole("textbox", { name: /Cédula/ }), {
++      target: { value: "1234567890" },
++    });
++    fireEvent.click(screen.getByRole("button", { name: "Crear contacto" }));
++    await waitFor(() =>
++      expect(criar).toHaveBeenCalledWith(
++        expect.objectContaining({ phone_number: "+573001234567", cpf: "1234567890" }),
++      ),
++    );
++  });
++  it("puede elegir un prefijo distinto al país de la empresa", async () => {
++    render(
++      <IdiomaProvider locale="es">
++        <RegiaoProvider pais="CO">
++          <NewContactDialog open onOpenChange={() => {}} />
++        </RegiaoProvider>
++      </IdiomaProvider>,
++    );
++    fireEvent.change(screen.getByLabelText("País del teléfono"), { target: { value: "CR" } });
++    fireEvent.change(screen.getByRole("textbox", { name: /Teléfono/ }), {
++      target: { value: "88881234" },
++    });
++    fireEvent.click(screen.getByRole("button", { name: "Crear contacto" }));
++    await waitFor(() =>
++      expect(criar).toHaveBeenCalledWith(expect.objectContaining({ phone_number: "+50688881234" })),
++    );
++  });
++  it("recuperação mostra botão e erro de e-mail em espanhol", async () => {
++    render(
++      <IdiomaProvider locale="es">
++        <ForgotPasswordForm />
++      </IdiomaProvider>,
++    );
++    fireEvent.change(screen.getByRole("textbox"), { target: { value: "invalido" } });
++    fireEvent.click(screen.getByRole("button", { name: "Enviar enlace de restablecimiento" }));
++    await waitFor(() => expect(screen.getByText("Correo inválido")).toBeInTheDocument());
++  });
++  it("nova senha mostra requisitos em espanhol", () => {
++    render(
++      <IdiomaProvider locale="es">
++        <ResetPasswordForm />
++      </IdiomaProvider>,
++    );
++    expect(screen.getByText("8 o más caracteres")).toBeInTheDocument();
++    expect(screen.getByText("Un símbolo")).toBeInTheDocument();
++    expect(screen.getByText("Seguridad de la contraseña")).toBeInTheDocument();
++    expect(screen.queryByText("8 ou mais caracteres")).toBeNull();
++  });
++});
+diff --git a/lib/regional/regiones.test.ts b/lib/regional/regiones.test.ts
+new file mode 100644
+index 0000000..5ac8a03
+--- /dev/null
++++ b/lib/regional/regiones.test.ts
+@@ -0,0 +1,129 @@
++import { describe, expect, it } from "vitest";
++import { createHash } from "node:crypto";
++import { formatCents, MOEDAS_SERVIDAS } from "@/lib/money";
++import { perfilDoPais, paisesOferecidos, citacaoDaLei } from "@/lib/legal/perfil-do-pais";
++import {
++  normalizaTelefoneDoPais,
++  regiaoDoPais,
++  FUSOS_SERVIDOS,
++  formaFiscalValida,
++} from "./catalogo";
++import { contactCreateSchemaDoPais } from "@/lib/schemas/contacts";
++import { tenantSchema } from "@/lib/schemas/settings";
++import { hashCpf } from "@/lib/contacts/cpf";
++import { mapHeader, mapLinha } from "@/lib/contacts/csv";
++import { anonymize, padroesDePii } from "@/lib/ai/anonymize";
++
++const CASOS = [
++  {
++    pais: "CO",
++    moeda: "COP",
++    telefone: "300 123 4567",
++    e164: "+573001234567",
++    documento: "1.234.567.890",
++    gravado: "1234567890",
++    fiscal: "900123456-8",
++  },
++  {
++    pais: "CR",
++    moeda: "CRC",
++    telefone: "8888-1234",
++    e164: "+50688881234",
++    documento: "1-1234-1234",
++    gravado: "112341234",
++    fiscal: "3-101-123456",
++  },
++  {
++    pais: "PA",
++    moeda: "USD",
++    telefone: "6123-4567",
++    e164: "+50761234567",
++    documento: "8-123-4567",
++    gravado: "8-123-4567",
++    fiscal: "123456-1-123456 DV 00",
++  },
++  {
++    pais: "US",
++    moeda: "USD",
++    telefone: "(202) 555-0123",
++    e164: "+12025550123",
++    documento: "123-45-6789",
++    gravado: "123456789",
++    fiscal: "12-3456789",
++  },
++];
++for (const c of CASOS)
++  describe(c.pais, () => {
++    it("pode ser escolhido sem afirmar lei brasileira", () => {
++      expect(paisesOferecidos().map((p) => p.codigo)).toContain(c.pais);
++      expect(citacaoDaLei(perfilDoPais(c.pais))).toBeNull();
++      expect(perfilDoPais(c.pais).calendario.feriados).toEqual([]);
++    });
++    it("serve moeda e fuso IANA do país", () => {
++      expect(MOEDAS_SERVIDAS).toContain(c.moeda);
++      expect(regiaoDoPais(c.pais).moeda).toBe(c.moeda);
++      expect(FUSOS_SERVIDOS).toContain(regiaoDoPais(c.pais).fuso);
++      expect(
++        new Intl.DateTimeFormat("es", { timeZone: regiaoDoPais(c.pais).fuso }).resolvedOptions()
++          .timeZone,
++      ).toBeTruthy();
++      expect(formatCents(123450, c.moeda)).not.toContain("NaN");
++    });
++    it("telefone local ganha o prefixo certo; explícito internacional é preservado", () => {
++      expect(normalizaTelefoneDoPais(c.telefone, c.pais)).toBe(c.e164);
++      expect(normalizaTelefoneDoPais("+50688881234", c.pais)).toBe("+50688881234");
++      expect(normalizaTelefoneDoPais("abc" + c.telefone, c.pais)).toBeNull();
++      expect(normalizaTelefoneDoPais("123", c.pais)).toBeNull();
++    });
++    it("a validação do contato não exige CPF brasileiro e preserva o documento", () => {
++      const schema = contactCreateSchemaDoPais(perfilDoPais(c.pais));
++      expect(schema.parse({ email: "teste@example.test", cpf: c.documento }).cpf).toBe(c.gravado);
++      expect(schema.safeParse({ cpf: "<invalid>" }).success).toBe(false);
++    });
++    it("a planilha usa os mesmos documentos e telefones", () => {
++      const doc = perfilDoPais(c.pais).documento;
++      const { indices } = mapHeader(["teléfono", "documento"], undefined, doc);
++      const linha = mapLinha([c.telefone, c.documento], indices, undefined, doc, c.pais);
++      expect(linha.motivo).toBeNull();
++      expect(linha.contato).toMatchObject({ cpf: c.gravado, phone_number: c.e164 });
++    });
++    it("permite gravar identificador fiscal e região na empresa", () => {
++      expect(formaFiscalValida(c.fiscal, c.pais)).toBe(true);
++      expect(
++        tenantSchema.safeParse({
++          display_name: "Empresa",
++          legal_name: "Empresa",
++          cnpj: c.fiscal,
++          country: c.pais,
++          currency: c.moeda,
++          timezone: regiaoDoPais(c.pais).fuso,
++          locale: "es",
++          media_retention_days: 90,
++        }).success,
++      ).toBe(true);
++    });
++  });
++it("mantém o hash de CPF existente e distingue passaportes e cédulas estruturadas", () => {
++  expect(hashCpf("529.982.247-25")).toBe(createHash("sha256").update("52998224725").digest("hex"));
++  expect(hashCpf("AB123456")).not.toBe(hashCpf("CD123456"));
++  expect(hashCpf("8-12-345")).not.toBe(hashCpf("8-123-45"));
++});
++it("a cédula jurídica da Costa Rica pode preservar letras no novo consecutivo", () => {
++  expect(formaFiscalValida("3-101-A12345", "CR")).toBe(true);
++});
++it("identificadores fiscais malformados são recusados", () => {
++  for (const pais of ["CO", "CR", "US"]) expect(formaFiscalValida("inválido", pais)).toBe(false);
++});
++it("documento rotulado não chega ao modelo em texto aberto", () => {
++  const resultado = anonymize("SSN: 123-45-6789", padroesDePii([perfilDoPais("US")]));
++  expect(resultado.anonymized).not.toContain("123-45-6789");
++});
++
++it("a redação reconhece rótulos em caixa baixa sem consumir o texto seguinte", () => {
++  const resultado = anonymize(
++    "cédula: 8-123-4567 pedido pendente",
++    padroesDePii([perfilDoPais("PA")]),
++  );
++  expect(resultado.anonymized).toContain("pedido pendente");
++  expect(resultado.anonymized).not.toContain("8-123-4567");
++});
+diff --git a/lib/schemas/contacts.ts b/lib/schemas/contacts.ts
+index 78edde0..0159e53 100644
+--- a/lib/schemas/contacts.ts
++++ b/lib/schemas/contacts.ts
+@@ -85,6 +85,7 @@ export function contactCreateSchemaDoPais(perfil: PerfilDoPais) {
+     cpf: z
+       .string()
+       .refine(perfil.documento.valida, perfil.documento.mensagemInvalido)
++      .transform(perfil.documento.normaliza)
+       .optional(),
+   });
+ }
+@@ -95,6 +96,7 @@ export function contactPatchSchemaDoPais(perfil: PerfilDoPais) {
+     cpf: z
+       .string()
+       .refine(perfil.documento.valida, perfil.documento.mensagemInvalido)
++      .transform(perfil.documento.normaliza)
+       .optional(),
+   });
+ }
+diff --git a/lib/schemas/settings.ts b/lib/schemas/settings.ts
+index 22e7217..b9b937a 100644
+--- a/lib/schemas/settings.ts
++++ b/lib/schemas/settings.ts
+@@ -10,6 +10,7 @@ import { z } from "zod";
+ 
+ import { ehHexValido } from "@/lib/branding/rampa";
+ import { IDIOMAS } from "@/lib/i18n/idiomas";
++import { formaFiscalValida } from "@/lib/regional/catalogo";
+ import { MOEDAS_SERVIDAS } from "@/lib/money";
+ 
+ import { conversationTagSchema } from "./messaging";
+@@ -81,50 +82,55 @@ export type ProfileInput = z.infer<typeof profileSchema>;
+  */
+ const MOEDAS = MOEDAS_SERVIDAS;
+ 
+-export const tenantSchema = z.object({
+-  display_name: z.string().min(1).max(120),
+-  legal_name: z.string().min(1).max(200),
+-  cnpj: z
+-    .string()
+-    .max(20)
+-    .nullable()
+-    .optional()
+-    .or(z.literal("").transform(() => null)),
+-  /**
+-   * O país da organização (issue #1033): ISO-3166 alpha-2, maiúsculas, `null` =
+-   * Brasil. É a MESMA régua do CHECK `organizations_country_check` da migration
+-   * 0277 — a validação de aplicação e a do banco não podem divergir, ou a tela
+-   * aceita o que o banco recusa (e o erro chega como 500 em vez de formulário).
+-   * Aqui NÃO se valida se o país tem perfil revisado: quem oferece a lista é
+-   * `paisesOferecidos()` (`lib/legal/perfil-do-pais.ts`), e o valor que chega é
+-   * conferido contra ela um degrau antes de gravar — país sem lei revisada não
+-   * entra nem por API.
+-   */
+-  country: z
+-    .string()
+-    .regex(/^[A-Z]{2}$/)
+-    .nullable()
+-    .optional()
+-    .or(z.literal("").transform(() => null)),
+-  timezone: z.string().min(1).max(64),
+-  locale: z.enum(LOCALES),
+-  currency: z.enum(MOEDAS),
+-  media_retention_days: z.coerce.number().int().min(30).max(3650),
+-  dpo_email: z
+-    .string()
+-    .email()
+-    .max(200)
+-    .nullable()
+-    .optional()
+-    .or(z.literal("").transform(() => null)),
+-  privacy_policy_url: z
+-    .string()
+-    .url()
+-    .max(2048)
+-    .nullable()
+-    .optional()
+-    .or(z.literal("").transform(() => null)),
+-});
++export const tenantSchema = z
++  .object({
++    display_name: z.string().min(1).max(120),
++    legal_name: z.string().min(1).max(200),
++    cnpj: z
++      .string()
++      .max(32)
++      .nullable()
++      .optional()
++      .or(z.literal("").transform(() => null)),
++    /**
++     * O país da organização (issue #1033): ISO-3166 alpha-2, maiúsculas, `null` =
++     * Brasil. É a MESMA régua do CHECK `organizations_country_check` da migration
++     * 0277 — a validação de aplicação e a do banco não podem divergir, ou a tela
++     * aceita o que o banco recusa (e o erro chega como 500 em vez de formulário).
++     * Aqui NÃO se valida se o país tem perfil revisado: quem oferece a lista é
++     * `paisesOferecidos()` (`lib/legal/perfil-do-pais.ts`), e o valor que chega é
++     * conferido contra ela um degrau antes de gravar. Perfis operacionais do
++     * fork podem ser escolhidos sem citação legal revisada.
++     */
++    country: z
++      .string()
++      .regex(/^[A-Z]{2}$/)
++      .nullable()
++      .optional()
++      .or(z.literal("").transform(() => null)),
++    timezone: z.string().min(1).max(64),
++    locale: z.enum(LOCALES),
++    currency: z.enum(MOEDAS),
++    media_retention_days: z.coerce.number().int().min(30).max(3650),
++    dpo_email: z
++      .string()
++      .email()
++      .max(200)
++      .nullable()
++      .optional()
++      .or(z.literal("").transform(() => null)),
++    privacy_policy_url: z
++      .string()
++      .url()
++      .max(2048)
++      .nullable()
++      .optional()
++      .or(z.literal("").transform(() => null)),
++  })
++  .refine((v) => !v.cnpj || formaFiscalValida(v.cnpj, v.country), {
++    path: ["cnpj"],
++    message: "Identificador fiscal inválido: confira o formato.",
++  });
+ export type TenantInput = z.infer<typeof tenantSchema>;
+ 
+ export const NOTIFICATION_CATEGORIES = [
+@@ -187,9 +193,7 @@ export const customFieldSchema = z.object({
+       ao_perder: z.boolean().optional(),
+     })
+     .optional(),
+-  options: z
+-    .array(z.object({ value: z.string().min(1), label: z.string().min(1) }))
+-    .optional(),
++  options: z.array(z.object({ value: z.string().min(1), label: z.string().min(1) })).optional(),
+ });
+ export type CustomFieldDef = z.infer<typeof customFieldSchema>;
+ 
+@@ -314,24 +318,32 @@ export const marcaDaOrganizacaoSchema = z.object({
+ export type MarcaDaOrganizacaoInput = z.infer<typeof marcaDaOrganizacaoSchema>;
+ 
+ /** Prazos por organização. Leitura legada degrada; escrita usa schema estrito. */
+-export const agendaSettingsWriteSchema = z.strictObject({
+-  confirmation_delay_minutes: z.number().int().min(1).max(10080),
+-  unknown_protection_minutes: z.number().int().min(1).max(10080),
+-  /**
+-   * Quanto tempo um pedido não confirmado segura o horário.
+-   *
+-   * ⚠️ `.default()` e não obrigatório: este schema é `strictObject`, e torná-lo
+-   * exigido faria TODO PATCH já escrito (que manda só os dois campos de cima)
+-   * passar a falhar — o tipo de mudança que a doutrina de packaging proíbe,
+-   * porque quebra quem já instalou sem nenhum aviso.
+-   *
+-   * 24h é o default porque quem confere a fila uma vez por dia não pode perder
+-   * pedido. O mínimo é 15 minutos: abaixo disso a expiração corre com quem está
+-   * decidindo naquele instante.
+-   */
+-  pending_expires_after_minutes: z.number().int().min(15).max(10080).default(1440),
+-}).refine(v => v.unknown_protection_minutes >= v.confirmation_delay_minutes, {message:"O prazo de proteção deve ser maior que o prazo de confirmação."});
+-export const agendaSettingsSchema = agendaSettingsWriteSchema.catch({confirmation_delay_minutes:10,unknown_protection_minutes:1440,pending_expires_after_minutes:1440});
++export const agendaSettingsWriteSchema = z
++  .strictObject({
++    confirmation_delay_minutes: z.number().int().min(1).max(10080),
++    unknown_protection_minutes: z.number().int().min(1).max(10080),
++    /**
++     * Quanto tempo um pedido não confirmado segura o horário.
++     *
++     * ⚠️ `.default()` e não obrigatório: este schema é `strictObject`, e torná-lo
++     * exigido faria TODO PATCH já escrito (que manda só os dois campos de cima)
++     * passar a falhar — o tipo de mudança que a doutrina de packaging proíbe,
++     * porque quebra quem já instalou sem nenhum aviso.
++     *
++     * 24h é o default porque quem confere a fila uma vez por dia não pode perder
++     * pedido. O mínimo é 15 minutos: abaixo disso a expiração corre com quem está
++     * decidindo naquele instante.
++     */
++    pending_expires_after_minutes: z.number().int().min(15).max(10080).default(1440),
++  })
++  .refine((v) => v.unknown_protection_minutes >= v.confirmation_delay_minutes, {
++    message: "O prazo de proteção deve ser maior que o prazo de confirmação.",
++  });
++export const agendaSettingsSchema = agendaSettingsWriteSchema.catch({
++  confirmation_delay_minutes: 10,
++  unknown_protection_minutes: 1440,
++  pending_expires_after_minutes: 1440,
++});
+ 
+ /**
+  * `organizations.settings.crm` — regras de CRM que cada organização liga para si.
+diff --git a/lib/tempo/fusos.ts b/lib/tempo/fusos.ts
+index b9c84c3..879f0c3 100644
+--- a/lib/tempo/fusos.ts
++++ b/lib/tempo/fusos.ts
+@@ -38,6 +38,18 @@ export const FUSOS_OFERECIDOS: { codigo: string; rotulo: string }[] = [
+   { codigo: "America/La_Paz", rotulo: "La Paz (Bolívia)" },
+   { codigo: "America/Lima", rotulo: "Lima (Peru)" },
+   { codigo: "America/Bogota", rotulo: "Bogotá (Colômbia)" },
++  { codigo: "America/Costa_Rica", rotulo: "San José (Costa Rica)" },
++  { codigo: "America/Panama", rotulo: "Cidade do Panamá (Panamá)" },
++  { codigo: "America/New_York", rotulo: "Nova York (Estados Unidos)" },
++  { codigo: "America/Chicago", rotulo: "Chicago (Estados Unidos)" },
++  { codigo: "America/Denver", rotulo: "Denver (Estados Unidos)" },
++  { codigo: "America/Los_Angeles", rotulo: "Los Angeles (Estados Unidos)" },
++  { codigo: "America/Phoenix", rotulo: "Phoenix (Estados Unidos)" },
++  { codigo: "America/Anchorage", rotulo: "Anchorage (Estados Unidos)" },
++  { codigo: "Pacific/Honolulu", rotulo: "Honolulu (Estados Unidos)" },
++  { codigo: "America/Cuiaba", rotulo: "Cuiabá (Brasil)" },
++  { codigo: "America/Rio_Branco", rotulo: "Rio Branco (Brasil)" },
++  { codigo: "Europe/Madrid", rotulo: "Madri (Espanha)" },
+   { codigo: "America/Mexico_City", rotulo: "Cidade do México (México)" },
+   { codigo: "America/Sao_Paulo", rotulo: "São Paulo (Brasil)" },
+   { codigo: "America/Manaus", rotulo: "Manaus (Brasil)" },
+diff --git a/tests/unit/fuso-horario.test.ts b/tests/unit/fuso-horario.test.ts
+index 284c5c7..0083ed2 100644
+--- a/tests/unit/fuso-horario.test.ts
++++ b/tests/unit/fuso-horario.test.ts
+@@ -25,6 +25,8 @@ import { describe, expect, it } from "vitest";
+  * A LISTA impede o erro de digitação, que é a origem. A CHECAGEM defende a API,
+  * que aceita qualquer cliente e não passa pela tela.
+  */
++import { fusosComAtual } from "@/lib/regional/catalogo";
++
+ import { DICIONARIO } from "@/lib/i18n/dicionario";
+ import { availabilityScheduleSchema } from "@/lib/schemas/routing";
+ import { FUSOS_OFERECIDOS, FUSO_PADRAO, fusoValido } from "@/lib/tempo/fusos";
+@@ -118,7 +120,8 @@ describe("os fusos OFERECIDOS — a lista, não o padrão", () => {
+   it("oferece Luanda, e a tela da empresa também", () => {
+     expect(FUSOS_OFERECIDOS.map((f) => f.codigo)).toContain("Africa/Luanda");
+     const formulario = readFileSync("app/app/settings/tenant/_form.tsx", "utf8");
+-    expect(formulario).toContain("Africa/Luanda");
++    expect(formulario).toContain("fusosComAtual");
++    expect(fusosComAtual("UTC")).toContain("Africa/Luanda");
+   });
+ 
+   // As quatro listas são três fontes: `FUSOS_OFERECIDOS` (jornada e janela de
+@@ -127,7 +130,8 @@ describe("os fusos OFERECIDOS — a lista, não o padrão", () => {
+   it("oferece Lisboa nas três fontes", () => {
+     expect(FUSOS_OFERECIDOS.map((f) => f.codigo)).toContain("Europe/Lisbon");
+     for (const arquivo of ["app/app/settings/tenant/_form.tsx", "app/app/settings/profile/_form.tsx"]) {
+-      expect(readFileSync(arquivo, "utf8"), arquivo).toContain('"Europe/Lisbon"');
++      expect(readFileSync(arquivo, "utf8"), arquivo).toContain("fusosComAtual");
++      expect(fusosComAtual("UTC")).toContain("Europe/Lisbon");
+     }
+   });
+ 

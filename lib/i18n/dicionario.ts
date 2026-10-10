@@ -37,6 +37,8 @@ import type { Idioma } from "./idiomas";
 type Traducoes = Record<string, Partial<Record<Exclude<Idioma, "pt-BR">, string>>>;
 
 export const DICIONARIO: Traducoes = {
+  "Fuso horário inválido.": { es: "Zona horaria inválida." },
+  "Não foi possível cifrar o documento. Confira a chave e a atualização do banco.": { es: "No se pudo cifrar el documento. Revisa la clave y la actualización de la base de datos." },
   // ─── BUSCA DENTRO DA CONVERSA (extraída do PR #1793) ───
   "Resultados nas mensagens carregadas": { es: "Resultados en los mensajes cargados" },
   "Buscar nesta conversa": { es: "Buscar en esta conversación" },
@@ -12856,6 +12858,41 @@ export const DICIONARIO: Traducoes = {
     {
       es: "Guía para agendar o reprogramar citas (consulta, visita, sesión): ofrece opciones concretas de la agenda real, nunca inventa disponibilidad y confirma por escrito antes de cerrar.",
     },
+  // Región y acceso en español — fork 1120.
+  "Sua conta no {marca} está quase pronta. Clique no botão abaixo para confirmar seu e-mail e ativar sua conta.": { es: "Tu cuenta en {marca} está casi lista. Haz clic en el botón para confirmar tu correo electrónico y activar tu cuenta." },
+  "Confirmar e-mail": { es: "Confirmar correo electrónico" },
+  "Se você não criou esta conta, ignore este e-mail.": { es: "Si no creaste esta cuenta, ignora este correo." },
+  "Redefinir sua senha": { es: "Restablecer tu contraseña" },
+  "Recebemos um pedido para redefinir a senha da sua conta no {marca}. Clique no botão abaixo para escolher uma nova.": { es: "Recibimos una solicitud para restablecer la contraseña de tu cuenta en {marca}. Haz clic en el botón para elegir una nueva." },
+  "Se não foi você quem pediu, ignore este e-mail — sua senha continua a mesma.": { es: "Si no solicitaste el cambio, ignora este correo. Tu contraseña seguirá siendo la misma." },
+  "Ou copie e cole este link no navegador:": { es: "O copia y pega este enlace en tu navegador:" },
+  "Define os documentos e o prefixo telefônico padrão. Os novos países não incluem revisão jurídica nem feriados locais.": { es: "Define los documentos y el prefijo telefónico predeterminado. Los nuevos países no incluyen revisión jurídica ni días festivos locales." },
+  "Telefone inválido: informe o prefixo internacional ou selecione o país.": { es: "Teléfono inválido: escribe el prefijo internacional o selecciona el país." },
+  "País do telefone": { es: "País del teléfono" },
+  "Identificador fiscal inválido: confira o formato.": { es: "Identificador fiscal inválido: revisa el formato." },
+  "Documento inválido: confira o formato; a validação não comprova a identidade.": { es: "Documento inválido: revisa el formato; la validación no comprueba la identidad." },
+  "Conclua a configuração e publique uma versão.": { es: "Completa la configuración y publica una versión." },
+  "Bogotá · Colombia": { es: "Bogotá · Colombia" },
+  "San José · Costa Rica": { es: "San José · Costa Rica" },
+  "Ciudad de Panamá": { es: "Ciudad de Panamá" },
+  "Chicago": { es: "Chicago" },
+  "Denver": { es: "Denver" },
+  "Phoenix": { es: "Phoenix" },
+  "Anchorage": { es: "Anchorage" },
+  "Honolulu": { es: "Honolulu" },
+  "Identificador fiscal": { es: "Identificador fiscal" },
+  "San José (Costa Rica)": { es: "San José (Costa Rica)" },
+  "Cidade do Panamá (Panamá)": { es: "Ciudad de Panamá (Panamá)" },
+  "Nova York (Estados Unidos)": { es: "Nueva York (Estados Unidos)" },
+  "Chicago (Estados Unidos)": { es: "Chicago (Estados Unidos)" },
+  "Denver (Estados Unidos)": { es: "Denver (Estados Unidos)" },
+  "Los Angeles (Estados Unidos)": { es: "Los Ángeles (Estados Unidos)" },
+  "Phoenix (Estados Unidos)": { es: "Phoenix (Estados Unidos)" },
+  "Anchorage (Estados Unidos)": { es: "Anchorage (Estados Unidos)" },
+  "Honolulu (Estados Unidos)": { es: "Honolulu (Estados Unidos)" },
+  "Cuiabá (Brasil)": { es: "Cuiabá (Brasil)" },
+  "Rio Branco (Brasil)": { es: "Rio Branco (Brasil)" },
+  "Madri (Espanha)": { es: "Madrid (España)" },
 };
 
 /**

@@ -1,4 +1,5 @@
 import { perfilDoPais, type DocumentoDoTitular } from "@/lib/legal/perfil-do-pais";
+import { normalizaTelefoneDoPais } from "@/lib/regional/catalogo";
 import { normalizePhoneBR } from "@/lib/webhooks/inbound";
 import { normalizarTags } from "@/lib/contacts/tag-normalizada";
 /**
@@ -386,6 +387,7 @@ export function mapLinha(
   indices: Record<string, number>,
   t?: (text: string) => string,
   documento?: DocumentoDoTitular,
+  pais?: string,
 ): { contato: LinhaNormalizada; motivo: string | null } {
   const _t = t || ((x) => x);
   const doc = documento ?? perfilDoPais(null).documento;
@@ -411,7 +413,7 @@ export function mapLinha(
 
   const phoneRaw = get("phone_number");
   if (phoneRaw !== "") {
-    const phone = normalizaTelefone(phoneRaw);
+    const phone = pais && pais !== "BR" ? normalizaTelefoneDoPais(phoneRaw, pais) : normalizaTelefone(phoneRaw);
     if (phone === null) {
       return {
         contato: {},

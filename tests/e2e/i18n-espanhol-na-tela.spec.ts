@@ -115,8 +115,8 @@ function rotulosDeInterface(textos: string[]): string {
 }
 
 /** Todo texto que a pessoa consegue LER nesta tela, normalizado. */
-async function textosVisiveis(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
+async function textosVisiveis(page: Page, apenasInterface = false): Promise<string[]> {
+  return page.evaluate((ignorarDados) => {
     const saida: string[] = [];
     const anda = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (let no = anda.nextNode(); no; no = anda.nextNode()) {
@@ -124,6 +124,10 @@ async function textosVisiveis(page: Page): Promise<string[]> {
       if (!texto) continue;
       const pai = no.parentElement;
       if (!pai) continue;
+      // O nome de uma etapa pode coincidir com uma chave do dicionário.
+      // Só a medição de vazamento exclui o campo marcado: os retratos e a
+      // prova de ida e volta continuam lendo o texto original da organização.
+      if (ignorarDados && pai.closest('[data-tenant-field="crm_stages.name"]')) continue;
       // `sr-only` conta: é texto que o leitor de tela fala, e traduzir a
       // interface e deixar o leitor de tela em português seria acessibilidade
       // de mentira. O que não conta é o que está escondido de TODO mundo.
@@ -133,7 +137,7 @@ async function textosVisiveis(page: Page): Promise<string[]> {
       saida.push(texto);
     }
     return saida;
-  });
+  }, apenasInterface);
 }
 
 /**
@@ -371,7 +375,7 @@ test.describe("o idioma escolhido chega à tela", () => {
     for (const tela of TELAS) {
       await page.goto(tela);
       await page.waitForLoadState("networkidle", { timeout: PRAZO });
-      for (const texto of await textosVisiveis(page)) {
+      for (const texto of await textosVisiveis(page, true)) {
         if (CHAVES_QUE_MUDAM.has(texto) && !DADO_DO_TENANT.has(texto)) {
           vazando.push(`${tela} → ${JSON.stringify(texto)}`);
         }

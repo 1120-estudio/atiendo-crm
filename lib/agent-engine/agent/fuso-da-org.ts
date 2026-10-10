@@ -25,16 +25,16 @@
  * ⚠️ FALHA ABERTA, e isso é decisão, não descuido. A leitura pode estourar num
  * clone cujo schema está atrás do código, e o valor pode ser um fuso que o
  * `Intl` recusa — `organizations.timezone` não é validado por escritor nenhum
- * (`tenantSchema` e o schema do onboarding são `z.string().max(64)` sem
- * `refine`, e a coluna não tem CHECK). Nos dois casos o turno segue com o
+ * (os formulários validam com `fusoValido`, mas a coluna aceita valores
+ * legados e não tem CHECK). Nos dois casos o turno segue com o
  * padrão do produto: derrubar o atendimento de um cliente por causa de um
  * acento no campo de configuração seria pior que uma hora de diferença.
  */
 
-import { FUSO_PADRAO, fusoValido } from '@/lib/tempo/fusos';
+import { FUSO_PADRAO, fusoValido } from "@/lib/tempo/fusos";
 
-import type { Queryable } from '../queue/queue';
-import type { Logger } from '../obs/logger';
+import type { Queryable } from "../queue/queue";
+import type { Logger } from "../obs/logger";
 
 /**
  * O fuso IANA da organização, sempre utilizável.
@@ -52,22 +52,22 @@ export async function fusoDaOrganizacao(
   let bruto: string | null = null;
   try {
     const { rows } = await db.query<{ timezone: string | null }>(
-      'select timezone from organizations where id = $1',
+      "select timezone from organizations where id = $1",
       [organizationId],
     );
     bruto = rows[0]?.timezone ?? null;
   } catch (err) {
-    log?.warn('não consegui ler o fuso da organização — o turno segue no padrão', {
+    log?.warn("não consegui ler o fuso da organização — o turno segue no padrão", {
       fuso_padrao: FUSO_PADRAO,
       error: (err instanceof Error ? err.message : String(err)).slice(0, 120),
     });
     return FUSO_PADRAO;
   }
 
-  const tz = bruto?.trim() ?? '';
-  if (tz !== '' && fusoValido(tz)) return tz;
+  const tz = bruto?.trim() ?? "";
+  if (tz !== "" && fusoValido(tz)) return tz;
 
-  log?.warn('fuso da organização inutilizável — o turno segue no padrão', {
+  log?.warn("fuso da organização inutilizável — o turno segue no padrão", {
     // O valor recusado vai ao log porque é ele que diz o que corrigir na tela.
     // Não é PII: é um código IANA de configuração, não dado de pessoa.
     fuso_recusado: tz,

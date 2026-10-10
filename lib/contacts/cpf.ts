@@ -1,16 +1,15 @@
-/**
- * CPF normalization + hashing helpers.
- *
- * `cpf_hash` is sha256(hex) of the 11-digit normalized CPF — used for exact-match
- * lookup and dedup without exposing plaintext. At-rest encryption (column
- * `cpf_encrypted bytea`) requires a server-side `encrypt_cpf` SQL function which
- * is not yet provisioned — see follow-up note in EPIC-05 commit message.
- */
+/** Documento pessoal: hash para dedupe e pgp_sym AES-256 para recuperação autorizada. */
+import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export function normalizeCpf(raw: string): string {
-  return raw.replace(/\D/g, "");
+  const compacto = raw.toUpperCase().replace(/[.\s]/g, "");
+  // Os CPFs existentes mantêm o hash. Em cédulas estruturadas, os hífens
+  // distinguem números diferentes (8-12-345 não é 8-123-45).
+  if (/^\d{9}-\d{2}$/.test(compacto)) return compacto.replace(/-/g, "");
+  return compacto.replace(/[^A-Z0-9-]/g, "");
 }
 
 /**
@@ -20,25 +19,24 @@ export function hashCpf(raw: string): string {
   return createHash("sha256").update(normalizeCpf(raw)).digest("hex");
 }
 
-/**
- * At-rest CPF encryption via pgcrypto-backed `encrypt_cpf` RPC.
- *
- * Returns null when the RPC is not yet provisioned in the database — caller
- * should still persist `cpf_hash` and emit a single console.warn (we tolerate
- * the gap until the migration lands).
- */
+/** Sem cifra confirmada, o chamador recusa a escrita do documento. */
 export async function encryptCpfSql(
   supabase: SupabaseClient,
   plaintext: string,
-): Promise<Uint8Array | null> {
-  const { data, error } = await supabase.rpc("encrypt_cpf", { p_plaintext: plaintext });
-  if (error) {
-    console.warn(
-      "[contacts.cpf] encrypt_cpf RPC unavailable — storing cpf_hash only.",
-      error.message,
-    );
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.rpc("encrypt_cpf", {
+      p_plaintext: plaintext,
+      p_key: env.CPF_ENCRYPTION_KEY,
+    });
+    if (error || typeof data !== "string" || !/^\\x(?:[0-9a-f]{2})+$/i.test(data)) {
+      // Não registrar o erro do servidor: ele pode conter argumentos da RPC.
+      logger.error("[contacts.document] encryption unavailable");
+      return null;
+    }
+    return data;
+  } catch {
+    logger.error("[contacts.document] encryption unavailable");
     return null;
   }
-  if (!data) return null;
-  return data as Uint8Array;
 }

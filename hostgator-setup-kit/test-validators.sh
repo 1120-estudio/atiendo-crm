@@ -990,7 +990,12 @@ echo "provisionamento do Supabase: senha do banco"
 #     rodar o script e exigir que ele CHEGUE ao passo seguinte.
 #     O passo 3 imprime o título antes de tocar a rede, então a asserção não
 #     depende de a API responder (e o token aqui é propositalmente inválido).
-saida="$(SUPABASE_ACCESS_TOKEN=token-invalido-de-teste SUPABASE_ORG_ID=org-de-teste \
+# Esta prova só exige chegar ao título do passo 3. Interrompa o transporte
+# com um dublê: token inválido não torna uma chamada real necessária ou segura.
+mkdir -p "$SUITE_TMP/sem-rede"
+printf '#!/usr/bin/env bash\nexit 7\n' > "$SUITE_TMP/sem-rede/curl"
+chmod +x "$SUITE_TMP/sem-rede/curl"
+saida="$(PATH="$SUITE_TMP/sem-rede:$PATH" SUPABASE_ACCESS_TOKEN=token-invalido-de-teste SUPABASE_ORG_ID=org-de-teste \
          SUPABASE_PROVISION_STATE="$SUITE_TMP/senha-do-teste.env" \
          bash ./supabase-provision.sh "Projeto de Teste" sa-east-1 2>&1 || true)"
 if printf '%s' "$saida" | grep -q 'Criando o projeto'; then

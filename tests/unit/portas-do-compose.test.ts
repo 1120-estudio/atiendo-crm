@@ -34,6 +34,9 @@ import { describe, expect, it } from "vitest";
  *
  * ─── ESCOPO ──────────────────────────────────────────────────────────────────
  *
+ * Coolify usa seis serviços; o compose tradicional acrescenta Caddy.
+ * Ambos preservam a fronteira privada e não incluem telefonia.
+ * As portas e labels continuam vigiadas; a ausência de voz é explícita.
  * `docker-compose.prod.yml` e `docker-compose.traefik.yml` — os que rodam na
  * VPS do cliente. O `docker-compose.yml` (dev) está FORA de propósito: publicar
  * portas na máquina de quem desenvolve é justamente o que ele existe para
@@ -129,6 +132,26 @@ function semComentarios(bloco: string): string {
     .join("\n");
 }
 
+/** Impede que serviços comuns dependam de um profile inativo. */
+function dependenciasDeProfile(servicos: Map<string, string>): string[] {
+  const emProfile = [...servicos.entries()]
+    .filter(([, bloco]) => /^ {4}profiles:/m.test(semComentarios(bloco)))
+    .map(([nome]) => nome);
+  const quebrados: string[] = [];
+  for (const [nome, bloco] of servicos) {
+    if (emProfile.includes(nome)) continue;
+    const linhas = semComentarios(bloco).split("\n");
+    const inicio = linhas.findIndex((linha) => /^ {4}depends_on:/.test(linha));
+    if (inicio < 0) continue;
+    for (const linha of linhas.slice(inicio + 1)) {
+      if (/^ {4}\S/.test(linha)) break;
+      const alvo = linha.match(/^ {6}(?:-\s+)?([a-z0-9_-]+)\s*:?(?:\s|$)/i)?.[1];
+      if (alvo && emProfile.includes(alvo)) quebrados.push(`${nome} → ${alvo}`);
+    }
+  }
+  return quebrados;
+}
+
 const ARQUIVOS = ["docker-compose.prod.yml", "docker-compose.traefik.yml"] as const;
 
 const SERVICOS = new Map<string, Map<string, string>>(
@@ -143,13 +166,10 @@ describe("a fronteira de rede do que o cliente instala", () => {
     expect([...SERVICOS.get("docker-compose.prod.yml")!.keys()].sort()).toEqual(
       [
         "app",
-        "asterisk",
         "caddy",
         "redis",
         "scheduler",
         "srh",
-        "voice-agent",
-        "wacalls",
         "waha",
         "worker",
       ].sort(),
@@ -158,6 +178,16 @@ describe("a fronteira de rede do que o cliente instala", () => {
     const traefik = [...SERVICOS.get("docker-compose.traefik.yml")!.keys()];
     expect(traefik, "o override do Traefik parou de declarar serviços").toContain("app");
     expect(traefik).toContain("caddy");
+  });
+
+  it.each(["single-server", "traefik", "npm", "build"])("override %s não referencia serviço removido", (mode) => {
+    const base = SERVICOS.get("docker-compose.prod.yml")!;
+    const override = lerServicos(fs.readFileSync(path.join(RAIZ, `docker-compose.${mode}.yml`), "utf8"));
+    expect(override.size).toBeGreaterThan(0);
+    expect([...override.keys()].filter((name) => !base.has(name))).toEqual([]);
+    if (mode === "single-server") {
+      for (const name of ["app", "worker"]) expect(override.get(name)).toContain("supabase_private");
+    }
   });
 
   it("só o proxy reverso publica porta no host", () => {
@@ -257,55 +287,36 @@ describe("a fronteira de rede do que o cliente instala", () => {
     ).toEqual([]);
   });
 
-  it("o serviço de chamada de voz nasce num profile desligado", () => {
-    // Não é sobre porta, e é a razão de o serviço ser seguro por padrão: sem
-    // profile ativo o compose NEM CRIA o contêiner. Medido com o compose
-    // v2.38.2 — `config --services` sem COMPOSE_PROFILES não lista `wacalls`;
-    // com `COMPOSE_PROFILES=voz`, lista.
-    //
-    // Sem esta asserção, alguém que apagasse a linha `profiles:` passaria nos
-    // quatro casos acima (o serviço continua sem `ports:`) e teria devolvido ao
-    // parque um contêiner a mais em toda instalação, ligado por padrão.
-    const bloco = SERVICOS.get("docker-compose.prod.yml")!.get("wacalls");
-    expect(bloco, "o serviço 'wacalls' sumiu do compose de produção").toBeDefined();
-    expect(
-      semComentarios(bloco!),
-      `'wacalls' perdeu o \`profiles:\`. Sem ele o serviço sobe em TODA instalação — e a\n` +
-        `chamada de voz vincula um segundo aparelho ao número que já atende, com risco de\n` +
-        `bloqueio da CONTA. Ninguém ganha essa capacidade por atualizar.`,
-    ).toMatch(/^\s{4}profiles:\s*\[?["']?voz/m);
+  it("a instalação 1120 não inclui serviços de telefonia", () => {
+    const servicos = SERVICOS.get("docker-compose.prod.yml")!;
+    for (const nome of ["wacalls", "asterisk", "voice-agent"]) {
+      expect(servicos.has(nome), `${nome} não faz parte desta instalação`).toBe(false);
+    }
   });
 
   it("app e worker não dependem de um serviço que vive em profile", () => {
-    // Armadilha medida do Compose: `depends_on` de um serviço cujo profile está
-    // inativo impede o dependente de subir. Um `depends_on: wacalls` no `app`
-    // não quebraria a chamada de voz — quebraria o CRM INTEIRO de toda
-    // instalação que não a usa, e o sintoma não aponta para a voz.
     const servicos = SERVICOS.get("docker-compose.prod.yml")!;
-    const emProfile = [...servicos.entries()]
-      .filter(([, b]) => /^\s{4}profiles:/m.test(semComentarios(b)))
-      .map(([nome]) => nome);
+    expect(servicos.has("app")).toBe(true);
+    expect(servicos.has("worker")).toBe(true);
+    expect(dependenciasDeProfile(servicos)).toEqual([]);
+  });
 
-    expect(emProfile, "nenhum serviço em profile — a régua deste caso está vazia").toContain(
-      "wacalls",
-    );
-
-    const quebrados: string[] = [];
-    for (const [nome, bloco] of servicos) {
-      if (emProfile.includes(nome)) continue;
-      const limpo = semComentarios(bloco);
-      const dependeDe = limpo.match(/^\s{4}depends_on:[\s\S]*?(?=^\s{4}\S|\s*$)/m)?.[0] ?? "";
-      for (const alvo of emProfile) {
-        if (new RegExp(`^\\s+${alvo}:`, "m").test(dependeDe)) {
-          quebrados.push(`${nome} → ${alvo}`);
-        }
-      }
-    }
-
-    expect(
-      quebrados,
-      `depends_on apontando para serviço em profile: ${quebrados.join(", ")}. Com o profile\n` +
-        `inativo o dependente NÃO SOBE — e o dependente aqui é o produto inteiro.`,
-    ).toEqual([]);
+  it("a guarda detecta dependência de profile mesmo sem voz no compose atual", () => {
+    const candidato = lerServicos([
+      "services:",
+      "  app:",
+      "    depends_on:",
+      "      opcional:",
+      "        condition: service_started",
+      "  opcional:",
+      "    profiles: [extra]",
+      "    image: exemplo",
+      "",
+    ].join("\n"));
+    expect(dependenciasDeProfile(candidato)).toEqual(["app → opcional"]);
+    candidato.set("app", "    depends_on:\n      - opcional\n");
+    expect(dependenciasDeProfile(candidato)).toEqual(["app → opcional"]);
+    candidato.set("app", "    image: exemplo\n");
+    expect(dependenciasDeProfile(candidato)).toEqual([]);
   });
 });

@@ -86,6 +86,7 @@ vi.mock("@/lib/channels/archived", () => ({
 vi.mock("@/lib/audit", () => ({ audit: async () => undefined }));
 vi.mock("@/lib/auth/cron-auth", () => ({ autorizaCron: () => true }));
 vi.mock("@/lib/waha/webhook-auth", () => ({
+  authenticateGlobalWahaWebhook: () => true,
   authenticateWahaWebhook: () => ({ ok: true, signatureVerified: true }),
 }));
 

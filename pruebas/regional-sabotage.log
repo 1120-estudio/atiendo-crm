@@ -1,0 +1,75 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+  - ESM syntax in a file loaded as CommonJS (vitest.cercas.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+  - ESM syntax in a file loaded as CommonJS (vitest.cercas.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+  - ESM syntax in a file loaded as CommonJS (vitest.cercas.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /workspace/scratch/6dc3b2c014e3/atiendo-regional
+
+stderr | lib/email/templates/acesso-gotrue.test.ts
+[env] Nenhuma chave de IA configurada no ambiente (AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY, OPENROUTER_API_KEY ou OPENAI_API_KEY). Isto não prova que o agente está sem credencial: cada organização pode ter uma chave cadastrada em IA › Credenciais. A falta real só é conhecida quando a resolução completa do turno não encontra chave em nenhum degrau.
+[env] OPENAI_API_KEY ausente — ela é o ÚLTIMO degrau da escada de chave da OpenAI (preparo de material do acervo e transcrição de áudio). Se alguma organização já cadastrou a chave em IA › Credenciais, os dois seguem funcionando por ela; se não cadastrou nenhuma, ambos ficam parados até que alguém cadastre — pela tela ou aqui.
+[env] IMPERSONATE_COOKIE_SECRET not set or shorter than 32 chars — impersonate flow will return 503 at runtime.
+
+ ❯ |produto| lib/email/templates/acesso-gotrue.test.ts (14 tests | 1 failed) 31ms
+     × traduz confirmação, sem alterar token nem escape da marca 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |produto| lib/email/templates/acesso-gotrue.test.ts > acesso em espanhol > traduz confirmação, sem alterar token nem escape da marca
+AssertionError: expected '<!doctype html>\n<html lang="pt-BR">\…' to contain '<html lang="es">'
+
+- Expected
++ Received
+
+- <html lang="es">
++ <!doctype html>
++ <html lang="pt-BR">
++ <body style="margin:0;padding:0;background:#faf9f6;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#1c1a16">
++   <div style="max-width:560px;margin:0 auto;padding:32px 24px">
++     <p style="margin:0 0 24px"><img src="https://exemplo.test/logo.png" alt="Acme &quot;Test&quot; &amp; Cia" height="40" style="height:40px;width:auto;max-width:200px;border:0;display:block"></p>
++     <h1 style="font-size:22px;line-height:1.3;margin:0 0 16px;color:#1c1a16">
++       Confirma tu correo
++     </h1>
++     <p style="margin:0 0 16px;font-size:15px;line-height:1.5">
++       Tu cuenta en Acme &quot;Test&quot; &amp; Cia está casi lista. Haz clic en el botón para confirmar tu correo electrónico y activar tu cuenta.
++     </p>
++     <p style="margin:24px 0">
++       <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}" style="display:inline-block;padding:12px 24px;background:#506d48;color:#ffffff;border-radius:6px;text-decoration:none;font-weight:600">
++         Confirmar correo electrónico
++       </a>
++     </p>
++     <p style="margin:0 0 8px;font-size:13px;color:#7d786c">
++       O copia y pega este enlace en tu navegador:<br>
++       <span style="word-break:break-all;color:#506d48">{{ .RedirectTo }}&token_hash={{ .TokenHash }}</span>
++     </p>
++     <p style="margin:24px 0 0;font-size:13px;color:#7d786c">
++       Si no creaste esta cuenta, ignora este correo.
++     </p>
++   </div>
++ </body>
++ </html>
+
+ ❯ lib/email/templates/acesso-gotrue.test.ts:89:18
+     87|   it("traduz confirmação, sem alterar token nem escape da marca", () =…
+     88|     const html = montarTemplateDeAcesso("confirmation", MARCA, "es");
+     89|     expect(html).toContain('<html lang="es">');
+       |                  ^
+     90|     expect(html).toContain("Confirma tu correo");
+     91|     expect(html).toContain("Tu cuenta en Acme &quot;Test&quot; &amp; C…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 13 passed (14)
+   Start at  18:17:22
+   Duration  1.54s (transform 496ms, setup 153ms, import 607ms, tests 31ms, environment 583ms)
+

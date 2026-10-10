@@ -25,6 +25,8 @@ import { VoiceCallProvider } from "@/components/voice/VoiceCallContext";
 import { ProvedorDaOcupacaoDoRodape } from "@/lib/ui/rodape-ocupado";
 import { acessoFoiRevogado } from "@/lib/auth/vinculo-revogado";
 
+import { RegiaoProvider } from "@/lib/regional/RegiaoProvider";
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await loadAuthUser();
   if (!user) redirect("/login");
@@ -55,6 +57,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
    * e não aqui: a precedência é regra do produto, não detalhe deste layout.
    */
   let cssDaOrganizacao: string | null = null;
+  let paisDaOrganizacao: string | null = null;
 
   // EPIC-02: gate /app/* on completed onboarding.
   // EPIC-11: gate /app/* on org not being suspended (S-11.08).
@@ -91,7 +94,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     const [orgRes, conexoes, isEnrolled, mfaRequired, modulos] = await Promise.all([
       admin
         .from("organizations")
-        .select("onboarded_at, status, settings")
+        .select("onboarded_at, status, settings, country")
         .eq("id", activeOrg.orgId)
         .maybeSingle(),
       listarConexoesCaidas(admin, activeOrg.orgId),
@@ -107,6 +110,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ]);
 
     const orgRow = orgRes.data;
+    paisDaOrganizacao = orgRow?.country ?? null;
     conexoesCaidas = conexoes;
     enrolled = isEnrolled;
     needsMfaGate = mfaRequired;
@@ -217,6 +221,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // pergunta quem está logado. Ver `lib/i18n/IdiomaProvider`: foi o
     // acoplamento com a autenticação que derrubou 32 casos.
     <IdiomaProvider locale={user.idioma}>
+    <RegiaoProvider pais={paisDaOrganizacao}>
     <AuthProvider user={user} activeOrg={activeOrg}>
       {/*
         A COR DA ETIQUETA, uma leitura por tela.
@@ -262,6 +267,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </div>
       </ProvedorDeCoresDasEtiquetas>
     </AuthProvider>
+    </RegiaoProvider>
     </IdiomaProvider>
   );
 }

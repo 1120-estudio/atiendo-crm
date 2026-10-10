@@ -29,9 +29,9 @@
  *     lei nenhuma. Não há fallback para a lei brasileira: afirmar a LGPD para
  *     um titular em Angola é exatamente a citação errada;
  *   • `paisesOferecidos()` — a lista que o seletor de Configurações mostra —
- *     só inclui país com citação revisada. O registro pode conhecer mais
- *     países do que a lista oferece; é o que permite preparar o trabalho sem
- *     publicar o que ninguém revisou.
+ *     inclui também perfis operacionais habilitados no fork. Isso permite
+ *     escolher documentos e região sem declarar uma revisão jurídica.
+ *     Estes perfis mantêm `lei: null` e não citam a LGPD brasileira.
  *
  * ─── A separação documento × forma (regra adotada do #928) ────────────────
  *
@@ -41,6 +41,8 @@
  * mensagem de erro não prometa uma garantia que o validador não dá.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { perfisRegionais } from "@/lib/regional/documentos";
 
 import { HOLIDAYS_BR_ISO } from "@/lib/lgpd/holidays-br";
 
@@ -126,6 +128,8 @@ export interface CalendarioDeDiasUteis {
 export interface PerfilDoPais {
   /** ISO-3166 alpha-2, maiúsculas. */
   codigo: CodigoDePais;
+  /** Seleção operacional explicitamente habilitada pelo fork, sem revisão jurídica. */
+  operacional?: boolean;
   /** Nome do país como o operador o lê. */
   nome: string;
   documento: DocumentoDoTitular;
@@ -205,7 +209,7 @@ const PERFIL_BR: PerfilDoPais = {
  * O registro de países conhecidos.
  *
  * ⚠️ Conhecer ≠ oferecer. A lista que o operador escolhe é
- * `paisesOferecidos()`, e ela exige `lei.revisada`. Entram aqui, à medida do
+ * `paisesOferecidos()`: revisão legal ou habilitação operacional explícita. Entram aqui, à medida do
  * trabalho de cada país: documento (forma, e checksum só quando é público),
  * lei com citação revisada, calendário de feriados e padrões de PII. País
  * incompleto mora aqui com o que já tem — nunca meio perfil publicado.
@@ -215,6 +219,7 @@ const PERFIL_BR: PerfilDoPais = {
  */
 export const PERFIS_DO_PAIS: Record<CodigoDePais, PerfilDoPais> = {
   BR: PERFIL_BR,
+  ...perfisRegionais(),
 };
 
 /** O perfil de um código; vazio ou desconhecido degrada para o Brasil. */
@@ -227,7 +232,7 @@ export function perfilDoPais(codigo: CodigoDePais | null | undefined): PerfilDoP
 /** O que o seletor de Configurações › Empresa oferece. */
 export function paisesOferecidos(): PerfilDoPais[] {
   return Object.values(PERFIS_DO_PAIS)
-    .filter((p) => p.lei?.revisada === true)
+    .filter((p) => p.operacional === true || p.lei?.revisada === true)
     .sort((a, b) => a.nome.localeCompare(b.nome));
 }
 

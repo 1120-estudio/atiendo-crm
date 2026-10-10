@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { idiomaDaInstalacao } from "@/lib/i18n/idiomaDaInstalacao";
+
 import { marcaDaSaida } from "@/lib/branding/saida";
 import {
   MODELOS_DE_ACESSO,
@@ -68,7 +70,7 @@ export async function GET(
   // do produto, que é uma instalação funcionando.
   const marca = await marcaDaSaida(null);
 
-  return new NextResponse(montarTemplateDeAcesso(modelo as ModeloDeAcesso, marca), {
+  return new NextResponse(montarTemplateDeAcesso(modelo as ModeloDeAcesso, marca, idiomaDaInstalacao()), {
     status: 200,
     headers: {
       "content-type": "text/html; charset=utf-8",

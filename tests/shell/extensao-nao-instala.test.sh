@@ -43,9 +43,15 @@ else
 fi
 
 # ── COMPORTAMENTO ───────────────────────────────────────────────────────────
-saida="$(mktemp)"; trap 'rm -f "$saida"' EXIT
+saida="$(mktemp)"; transport="$(mktemp -d)"
+trap 'rm -f "$saida"; rm -rf "$transport"' EXIT
+cat > "$transport/curl" <<'CURL'
+#!/usr/bin/env bash
+exit 7
+CURL
+chmod +x "$transport/curl"
 
-if EXTENSOES_ORIGEM="https://origem.invalida.test" PROJECT_DIR="$(dirname "$saida")" \
+if PATH="$transport:$PATH" EXTENSOES_ORIGEM="https://origem.invalida.test" PROJECT_DIR="$(dirname "$saida")" \
    bash "$SCRIPT" listar >"$saida" 2>&1; then
   erro "origem inalcançável devolveu sucesso — falha de rede tem de falhar"
 else

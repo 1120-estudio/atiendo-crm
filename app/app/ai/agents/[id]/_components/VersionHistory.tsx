@@ -120,7 +120,7 @@ export function VersionHistory({ agentId, versions, readOnly }: Props) {
     try {
       const res = await revertToVersionAction(agentId, revertTarget.id);
       if (!res.ok) {
-        toast.error(res.message ?? `${t("Erro")}: ${res.error}`);
+        toast.error((res.message ? t(res.message) : null) ?? `${t("Erro")}: ${res.error}`);
         return;
       }
       toast.success(

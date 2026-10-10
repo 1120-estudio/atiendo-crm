@@ -536,7 +536,7 @@ export function AgentForm(props: Props) {
   async function handleSave() {
     if (!isValid) {
       const first = Object.values(validation)[0];
-      toast.error(first ?? t("Formulário inválido."));
+      toast.error((first ? t(first) : null) ?? t("Formulário inválido."));
       return;
     }
     setSaving(true);
@@ -558,7 +558,7 @@ export function AgentForm(props: Props) {
           cadastro.data,
         );
         if (!res.ok) {
-          toast.error(res.message ?? `${t("Erro")}: ${res.error}`);
+          toast.error((res.message ? t(res.message) : null) ?? `${t("Erro")}: ${res.error}`);
           return;
         }
         toast.success(`${t("Rascunho")} v${res.data!.version_number} ${t("salvo.")}`);
@@ -577,7 +577,7 @@ export function AgentForm(props: Props) {
         }
         const res = await createMcpAgentAction(validated.data);
         if (!res.ok) {
-          toast.error(res.message ?? `${t("Erro")}: ${res.error}`);
+          toast.error((res.message ? t(res.message) : null) ?? `${t("Erro")}: ${res.error}`);
           return;
         }
         toast.success(t("Agent criado."));

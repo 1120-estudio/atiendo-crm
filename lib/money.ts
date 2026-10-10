@@ -136,13 +136,9 @@ export function formatCentsUSD(cents: number): string {
  * Aceitar `currency` e fixar `pt-BR` é o defeito medido: o lead em MXN sai
  * `MX$ 249,90`, com vírgula decimal brasileira, para quem opera no México.
  *
- * **As três do kanban já convergiram** — em `formatValorDoNegocio`, e não em
- * `formatCents`, porque o negócio guarda ×100 em qualquer moeda (ver a função);
- * o `maximumFractionDigits: 0` delas virou a opção `semCentavos`. Faltam o
- * inbox e o PDF de LGPD, frentes que a doutrina não deixa misturar com esta.
- * Enquanto não convergem, a duplicação fica DECLARADA aqui
- * — que é o que separa o anti-pattern 2 ("duplicação sem source of truth
- * declarado") de uma dívida com dono e endereço.
+ * Kanban, inbox e PDF de LGPD convergiram em `formatValorDoNegocio`:
+ * o negócio guarda ×100 em qualquer moeda; `semCentavos` preserva a opção
+ * de exibição do kanban. A lista acima documenta as cópias substituídas.
  *
  * `formatCentsBRL` e `formatCentsUSD` ficam pelo mesmo motivo: atendem o valor
  * do negócio no kanban e o gasto de IA, que são essas outras frentes.
@@ -305,7 +301,7 @@ export function formatValorDoNegocio(
  * ABERTO que a doutrina de modelagem descreve. O conjunto vive só aqui, no
  * TypeScript.
  *
- * As cinco têm subunidade de 2 casas, então nenhuma esbarra na ressalva de
+ * As moedas servidas têm subunidade de 2 casas, então nenhuma esbarra na ressalva de
  * unidades menores de `formatCents`. Acrescentar JPY ou CLP funciona — o
  * formatador já os cobre —, mas exige olhar `precoParaCentavos`, que ainda
  * multiplica por 100 na leitura do que a pessoa digita.
@@ -322,7 +318,7 @@ export function formatValorDoNegocio(
  * `LOCALE_DA_MOEDA_SEM_PAIS`): sem a exceção, `formatCents(24990, "EUR")`
  * sairia `€249.90`, e a varredura de degradação deixaria passar.
  */
-export const MOEDAS_SERVIDAS = ["AOA", "BRL", "EUR", "MXN", "USD"] as const;
+export const MOEDAS_SERVIDAS = ["AOA", "BRL", "COP", "CRC", "EUR", "MXN", "USD"] as const;
 export type MoedaServida = (typeof MOEDAS_SERVIDAS)[number];
 
 /** O que o `default` da coluna grava quando ninguém escolheu. */
