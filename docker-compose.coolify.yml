@@ -1,5 +1,5 @@
-# Configuracion de Coolify para el fork 1120-estudio/atiendo-crm.
-# Sin secretos en el repositorio; las variables se configuran en Coolify.
+# Coolify: imagenes compiladas y verificadas en GitHub Actions.
+# Variables y secretos se configuran en Coolify.
 x-logging: &id001
   driver: json-file
   options:
@@ -7,8 +7,8 @@ x-logging: &id001
     max-file: '3'
 services:
   app:
-    image: 1120-atiendo-app:coolify
-    pull_policy: build
+    image: ghcr.io/1120-estudio/deskcommcrm@sha256:49cdd90b051e59eddc567649c50fd02299ca79e4ea32a1e486e95e3aea270224
+    pull_policy: always
     mem_limit: 768m
     restart: unless-stopped
     environment:
@@ -61,19 +61,9 @@ services:
     networks:
     - internal
     - supabase
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        APP_VERSION: 1120-coolify
   worker:
-    image: 1120-atiendo-worker:coolify
-    pull_policy: build
-    build:
-      context: .
-      dockerfile: Dockerfile.worker
-      args:
-        APP_VERSION: 1120-coolify
+    image: ghcr.io/1120-estudio/deskcomm-worker@sha256:3679edbf4b7c74e74942fc12a5ceb27ddda3f1856146e455fe1dab8599bade30
+    pull_policy: always
     mem_limit: 512m
     restart: unless-stopped
     environment:
@@ -182,13 +172,8 @@ services:
     - internal
     mem_limit: 128m
   scheduler:
-    image: 1120-atiendo-scheduler:coolify
-    pull_policy: build
-    build:
-      context: .
-      dockerfile: Dockerfile.scheduler
-      args:
-        APP_VERSION: 1120-coolify
+    image: ghcr.io/1120-estudio/deskcomm-scheduler@sha256:1fa3cdcd8e0e8fdae97995a59bdb475447d894b5b6936b14ac4904512f4d701b
+    pull_policy: always
     restart: unless-stopped
     depends_on:
       app:
