@@ -39374,8 +39374,8 @@ end;
 $$;
 
 create or replace function public.decrypt_cpf(p_contact_id uuid, p_key text)
-returns text language plpgsql security definer
-set search_path = public, extensions, pg_temp as $$
+returns text language plpgsql stable security definer
+set search_path = public, extensions, pg_temp as $
 declare
   v_cipher bytea;
 begin

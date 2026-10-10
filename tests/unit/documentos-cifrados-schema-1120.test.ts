@@ -28,6 +28,7 @@ describe("contrato SQL de documentos", () => {
       expect(body).toContain(condition);
       expect(body.indexOf(condition)).toBeLessThan(body.indexOf("return pgp_sym_decrypt("));
     }
+    expect(body).toContain("returns text language plpgsql stable security definer");
     expect(body).toContain("set search_path = public, extensions, pg_temp");
   });
   it("a ACL remove defaults e concede decifra apenas à sessão autenticada", () => {
