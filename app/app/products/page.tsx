@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { BUCKET_DAS_FOTOS, fotoPertenceAoProduto } from "@/lib/catalogo/fotos";
+import { moedaDaOrganizacao } from "@/lib/catalogo/moeda-da-org";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { COLUNAS_DO_PRODUTO, type Produto } from "@/lib/schemas/produtos";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -38,9 +38,11 @@ export default async function ProdutosPage() {
   const activeOrg = await resolveActiveOrg(user);
   if (!activeOrg) redirect("/app");
 
-  const podeEditar = (user.is_platform_admin && !user.support) || ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager;
+  const podeEditar =
+    (user.is_platform_admin && !user.support) || ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager;
 
   const supabase = await createClient();
+  const moeda = await moedaDaOrganizacao(supabase, activeOrg.orgId);
   const { data } = await supabase
     .from("catalog_products")
     .select(COLUNAS_DO_PRODUTO)
@@ -69,6 +71,7 @@ export default async function ProdutosPage() {
   return (
     <ProdutosClient
       inicial={produtos}
+      moeda={moeda}
       urlsDasFotos={urlsDasFotos}
       podeEditar={podeEditar}
       textos={{

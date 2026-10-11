@@ -7,9 +7,19 @@ import { toast } from "sonner";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { useT } from "@/hooks/i18n/useT";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { apiClient } from "@/lib/api/client";
 import { MAXIMO_DE_FOTOS } from "@/lib/catalogo/fotos";
-import { formatCents } from "@/lib/money";
+import { MOEDA_PADRAO } from "@/lib/money";
+import { formatPrecoDoCatalogo, precoParaEdicao } from "@/lib/catalogo/preco";
 import { precoParaCentavos, type Produto } from "@/lib/schemas/produtos";
 
 interface Textos {
@@ -30,6 +40,7 @@ interface ResumoDaImportacao {
 interface Rascunho {
   codigo: string;
   nome: string;
+  descricao: string;
   marca: string;
   categoria: string;
   preco: string;
@@ -41,6 +52,7 @@ interface Rascunho {
 const VAZIO: Rascunho = {
   codigo: "",
   nome: "",
+  descricao: "",
   marca: "",
   categoria: "",
   preco: "",
@@ -61,8 +73,9 @@ function doRascunho(
   return {
     codigo: r.codigo.trim(),
     nome: r.nome.trim(),
-    ...(r.marca.trim() ? { marca: r.marca.trim() } : {}),
-    ...(r.categoria.trim() ? { categoria: r.categoria.trim() } : {}),
+    descricao: r.descricao.trim(),
+    marca: r.marca.trim(),
+    categoria: r.categoria.trim(),
     preco_cents,
     custo_cents,
     controla_estoque: r.controla_estoque,
@@ -89,9 +102,14 @@ function FotosDoProduto({ produto, urls }: { produto: Produto; urls: Record<stri
     try {
       const form = new FormData();
       form.append("file", arquivo);
-      const res = await fetch(`/api/v1/products/${produto.id}/fotos`, { method: "POST", body: form });
+      const res = await fetch(`/api/v1/products/${produto.id}/fotos`, {
+        method: "POST",
+        body: form,
+      });
       if (!res.ok) {
-        const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+        const json = (await res.json().catch(() => null)) as {
+          error?: { message?: string };
+        } | null;
         toast.error(json?.error?.message ?? t("Não consegui enviar a foto."));
         return;
       }
@@ -127,7 +145,9 @@ function FotosDoProduto({ produto, urls }: { produto: Produto; urls: Record<stri
   return (
     <div className="border-t bg-muted/30 p-3" data-testid={`fotos-${produto.codigo}`}>
       <p className="mb-2 text-xs text-muted-foreground">
-        {t("A primeira foto é a capa. O atendente de IA manda as fotos nesta ordem quando apresenta o produto.")}
+        {t(
+          "A primeira foto é a capa. O atendente de IA manda as fotos nesta ordem quando apresenta o produto.",
+        )}
       </p>
       <ul className="flex flex-wrap gap-3">
         {fotos.map((caminho, i) => (
@@ -159,7 +179,12 @@ function FotosDoProduto({ produto, urls }: { produto: Produto; urls: Record<stri
                 variant="ghost"
                 size="sm"
                 disabled={ocupado}
-                onClick={() => void gravarOrdem(fotos.filter((c) => c !== caminho), t("Foto removida"))}
+                onClick={() =>
+                  void gravarOrdem(
+                    fotos.filter((c) => c !== caminho),
+                    t("Foto removida"),
+                  )
+                }
                 aria-label={t("Remover a foto")}
                 data-testid="remover-foto"
               >
@@ -209,11 +234,13 @@ function FotosDoProduto({ produto, urls }: { produto: Produto; urls: Record<stri
 
 export function ProdutosClient({
   inicial,
+  moeda = MOEDA_PADRAO,
   urlsDasFotos,
   podeEditar,
   textos,
 }: {
   inicial: Produto[];
+  moeda?: string;
   urlsDasFotos: Record<string, string>;
   podeEditar: boolean;
   textos: Textos;
@@ -222,12 +249,57 @@ export function ProdutosClient({
   const router = useRouter();
   const [busca, setBusca] = React.useState("");
   const [criando, setCriando] = React.useState(false);
+  const [editando, setEditando] = React.useState<Produto | null>(null);
+  const [excluindo, setExcluindo] = React.useState<Produto | null>(null);
+  const [apagando, setApagando] = React.useState(false);
   const [rascunho, setRascunho] = React.useState<Rascunho>(VAZIO);
   const [salvando, setSalvando] = React.useState(false);
   const [importando, setImportando] = React.useState(false);
   const [resumo, setResumo] = React.useState<ResumoDaImportacao | null>(null);
   const arquivoRef = React.useRef<HTMLInputElement>(null);
   const [fotosAbertas, setFotosAbertas] = React.useState<string | null>(null);
+  const moedaDoFormulario = editando?.moeda ?? moeda;
+  const precoInterpretado = precoParaCentavos(rascunho.preco);
+  const custoInterpretado = precoParaCentavos(rascunho.custo);
+
+  function fecharFormulario() {
+    setCriando(false);
+    setEditando(null);
+    setRascunho(VAZIO);
+  }
+
+  function editar(p: Produto) {
+    setEditando(p);
+    setCriando(true);
+    setRascunho({
+      codigo: p.codigo,
+      nome: p.nome,
+      descricao: p.descricao ?? "",
+      marca: p.marca ?? "",
+      categoria: p.categoria ?? "",
+      preco: precoParaEdicao(p.preco_cents),
+      custo: p.custo_cents === null ? "" : precoParaEdicao(p.custo_cents),
+      quantidade: String(p.quantidade),
+      controla_estoque: p.controla_estoque,
+    });
+  }
+
+  async function excluir() {
+    if (!excluindo || apagando) return;
+    setApagando(true);
+    try {
+      await apiClient.delete(`/api/v1/products/${excluindo.id}`);
+      if (editando?.id === excluindo.id) fecharFormulario();
+      if (fotosAbertas === excluindo.id) setFotosAbertas(null);
+      setExcluindo(null);
+      toast.success(t("Produto excluído"));
+      router.refresh();
+    } catch (e) {
+      showApiError(e);
+    } finally {
+      setApagando(false);
+    }
+  }
 
   const filtrados = React.useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -245,10 +317,10 @@ export function ProdutosClient({
     }
     setSalvando(true);
     try {
-      await apiClient.post("/api/v1/products", corpo);
-      toast.success(t("Produto cadastrado"));
-      setRascunho(VAZIO);
-      setCriando(false);
+      if (editando) await apiClient.patch(`/api/v1/products/${editando.id}`, corpo);
+      else await apiClient.post("/api/v1/products", corpo);
+      toast.success(t(editando ? "Produto atualizado" : "Produto cadastrado"));
+      fecharFormulario();
       router.refresh();
     } catch (e) {
       showApiError(e);
@@ -265,8 +337,7 @@ export function ProdutosClient({
       form.append("file", arquivo);
       const res = await fetch("/api/v1/products/import", { method: "POST", body: form });
       const json = (await res.json()) as
-        | { data: ResumoDaImportacao }
-        | { error?: { message?: string } };
+        { data: ResumoDaImportacao } | { error?: { message?: string } };
       if (!res.ok || !("data" in json)) {
         const msg = "error" in json ? json.error?.message : undefined;
         toast.error(msg ?? t("Não consegui ler essa planilha."));
@@ -301,7 +372,7 @@ export function ProdutosClient({
         <p className="mt-1 text-sm text-muted-foreground">{textos.subtitulo}</p>
       </header>
 
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <input
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
@@ -311,7 +382,18 @@ export function ProdutosClient({
         />
         {podeEditar ? (
           <>
-            <Button onClick={() => setCriando((v) => !v)} data-testid="novo-produto">
+            <Button
+              disabled={salvando}
+              onClick={() => {
+                if (criando) fecharFormulario();
+                else {
+                  setRascunho(VAZIO);
+                  setEditando(null);
+                  setCriando(true);
+                }
+              }}
+              data-testid="novo-produto"
+            >
               {t(criando ? "Cancelar" : "Novo produto")}
             </Button>
             <input
@@ -386,102 +468,159 @@ export function ProdutosClient({
       ) : null}
 
       {criando && podeEditar ? (
-        <div className="mb-6 rounded-lg border p-4" data-testid="form-produto">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-sm">
-              {t("Código")}
-              <input
-                value={rascunho.codigo}
-                onChange={(e) => setRascunho({ ...rascunho, codigo: e.target.value })}
-                className="mt-1 h-9 w-full rounded-md border px-3"
-                data-testid="produto-codigo"
-              />
-            </label>
-            <label className="text-sm">
-              {t("Nome")}
-              <input
-                value={rascunho.nome}
-                onChange={(e) => setRascunho({ ...rascunho, nome: e.target.value })}
-                className="mt-1 h-9 w-full rounded-md border px-3"
-                data-testid="produto-nome"
-              />
-            </label>
-            <label className="text-sm">
-              {t("Marca")}
-              <input
-                value={rascunho.marca}
-                onChange={(e) => setRascunho({ ...rascunho, marca: e.target.value })}
-                className="mt-1 h-9 w-full rounded-md border px-3"
-              />
-            </label>
-            <label className="text-sm">
-              {t("Categoria")}
-              <input
-                value={rascunho.categoria}
-                onChange={(e) => setRascunho({ ...rascunho, categoria: e.target.value })}
-                className="mt-1 h-9 w-full rounded-md border px-3"
-              />
-            </label>
-            <label className="text-sm">
-              {t("Preço de venda")}
-              <input
-                value={rascunho.preco}
-                onChange={(e) => setRascunho({ ...rascunho, preco: e.target.value })}
-                placeholder="5.499,00"
-                className="mt-1 h-9 w-full rounded-md border px-3"
-                data-testid="produto-preco"
-              />
-            </label>
-            <label className="text-sm">
-              {t("Custo")} <span className="text-muted-foreground">{t("(opcional)")}</span>
-              <input
-                value={rascunho.custo}
-                onChange={(e) => setRascunho({ ...rascunho, custo: e.target.value })}
-                placeholder="4.100,00"
-                className="mt-1 h-9 w-full rounded-md border px-3"
+        <form
+          className="mb-6 rounded-lg border p-4"
+          data-testid="form-produto"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!salvando) void salvar();
+          }}
+        >
+          <p className="mb-3 font-medium">{t(editando ? "Editar produto" : "Novo produto")}</p>
+          <fieldset disabled={salvando}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="text-sm">
+                {t("Código")}
+                <input
+                  value={rascunho.codigo}
+                  onChange={(e) => setRascunho({ ...rascunho, codigo: e.target.value })}
+                  className="mt-1 h-9 w-full rounded-md border px-3"
+                  data-testid="produto-codigo"
+                />
+              </label>
+              <label className="text-sm">
+                {t("Nome")}
+                <input
+                  value={rascunho.nome}
+                  onChange={(e) => setRascunho({ ...rascunho, nome: e.target.value })}
+                  className="mt-1 h-9 w-full rounded-md border px-3"
+                  data-testid="produto-nome"
+                />
+              </label>
+              <label className="text-sm">
+                {t("Marca")}
+                <input
+                  value={rascunho.marca}
+                  onChange={(e) => setRascunho({ ...rascunho, marca: e.target.value })}
+                  className="mt-1 h-9 w-full rounded-md border px-3"
+                />
+              </label>
+              <label className="text-sm">
+                {t("Categoria")}
+                <input
+                  value={rascunho.categoria}
+                  onChange={(e) => setRascunho({ ...rascunho, categoria: e.target.value })}
+                  className="mt-1 h-9 w-full rounded-md border px-3"
+                />
+              </label>
+              <label className="text-sm">
+                {t("Preço de venda")}
+                <span className="ml-1 text-muted-foreground">({moedaDoFormulario})</span>
+                <input
+                  value={rascunho.preco}
+                  onChange={(e) => setRascunho({ ...rascunho, preco: e.target.value })}
+                  inputMode="decimal"
+                  placeholder="24950"
+                  className="mt-1 h-9 w-full rounded-md border px-3"
+                  data-testid="produto-preco"
+                />
+                {precoInterpretado !== null ? (
+                  <span
+                    className="mt-1 block text-xs text-muted-foreground"
+                    data-testid="preco-interpretado"
+                  >
+                    {t("Valor que será salvo:")}{" "}
+                    {formatPrecoDoCatalogo(precoInterpretado, moedaDoFormulario)} (
+                    {moedaDoFormulario})
+                  </span>
+                ) : null}
+              </label>
+              <label className="text-sm">
+                {t("Custo")} <span className="text-muted-foreground">{t("(opcional)")}</span>
+                <span className="ml-1 text-muted-foreground">({moedaDoFormulario})</span>
+                <input
+                  value={rascunho.custo}
+                  onChange={(e) => setRascunho({ ...rascunho, custo: e.target.value })}
+                  inputMode="decimal"
+                  placeholder="20000"
+                  className="mt-1 h-9 w-full rounded-md border px-3"
+                />
+                {custoInterpretado !== null ? (
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {t("Valor que será salvo:")}{" "}
+                    {formatPrecoDoCatalogo(custoInterpretado, moedaDoFormulario)} (
+                    {moedaDoFormulario})
+                  </span>
+                ) : null}
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {t("Custo interno de referência. Não aparece para o cliente.")}
+                </span>
+              </label>
+            </div>
+
+            <label className="mt-3 block text-sm">
+              {t("Descrição e características")}
+              <textarea
+                value={rascunho.descricao}
+                onChange={(e) => setRascunho({ ...rascunho, descricao: e.target.value })}
+                maxLength={2000}
+                rows={5}
+                className="mt-1 w-full rounded-md border px-3 py-2"
+                data-testid="produto-descricao"
               />
               <span className="mt-1 block text-xs text-muted-foreground">
-                {t("Serve para o atendente saber até onde pode negociar. Não aparece para o cliente.")}
+                {t(
+                  "Inclua benefícios, medidas, materiais e características. O assistente consulta este texto ao buscar o produto.",
+                )}
               </span>
             </label>
-          </div>
 
-          <label className="mt-3 flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={rascunho.controla_estoque}
-              onChange={(e) => setRascunho({ ...rascunho, controla_estoque: e.target.checked })}
-              data-testid="produto-controla-estoque"
-            />
-            {t("Controlar estoque deste produto")}
-          </label>
-          {rascunho.controla_estoque ? (
-            <label className="mt-2 block text-sm">
-              {t("Quantidade")}
+            <label className="mt-3 flex items-center gap-2 text-sm">
               <input
-                value={rascunho.quantidade}
-                onChange={(e) => setRascunho({ ...rascunho, quantidade: e.target.value })}
-                className="mt-1 h-9 w-32 rounded-md border px-3"
+                type="checkbox"
+                checked={rascunho.controla_estoque}
+                onChange={(e) => setRascunho({ ...rascunho, controla_estoque: e.target.checked })}
+                data-testid="produto-controla-estoque"
               />
+              {t("Controlar estoque deste produto")}
             </label>
-          ) : (
-            <p className="mt-2 text-xs text-muted-foreground">
-              {t(
-                "Sem controle de estoque, este produto sempre aparece como disponível para o atendente — é o certo para item sob encomenda ou fracionado.",
-              )}
-            </p>
-          )}
+            {rascunho.controla_estoque ? (
+              <label className="mt-2 block text-sm">
+                {t("Quantidade")}
+                <input
+                  value={rascunho.quantidade}
+                  type="number"
+                  min="0"
+                  step="1"
+                  onChange={(e) => setRascunho({ ...rascunho, quantidade: e.target.value })}
+                  className="mt-1 h-9 w-32 rounded-md border px-3"
+                />
+              </label>
+            ) : (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t(
+                  "Sem controle de estoque, este produto sempre aparece como disponível para o atendente — é o certo para item sob encomenda ou fracionado.",
+                )}
+              </p>
+            )}
 
-          <div className="mt-4">
-            <Button onClick={salvar} disabled={salvando} data-testid="salvar-produto">
-              {t(salvando ? "Salvando…" : "Salvar produto")}
-            </Button>
-          </div>
-        </div>
+            <div className="mt-4 flex gap-3">
+              <Button type="submit" disabled={salvando} data-testid="salvar-produto">
+                {t(salvando ? "Salvando…" : editando ? "Salvar alterações" : "Salvar produto")}
+              </Button>
+              <Button type="button" variant="outline" onClick={fecharFormulario}>
+                {t("Cancelar")}
+              </Button>
+            </div>
+          </fieldset>
+        </form>
       ) : null}
 
       {filtrados.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-8 text-center" data-testid="produtos-vazio">
+        <div
+          className="rounded-lg border border-dashed p-8 text-center"
+          data-testid="produtos-vazio"
+        >
           <p className="font-medium">{textos.vazio}</p>
           <p className="mt-1 text-sm text-muted-foreground">{textos.vazioDica}</p>
         </div>
@@ -490,57 +629,111 @@ export function ProdutosClient({
           {filtrados.map((p) => {
             const capa = p.fotos?.[0] ? urlsDasFotos[p.fotos[0]] : undefined;
             return (
-            <li key={p.id} data-testid={`produto-${p.codigo}`}>
-            <div className="flex items-center gap-4 p-3">
-              {capa ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={capa} alt="" className="h-10 w-10 shrink-0 rounded-md object-cover" />
-              ) : null}
-              <div className="min-w-0 flex-1">
-                <p className={`truncate font-medium ${p.ativo ? "" : "text-muted-foreground line-through"}`}>
-                  {p.nome}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {p.codigo}
-                  {p.marca ? ` · ${p.marca}` : ""}
-                  {p.controla_estoque
-                    ? ` · ${p.quantidade} ${t("em estoque")}`
-                    : ` · ${t("sem controle de estoque")}`}
-                </p>
-              </div>
-              <span className="shrink-0 tabular-nums font-medium">
-                {formatCents(p.preco_cents, p.moeda)}
-              </span>
-              {podeEditar ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setFotosAbertas((v) => (v === p.id ? null : p.id))}
-                    aria-expanded={fotosAbertas === p.id}
-                    data-testid={`abrir-fotos-${p.codigo}`}
-                  >
-                    {t("Fotos")} ({p.fotos?.length ?? 0})
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => void alternarAtivo(p)}
-                    data-testid={`alternar-${p.codigo}`}
-                  >
-                    {t(p.ativo ? "Desativar" : "Reativar")}
-                  </Button>
-                </>
-              ) : null}
-            </div>
-            {podeEditar && fotosAbertas === p.id ? (
-              <FotosDoProduto produto={p} urls={urlsDasFotos} />
-            ) : null}
-            </li>
+              <li key={p.id} data-testid={`produto-${p.codigo}`}>
+                <div className="flex flex-wrap items-center gap-4 p-3">
+                  {capa ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={capa} alt="" className="h-10 w-10 shrink-0 rounded-md object-cover" />
+                  ) : null}
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={`truncate font-medium ${p.ativo ? "" : "text-muted-foreground line-through"}`}
+                    >
+                      {p.nome}
+                    </p>
+                    {p.descricao ? (
+                      <p className="mt-2 text-sm whitespace-pre-line text-muted-foreground">
+                        {p.descricao}
+                      </p>
+                    ) : null}
+                    <p className="text-xs text-muted-foreground">
+                      {p.codigo}
+                      {p.marca ? ` · ${p.marca}` : ""}
+                      {p.controla_estoque
+                        ? ` · ${p.quantidade} ${t("em estoque")}`
+                        : ` · ${t("sem controle de estoque")}`}
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-medium tabular-nums">
+                    {formatPrecoDoCatalogo(p.preco_cents, p.moeda)}
+                  </span>
+                  {podeEditar ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={salvando}
+                        onClick={() => editar(p)}
+                        data-testid={`editar-${p.codigo}`}
+                      >
+                        {t("Editar")}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFotosAbertas((v) => (v === p.id ? null : p.id))}
+                        aria-expanded={fotosAbertas === p.id}
+                        data-testid={`abrir-fotos-${p.codigo}`}
+                      >
+                        {t("Fotos")} ({p.fotos?.length ?? 0})
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        onClick={() => setExcluindo(p)}
+                        data-testid={`excluir-${p.codigo}`}
+                      >
+                        {t("Excluir")}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => void alternarAtivo(p)}
+                        data-testid={`alternar-${p.codigo}`}
+                      >
+                        {t(p.ativo ? "Desativar" : "Reativar")}
+                      </Button>
+                    </>
+                  ) : null}
+                </div>
+                {podeEditar && fotosAbertas === p.id ? (
+                  <FotosDoProduto produto={p} urls={urlsDasFotos} />
+                ) : null}
+              </li>
             );
           })}
         </ul>
       )}
+      <AlertDialog
+        open={excluindo !== null}
+        onOpenChange={(open) => {
+          if (!open && !apagando) setExcluindo(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("Excluir produto?")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {excluindo?.nome}.{" "}
+              {t(
+                "O produto e suas fotos serão removidos do catálogo. Esta ação não pode ser desfeita.",
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={apagando}>{t("Cancelar")}</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={apagando}
+              onClick={() => void excluir()}
+              data-testid="confirmar-exclusao-produto"
+            >
+              {t(apagando ? "Excluindo…" : "Excluir produto")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

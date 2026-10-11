@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { crmSearchProducts } from "./comercio";
 import type { McpContext } from "../types";
+import { precoParaCentavos } from "@/lib/schemas/produtos";
 
 /** Só o formato do campo que este arquivo mede — não o contrato inteiro. */
 interface RespostaBusca {
@@ -39,7 +40,6 @@ function ctxCom(produtos: Array<Record<string, unknown>>): McpContext {
   } as McpContext;
 }
 
-
 /** O `Intl` emite NBSP (U+00A0) ou narrow NBSP (U+202F) entre símbolo e número. */
 const semNbsp = (s: string) => s.replace(/[\u00A0\u202F]/g, " ");
 
@@ -58,6 +58,19 @@ const PRODUTO_MXN = {
 };
 
 describe("crm_search_products — preço na convenção da moeda", () => {
+  it.each([24950, 29950])(
+    "entrega %s COP ao agente com a mesma unidade do cadastro",
+    async (valor) => {
+      const resultado = (await crmSearchProducts.handler(
+        { termo: "iphone", limite: 8, somente_disponiveis: true },
+        ctxCom([{ ...PRODUTO_MXN, moeda: "COP", preco_cents: precoParaCentavos(String(valor)) }]),
+      )) as RespostaBusca;
+      expect(semNbsp(resultado.produtos[0]!.preco)).toBe(
+        `$ ${valor === 24950 ? "24.950" : "29.950"}`,
+      );
+    },
+  );
+
   it("cota o preço em MXN como um comerciante mexicano lê, não em pt-BR", async () => {
     const resultado = (await crmSearchProducts.handler(
       { termo: "iphone", limite: 8, somente_disponiveis: true },

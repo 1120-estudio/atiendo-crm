@@ -37,6 +37,16 @@ import type { Idioma } from "./idiomas";
 type Traducoes = Record<string, Partial<Record<Exclude<Idioma, "pt-BR">, string>>>;
 
 export const DICIONARIO: Traducoes = {
+  "Descrição e características": { es: "Descripción y características" },
+  "Inclua benefícios, medidas, materiais e características. O assistente consulta este texto ao buscar o produto.": { es: "Incluye beneficios, medidas, materiales y características. El asistente consulta este texto al buscar el producto." },
+  "Valor que será salvo:": { es: "Importe que se guardará:" },
+  "Custo interno de referência. Não aparece para o cliente.": { es: "Costo interno de referencia. No se muestra al cliente." },
+  "Produto atualizado": { es: "Producto actualizado" },
+  "Produto excluído": { es: "Producto eliminado" },
+  "Editar produto": { es: "Editar producto" },
+  "Excluir produto?": { es: "¿Eliminar producto?" },
+  "Excluir produto": { es: "Eliminar producto" },
+  "O produto e suas fotos serão removidos do catálogo. Esta ação não pode ser desfeita.": { es: "El producto y sus fotos se eliminarán del catálogo. Esta acción no se puede deshacer." },
   "Fuso horário inválido.": { es: "Zona horaria inválida." },
   "Não foi possível cifrar o documento. Confira a chave e a atualização do banco.": { es: "No se pudo cifrar el documento. Revisa la clave y la actualización de la base de datos." },
   // ─── BUSCA DENTRO DA CONVERSA (extraída do PR #1793) ───

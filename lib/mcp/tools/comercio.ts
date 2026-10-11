@@ -13,7 +13,7 @@ import { z } from "zod";
 
 import type { McpToolDefinition } from "../types";
 import { buscarComRelaxamento } from "@/lib/catalogo/busca";
-import { formatCents } from "@/lib/money";
+import { formatPrecoDoCatalogo } from "@/lib/catalogo/preco";
 
 // ---------------------------------------------------------------------------
 // pedidos de um cliente
@@ -325,7 +325,7 @@ export const crmSearchProducts: McpToolDefinition<typeof produtosInputShape> = {
       produtos: topo.map(({ produto }) => ({
         codigo: produto.codigo,
         nome: produto.nome,
-        preco: formatCents(produto.preco_cents, produto.moeda),
+        preco: formatPrecoDoCatalogo(produto.preco_cents, produto.moeda),
         preco_cents: produto.preco_cents,
         ...(produto.marca ? { marca: produto.marca } : {}),
         ...(produto.descricao ? { descricao: produto.descricao } : {}),
