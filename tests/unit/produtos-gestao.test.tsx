@@ -139,7 +139,7 @@ describe("gestão do catálogo", () => {
     montar();
     fireEvent.click(screen.getByTestId("excluir-EST-1"));
     expect(mocks.delete).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Cancelar", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(mocks.delete).not.toHaveBeenCalled();
     fireEvent.click(screen.getByTestId("excluir-EST-1"));
     fireEvent.click(screen.getByTestId("confirmar-exclusao-produto"));
