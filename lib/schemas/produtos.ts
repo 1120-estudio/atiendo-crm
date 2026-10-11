@@ -15,7 +15,8 @@ export const ORIGENS_DO_PRODUTO = ["manual", "planilha", "nuvemshop"] as const;
 export type OrigemDoProduto = (typeof ORIGENS_DO_PRODUTO)[number];
 
 /**
- * Preço em texto livre → centavos.
+ * Preço em texto livre → valor ×100, inclusive em moeda sem centavos no Intl.
+ * A tela e a ferramenta do agente convertem por `formatPrecoDoCatalogo`.
  *
  * ⚠️ Uma loja de rua manda "R$ 5.499,00", "5499,00", "5.499" e "5499". As
  * quatro formas significam a mesma coisa, e adivinhar errado é caro nos dois

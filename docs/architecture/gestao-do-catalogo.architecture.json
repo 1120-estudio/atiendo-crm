@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Gestão do catálogo",
+    "subtitle": "Entrada humana, preço ×100 e consulta do assistente",
+    "output": "gestao-do-catalogo.html",
+    "quality_profile": "standard"
+  },
+  "lanes": [
+    { "id": "ui", "label": "Tela" },
+    { "id": "api", "label": "Rotas" },
+    { "id": "data", "label": "Dados" },
+    { "id": "agent", "label": "Assistente" }
+  ],
+  "mainPath": ["tela", "rotas", "produtos", "busca"],
+  "nodes": [
+    {
+      "id": "tela",
+      "lane": "ui",
+      "col": 1,
+      "type": "frontend",
+      "label": "Produtos: criar, editar e confirmar exclusão"
+    },
+    {
+      "id": "rotas",
+      "lane": "api",
+      "col": 2,
+      "type": "backend",
+      "label": "products: POST / PATCH / DELETE (manager)"
+    },
+    {
+      "id": "produtos",
+      "lane": "data",
+      "col": 3,
+      "type": "database",
+      "label": "catalog_products + RLS por organização"
+    },
+    {
+      "id": "busca",
+      "lane": "agent",
+      "col": 4,
+      "type": "backend",
+      "label": "crm_search_products: preço e descrição"
+    },
+    {
+      "id": "auditoria",
+      "lane": "data",
+      "col": 2,
+      "type": "database",
+      "label": "api_audit_log: created / updated / deleted"
+    },
+    {
+      "id": "preco",
+      "lane": "ui",
+      "col": 4,
+      "type": "backend",
+      "label": "formatPrecoDoCatalogo: cadastro ×100 → moeda"
+    }
+  ],
+  "edges": [
+    { "from": "tela", "to": "rotas", "label": "dados e confirmação" },
+    { "from": "rotas", "to": "produtos", "label": "org da sessão + Zod" },
+    { "from": "rotas", "to": "auditoria", "label": "mutação bem-sucedida" },
+    { "from": "produtos", "to": "tela", "label": "lista e descrição atualizadas" },
+    { "from": "produtos", "to": "busca", "label": "ativos e disponíveis" },
+    { "from": "preco", "to": "tela", "label": "prévia e lista" },
+    { "from": "preco", "to": "busca", "label": "preço cotado" }
+  ]
+}

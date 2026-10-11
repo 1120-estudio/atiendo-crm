@@ -39,6 +39,7 @@ vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
 
 import { ProdutosClient } from "@/app/app/products/_client";
 import type { Produto } from "@/lib/schemas/produtos";
+import { precoParaCentavos } from "@/lib/schemas/produtos";
 
 function produto(over: Partial<Produto> = {}): Produto {
   return {
@@ -78,6 +79,13 @@ function precoNaTela(codigo: string): string {
 }
 
 describe("o preço do catálogo na moeda da loja", () => {
+  it.each([24950, 29950])("mostra %s COP sem multiplicar o preço digitado por cem", (valor) => {
+    montar([
+      produto({ codigo: "CO1", moeda: "COP", preco_cents: precoParaCentavos(String(valor))! }),
+    ]);
+    expect(precoNaTela("CO1")).toBe(`$ ${valor === 24950 ? "24.950" : "29.950"}`);
+  });
+
   it("escreve o peso mexicano como quem vende no México lê", () => {
     montar([produto({ codigo: "MX1", moeda: "MXN", preco_cents: 24990 })]);
 
