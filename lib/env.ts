@@ -65,6 +65,10 @@ const schema = z.object({
   // Node
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 
+  // Solo infraestructura: Docker Compose consume esta variable, no el app.
+  // No se exige en runtime ni cambia la URL pública de Supabase.
+  SUPABASE_NETWORK: z.string().optional().default(""),
+
   // Supabase — obrigatórias sempre (até pra dev local)
   NEXT_PUBLIC_SUPABASE_URL: requiredAlways("NEXT_PUBLIC_SUPABASE_URL").url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: requiredAlways("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
