@@ -3,11 +3,7 @@
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { Badge } from "@/components/ui/badge";
 import { Warning } from "@/lib/ui/icons";
-import type {
-  TenantOrganization,
-  TenantCounts,
-  TenantIntegrations,
-} from "@/hooks/useTenantDetail";
+import type { TenantOrganization, TenantCounts, TenantIntegrations } from "@/hooks/useTenantDetail";
 import { useT } from "@/hooks/i18n/useT";
 
 // ---------------------------------------------------------------------------
@@ -56,9 +52,9 @@ export const NUVEMSHOP_VARIANT: Record<string, "success" | "warning" | "error" |
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-2 border-b last:border-0">
-      <span className="text-sm text-muted-foreground whitespace-nowrap">{label}</span>
-      <span className="text-sm font-medium text-right">{value ?? "—"}</span>
+    <div className="flex items-start justify-between gap-4 border-b py-2 last:border-0">
+      <span className="text-sm whitespace-nowrap text-muted-foreground">{label}</span>
+      <span className="text-right text-sm font-medium">{value ?? "—"}</span>
     </div>
   );
 }
@@ -66,14 +62,23 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 function StatCard({ label, value, warning }: { label: string; value: number; warning?: boolean }) {
   const t = useT();
   return (
-    <div className={[
-      "rounded-lg border p-4 flex flex-col gap-1",
-      warning && value > 0 ? "border-amber-300 bg-amber-50/50 dark:border-amber-700 dark:bg-amber-950/20" : "bg-card",
-    ].join(" ")}>
+    <div
+      className={[
+        "flex flex-col gap-1 rounded-lg border p-4",
+        warning && value > 0
+          ? "border-amber-300 bg-amber-50/50 dark:border-amber-700 dark:bg-amber-950/20"
+          : "bg-card",
+      ].join(" ")}
+    >
       <span className="text-2xl font-bold tabular-nums">{value.toLocaleString("pt-BR")}</span>
-      <span className="text-xs text-muted-foreground leading-tight">{label}</span>
+      <span className="text-xs leading-tight text-muted-foreground">{label}</span>
       {warning && value > 0 && (
-        <Warning size={14} weight="fill" className="text-amber-500 mt-0.5" aria-label={t("Atenção")} />
+        <Warning
+          size={14}
+          weight="fill"
+          className="mt-0.5 text-amber-500"
+          aria-label={t("Atenção")}
+        />
       )}
     </div>
   );
@@ -112,24 +117,40 @@ export function TenantOverview({ organization, counts, integrations }: TenantOve
     <div className="space-y-6">
       {/* Info card */}
       <div className="rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+        <h2 className="mb-3 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
           {t("Informações")}
         </h2>
         <div>
-          <InfoRow label={t("Plano")} value={<Badge variant="neutral" className="capitalize">{plan}</Badge>} />
+          <InfoRow
+            label={t("Plano")}
+            value={
+              <Badge variant="neutral" className="capitalize">
+                {plan}
+              </Badge>
+            }
+          />
           <InfoRow label={t("Razão social")} value={organization.legal_name} />
-          <InfoRow label="CNPJ" value={organization.cnpj} />
-          <InfoRow label={t("Onboarding concluído")} value={formatDate(organization.onboarded_at, tagDoIdioma)} />
-          <InfoRow label={t("Criado em")} value={formatDate(organization.created_at, tagDoIdioma)} />
+          <InfoRow label={t("CNPJ")} value={organization.cnpj} />
+          <InfoRow
+            label={t("Onboarding concluído")}
+            value={formatDate(organization.onboarded_at, tagDoIdioma)}
+          />
+          <InfoRow
+            label={t("Criado em")}
+            value={formatDate(organization.created_at, tagDoIdioma)}
+          />
           {organization.suspended_at && (
-            <InfoRow label={t("Suspenso em")} value={formatDate(organization.suspended_at, tagDoIdioma)} />
+            <InfoRow
+              label={t("Suspenso em")}
+              value={formatDate(organization.suspended_at, tagDoIdioma)}
+            />
           )}
         </div>
       </div>
 
       {/* Counts row */}
       <div>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+        <h2 className="mb-3 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
           {t("Volumes")}
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -144,15 +165,13 @@ export function TenantOverview({ organization, counts, integrations }: TenantOve
       {/* Integrations + WAHA */}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-lg border bg-card p-5">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          <h2 className="mb-3 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
             {t("Integrações")}
           </h2>
           <div>
             <InfoRow
-              label="Nuvemshop"
-              value={
-                <Badge variant={nuvemshopVariant}>{nuvemshopLabel}</Badge>
-              }
+              label={t("Nuvemshop")}
+              value={<Badge variant={nuvemshopVariant}>{nuvemshopLabel}</Badge>}
             />
             {integrations.nuvemshop_connected_at && (
               <InfoRow
@@ -166,7 +185,7 @@ export function TenantOverview({ organization, counts, integrations }: TenantOve
 
         {/* LGPD + AI */}
         <div className="rounded-lg border bg-card p-5">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          <h2 className="mb-3 text-sm font-semibold tracking-wider text-muted-foreground uppercase">
             {t("Compliance & IA")}
           </h2>
           <div>
@@ -174,16 +193,28 @@ export function TenantOverview({ organization, counts, integrations }: TenantOve
               label={t("Solicitações LGPD pendentes")}
               value={
                 <span className="flex items-center gap-1.5">
-                  <span className={counts.lgpd_requests_pending > 0 ? "text-amber-600 font-semibold" : ""}>
+                  <span
+                    className={
+                      counts.lgpd_requests_pending > 0 ? "font-semibold text-amber-600" : ""
+                    }
+                  >
                     {counts.lgpd_requests_pending}
                   </span>
                   {counts.lgpd_requests_pending > 0 && (
-                    <Warning size={14} weight="fill" className="text-amber-500" aria-label={t("Pendências LGPD")} />
+                    <Warning
+                      size={14}
+                      weight="fill"
+                      className="text-amber-500"
+                      aria-label={t("Pendências LGPD")}
+                    />
                   )}
                 </span>
               }
             />
-            <InfoRow label={t("Invocações IA (30d)")} value={counts.ai_invocations_30d.toLocaleString("pt-BR")} />
+            <InfoRow
+              label={t("Invocações IA (30d)")}
+              value={counts.ai_invocations_30d.toLocaleString("pt-BR")}
+            />
           </div>
         </div>
       </div>

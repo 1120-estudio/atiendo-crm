@@ -47,3 +47,48 @@ compose de producción general conserva Caddy para la instalación tradicional;
 el override single-server conecta app y worker a Supabase sin reintroducir
 servicios de telefonía ausentes. No combines el compose tradicional con el de
 Coolify.
+
+## Interfaz en español y paleta oscura
+
+Con `APP_LOCALE=es`, administración usa el idioma de instalación cuando el usuario
+no tiene una preferencia guardada. Las pantallas autenticadas conservan la
+resolución usuario → empresa → instalación de `loadAuthUser().idioma`.
+Los mensajes de error literales de la API tienen entradas en el diccionario y
+los mensajes con nombres variables usan patrones completos; los valores se
+conservan literalmente. Los encabezados de transferencias existentes se traducen
+al mostrarlos en `PassagemCard`, sin reescribir conversaciones ni citas.
+Los ejemplos de preguntas frecuentes están en español y el parser acepta
+`Pregunta`/`Respuesta`, además de los formatos anteriores. Los fragmentos
+conservan esos encabezados en español. Sin idioma declarado en el documento,
+se detectan los marcadores españoles; un `locale` explícito tiene prioridad.
+
+El PDF de acceso usa `organizations.locale` y `organizations.timezone`, recogidos
+junto con los datos del responsable del tratamiento. Las etiquetas y fechas se
+localizan; la ley citada y el contenido de los datos se mantienen. Sin idioma,
+usa el de la instalación; sin zona, muestra fechas en UTC.
+
+Los tokens de `app/globals.css` definen fondo `#111827`, tarjetas `#1f2937`,
+superficies elevadas `#273449`, barra y menú `#171f2d` y selección `#2563eb`
+con texto blanco como valores predeterminados. Si se elige un color de marca
+en la aplicación, los botones y la selección del menú usan la derivación de
+esa marca y su contraste, tanto para la instalación como para la empresa.
+La marca no cambia las superficies oscuras. El tema claro
+conserva su paleta y el cambio de tema sigue disponible.
+
+La cobertura se verifica con `tests/unit/interfaz-espanol-integral.test.tsx`,
+la catraca de traducción existente y la jornada
+`tests/e2e/i18n-espanhol-na-tela.spec.ts`. Esta revisión alcanza textos de
+interfaz y mensajes del sistema, no renombra campos de API, variables de
+plantillas, nombres registrados por clientes ni históricos de conversación.
+
+Integración: tokens → Sidebar/TopBar/tarjetas; idioma → diccionario → pantallas,
+avisos y PDF. Las puertas son las actuales del catálogo de navegación.
+No se añade un proceso ni una tarea automática. Los errores siguen usando los
+avisos y reintentos existentes; la catraca de idioma impide incorporar nuevos
+textos sin traducción. No se cambia el motor de atención IA/humano ni su latencia.
+
+Los modelos de seguimiento de fábrica se copian en el idioma de la interfaz
+al instalarse como borrador: nombre, etiquetas, mensajes, notas y patrones de
+respuesta. El grafo conserva identificadores, conexiones, plazos y políticas;
+no se publica ni se conecta a un agente automáticamente. Los flujos existentes
+y los nombres personalizados conservan el contenido registrado.

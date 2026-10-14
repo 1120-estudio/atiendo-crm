@@ -30,7 +30,9 @@ export function ImportContactsDialog({ open, onOpenChange }: Props) {
   const importar = useImportContacts();
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [resumo, setResumo] = useState<Awaited<ReturnType<typeof importar.mutateAsync>> | null>(null);
+  const [resumo, setResumo] = useState<Awaited<ReturnType<typeof importar.mutateAsync>> | null>(
+    null,
+  );
 
   function reset() {
     setFile(null);
@@ -51,7 +53,7 @@ export function ImportContactsDialog({ open, onOpenChange }: Props) {
         err instanceof Error && err.message
           ? t(err.message)
           : t("Não foi possível importar o arquivo.");
-      toast.error(msg);
+      toast.error(t(msg));
     }
   }
 

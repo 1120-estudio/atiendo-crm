@@ -56,7 +56,7 @@ Search input usa o mesmo Input com `type="search"` + leading `MagnifyingGlass`. 
 
 ## Card
 
-3 variants. Sempre sobre `surface` (white em light, `#1d1c17` em dark).
+3 variants. Sempre sobre `surface` (white em light, `#1f2937` em dark).
 
 | Variant | Border | Hover | Uso |
 |---------|--------|-------|-----|

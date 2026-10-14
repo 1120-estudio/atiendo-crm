@@ -58,11 +58,11 @@ interface Props {
 const DIA_MS = 86_400_000;
 
 /** "10 dias", "2 meses" — o horizonte na régua de quem opera, não em ms. */
-function horizonteLegivel(ms: number): string {
+function horizonteLegivel(ms: number, t: (texto: string) => string): string {
   const dias = Math.round(ms / DIA_MS);
-  if (dias < 31) return dias <= 1 ? "1 dia" : `${dias} dias`;
+  if (dias < 31) return dias <= 1 ? t("1 dia") : `${dias} ${t("dias")}`;
   const meses = Math.round(dias / 30);
-  return meses <= 1 ? "1 mês" : `${meses} meses`;
+  return meses <= 1 ? t("1 mês") : `${meses} ${t("meses")}`;
 }
 
 export function ModelosDialog({ open, onOpenChange, nomesExistentes }: Props) {
@@ -127,7 +127,8 @@ export function ModelosDialog({ open, onOpenChange, nomesExistentes }: Props) {
 
         <ul className="flex flex-col gap-3">
           {MODELOS_DE_FOLLOWUP.map((modelo) => {
-            const jaInstalado = nomesExistentes.includes(modelo.nome);
+            const jaInstalado =
+              nomesExistentes.includes(modelo.nome) || nomesExistentes.includes(t(modelo.nome));
             const etapaEscolhida = etapaPorModelo[modelo.id];
             const faltaEtapa = modelo.pedeEtapa && !etapaEscolhida;
             const instalando = instalar.isPending && instalar.variables?.model_id === modelo.id;
@@ -142,7 +143,7 @@ export function ModelosDialog({ open, onOpenChange, nomesExistentes }: Props) {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="neutral">{modelo.jornada}</Badge>
-                      <h3 className="font-medium">{modelo.nome}</h3>
+                      <h3 className="font-medium">{t(modelo.nome)}</h3>
                     </div>
                     <p className="mt-1 text-sm text-text-muted">{t(modelo.resumo)}</p>
                   </div>
@@ -161,7 +162,7 @@ export function ModelosDialog({ open, onOpenChange, nomesExistentes }: Props) {
                     <Clock size={13} aria-hidden />
                     <dt className="sr-only">{t("Duração")}</dt>
                     <dd>
-                      {t("acompanha por")} {horizonteLegivel(horizonteDoModeloMs(modelo.grafo))}
+                      {t("acompanha por")} {horizonteLegivel(horizonteDoModeloMs(modelo.grafo), t)}
                     </dd>
                   </div>
                 </dl>
@@ -184,9 +185,7 @@ export function ModelosDialog({ open, onOpenChange, nomesExistentes }: Props) {
                     >
                       <SelectTrigger id={`etapa-${modelo.id}`}>
                         <SelectValue
-                          placeholder={
-                            carregando ? t("Carregando etapas…") : t("Escolha a etapa")
-                          }
+                          placeholder={carregando ? t("Carregando etapas…") : t("Escolha a etapa")}
                         />
                       </SelectTrigger>
                       <SelectContent>

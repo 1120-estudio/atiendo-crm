@@ -9,7 +9,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { citacaoDaLei, perfilDoPais } from "@/lib/legal/perfil-do-pais";
 import { logger } from "@/lib/logger";
-import { camposLegiveis, perguntasDosGrafos, type CampoLegivel } from "@/lib/lgpd/campos-personalizados";
+import {
+  camposLegiveis,
+  perguntasDosGrafos,
+  type CampoLegivel,
+} from "@/lib/lgpd/campos-personalizados";
 import { maskPhone } from "@/lib/lgpd/mask";
 import type { Json } from "@/lib/database.types";
 
@@ -440,6 +444,8 @@ export interface CampaignSuppressionRow {
 }
 
 export interface ExportPayload {
+  locale?: string | null;
+  timezone?: string | null;
   request_id: string;
   organization_id: string;
   /**
@@ -602,6 +608,8 @@ const AUDIT_LIMIT = 200;
 
 /** A identidade JURÍDICA da organização — quem responde pelos dados. */
 interface Controlador {
+  locale?: string | null;
+  timezone?: string | null;
   legal_name: string;
   display_name: string;
   dpo_email: string | null;
@@ -635,7 +643,7 @@ async function lerControlador(
   };
   const { data, error } = await admin
     .from("organizations")
-    .select("legal_name, display_name, dpo_email, country")
+    .select("legal_name, display_name, dpo_email, country, locale, timezone")
     .eq("id", organizationId)
     .maybeSingle();
   if (error || !data) {
@@ -650,6 +658,8 @@ async function lerControlador(
     display_name: data.display_name ?? "",
     dpo_email: data.dpo_email?.trim() || dpoDaInstalacao,
     country: (data as { country?: string | null }).country ?? null,
+    locale: data.locale ?? null,
+    timezone: data.timezone ?? null,
   };
 }
 
@@ -658,7 +668,12 @@ export async function collectExportData(args: CollectArgs): Promise<ExportPayloa
   const { organizationId, requestId, externalCustomerId } = args;
   // ANTES do primeiro `return`: o caminho "nenhum dado localizado" também gera
   // um relatório entregue ao titular, e ele precisa nomear o controlador igual.
-  const controlador = await lerControlador(admin, organizationId, requestId, args.dpoDaInstalacao ?? null);
+  const controlador = await lerControlador(
+    admin,
+    organizationId,
+    requestId,
+    args.dpoDaInstalacao ?? null,
+  );
   let contactId = args.contactId;
 
   // Resolve contact_id when only external customer id is provided.
@@ -704,7 +719,9 @@ export async function collectExportData(args: CollectArgs): Promise<ExportPayloa
     }
     if (data) {
       const customFields =
-        data.custom_fields && typeof data.custom_fields === "object" && !Array.isArray(data.custom_fields)
+        data.custom_fields &&
+        typeof data.custom_fields === "object" &&
+        !Array.isArray(data.custom_fields)
           ? (data.custom_fields as Record<string, unknown>)
           : {};
       // Os rótulos vêm das perguntas dos roteiros que o contato percorreu. Duas
@@ -719,7 +736,9 @@ export async function collectExportData(args: CollectArgs): Promise<ExportPayloa
         .order("started_at", { ascending: false })
         .limit(50);
       const versaoIds = [
-        ...new Set((inscricoes ?? []).flatMap((r) => (r.version_id ? [r.version_id as string] : []))),
+        ...new Set(
+          (inscricoes ?? []).flatMap((r) => (r.version_id ? [r.version_id as string] : [])),
+        ),
       ];
       if (versaoIds.length > 0 && !inscricoesErr) {
         const { data: versoes, error: versoesErr } = await admin
@@ -728,7 +747,10 @@ export async function collectExportData(args: CollectArgs): Promise<ExportPayloa
           .eq("organization_id", organizationId)
           .in("id", versaoIds);
         if (versoesErr) {
-          logger.warn("[lgpd-export-worker] roteiros load failed", { request_id: requestId, error: versoesErr.message });
+          logger.warn("[lgpd-export-worker] roteiros load failed", {
+            request_id: requestId,
+            error: versoesErr.message,
+          });
         }
         const porId = new Map((versoes ?? []).map((v) => [v.id as string, v.graph]));
         for (const id of versaoIds) grafos.push(porId.get(id)); // o mais recente primeiro
@@ -1349,7 +1371,9 @@ export async function collectExportData(args: CollectArgs): Promise<ExportPayloa
         // UM literal, sem concatenação: o supabase-js lê a lista de colunas do
         // TIPO da string para inferir a linha, e `"a" + "b"` vira `string` —
         // a linha volta como `GenericStringError` e o `push` não compila.
-        .select("id, conversation_id, caso_id, motor, origem, motivo_codigo, title, body, notes, content, tentativas, cliente_avisado, aviso_motivo_codigo, criado_em, reconhecido_em")
+        .select(
+          "id, conversation_id, caso_id, motor, origem, motivo_codigo, title, body, notes, content, tentativas, cliente_avisado, aviso_motivo_codigo, criado_em, reconhecido_em",
+        )
         .eq("organization_id", organizationId)
         .eq("contact_id", contactId)
         .order("id")
@@ -1503,6 +1527,8 @@ export async function collectExportData(args: CollectArgs): Promise<ExportPayloa
   return {
     request_id: requestId,
     organization_id: organizationId,
+    locale: controlador.locale ?? null,
+    timezone: controlador.timezone ?? null,
     organization_legal_name: controlador.legal_name,
     organization_display_name: controlador.display_name,
     dpo_email: controlador.dpo_email,
@@ -1554,6 +1580,8 @@ function emptyPayload(
   return {
     request_id: requestId,
     organization_id: organizationId,
+    locale: controlador.locale ?? null,
+    timezone: controlador.timezone ?? null,
     organization_legal_name: controlador.legal_name,
     organization_display_name: controlador.display_name,
     dpo_email: controlador.dpo_email,

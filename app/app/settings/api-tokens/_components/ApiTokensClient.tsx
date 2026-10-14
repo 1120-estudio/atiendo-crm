@@ -121,7 +121,7 @@ export function ApiTokensClient() {
                 <TableHead>{t("Nome")}</TableHead>
                 <TableHead>{t("Prefixo")}</TableHead>
                 <TableHead>{t("Escopos")}</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>{t("Status")}</TableHead>
                 <TableHead>{t("Expira")}</TableHead>
                 <TableHead className="w-[120px]" />
               </TableRow>
@@ -150,7 +150,9 @@ export function ApiTokensClient() {
                     )}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {tok.expires_at ? new Date(tok.expires_at).toLocaleDateString(tagDoIdioma) : "—"}
+                    {tok.expires_at
+                      ? new Date(tok.expires_at).toLocaleDateString(tagDoIdioma)
+                      : "—"}
                   </TableCell>
                   <TableCell>
                     {!tok.revoked_at ? (
@@ -178,9 +180,7 @@ export function ApiTokensClient() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("Criar novo token")}</DialogTitle>
-            <DialogDescription>
-              {t("O plaintext será mostrado apenas uma vez.")}
-            </DialogDescription>
+            <DialogDescription>{t("O plaintext será mostrado apenas uma vez.")}</DialogDescription>
           </DialogHeader>
           <form onSubmit={onCreate} className="space-y-4">
             <div className="space-y-2">
@@ -249,7 +249,7 @@ export function ApiTokensClient() {
           </DialogHeader>
           {created ? (
             <div className="space-y-3">
-              <code className="block break-all rounded-md border bg-muted p-3 text-sm">
+              <code className="block rounded-md border bg-muted p-3 text-sm break-all">
                 {created.plaintext}
               </code>
               <Button

@@ -64,7 +64,12 @@ export function LgpdAdminClient() {
     setFilters({});
   }
 
-  const hasActiveFilters = !!(filters.status || filters.request_type || filters.risk_level || filters.tenant_id);
+  const hasActiveFilters = !!(
+    filters.status ||
+    filters.request_type ||
+    filters.risk_level ||
+    filters.tenant_id
+  );
 
   return (
     <div className="space-y-6">
@@ -74,7 +79,7 @@ export function LgpdAdminClient() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">{t("LGPD — Cross-tenant")}</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="mt-1 text-sm text-muted-foreground">
           {isLoading
             ? t("Carregando...")
             : `${total} ${total !== 1 ? t("solicitações") : t("solicitação")}${hasNextPage ? "+" : ""}`}
@@ -118,16 +123,12 @@ export function LgpdAdminClient() {
             <SelectItem value="expired">{t("Vencido")}</SelectItem>
             <SelectItem value="at_risk">{t("Crítico (<24h)")}</SelectItem>
             <SelectItem value="warning">{t("Alerta (>50%)")}</SelectItem>
-            <SelectItem value="ok">OK</SelectItem>
+            <SelectItem value="ok">{t("OK")}</SelectItem>
           </SelectContent>
         </Select>
 
         {hasActiveFilters && (
-          <Badge
-            variant="secondary"
-            className="cursor-pointer text-xs"
-            onClick={clearFilters}
-          >
+          <Badge variant="secondary" className="cursor-pointer text-xs" onClick={clearFilters}>
             {t("Limpar filtros")} ×
           </Badge>
         )}

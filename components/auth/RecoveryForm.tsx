@@ -41,7 +41,7 @@ export function RecoveryForm({ next }: RecoveryFormProps) {
   return (
     <form method="post" onSubmit={onSubmit} className="space-y-4" noValidate>
       <div className="space-y-1.5">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">{t("Email")}</Label>
         <Input
           id="email"
           type="email"
@@ -61,7 +61,7 @@ export function RecoveryForm({ next }: RecoveryFormProps) {
           maxLength={8}
           required
           placeholder="ABCD2345"
-          className="font-mono uppercase tracking-widest"
+          className="font-mono tracking-widest uppercase"
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
         />

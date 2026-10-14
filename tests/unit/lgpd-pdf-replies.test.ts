@@ -135,3 +135,18 @@ it("PDF entregue inclui revisão pessoal e omite contexto privado", async () => 
   for (const value of ["CLAIM-PRIVADO", "FRONTEIRA-PRIVADA", "TRACE-PRIVADO"])
     expect(pdf.text).not.toContain(value);
 });
+
+it("PDF en español usa la zona de la empresa y conserva los datos del cliente", async () => {
+  const data = payload();
+  data.locale = "es";
+  data.timezone = "America/Costa_Rica";
+  data.generated_at = "2030-01-02T13:05:00Z";
+  data.organization_legal_name = "Multitiendas Costa Rica";
+  const pdf = await rendered(data);
+  expect(pdf.text).toContain("Informe de acceso a los datos");
+  expect(pdf.text).toContain("Responsable del tratamiento:");
+  expect(pdf.text).toContain("Multitiendas Costa Rica");
+  expect(pdf.text).toContain("7:05");
+  expect(pdf.text).not.toContain("Relatório de Acesso aos Dados");
+  expect(pdf.text).not.toContain("Organização:");
+});

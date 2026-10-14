@@ -46,10 +46,7 @@ export function ForgotPasswordForm() {
 
   if (sent) {
     return (
-      <div
-        className="space-y-2 rounded-md border bg-muted/40 px-4 py-6 text-center"
-        role="status"
-      >
+      <div className="space-y-2 rounded-md border bg-muted/40 px-4 py-6 text-center" role="status">
         <p className="text-sm font-medium">{t("Verifique seu e-mail")}</p>
         <p className="text-sm text-muted-foreground">
           {t("Se existir uma conta com esse e-mail, enviamos um link para redefinir a senha.")}
@@ -61,7 +58,7 @@ export function ForgotPasswordForm() {
   return (
     <form method="post" onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       <div className="space-y-1.5">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">{t("Email")}</Label>
         <Input
           id="email"
           type="email"

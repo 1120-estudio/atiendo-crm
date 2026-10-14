@@ -7,7 +7,6 @@ import {
   type GrupoDaInstalacao,
 } from "@/lib/instalacao/catalogo";
 import { estadoParaTela, type EstadoParaTela } from "@/lib/instalacao/config";
-import { normalizarIdioma } from "@/lib/i18n/idiomas";
 import { traduzir } from "@/lib/i18n/dicionario";
 
 import { PainelDeConfiguracao } from "./_form";
@@ -51,7 +50,11 @@ const ORDEM: readonly {
   },
   { grupo: "banco", titulo: "Banco de dados", resumo: "Onde ficam todos os seus dados." },
   { grupo: "fila", titulo: "Fila de tarefas", resumo: "Controla o ritmo dos envios." },
-  { grupo: "ia", titulo: "Inteligência artificial", resumo: "Como o atendimento automático opera." },
+  {
+    grupo: "ia",
+    titulo: "Inteligência artificial",
+    resumo: "Como o atendimento automático opera.",
+  },
 ];
 
 export interface LinhaDaTela {
@@ -66,7 +69,7 @@ export default async function Page() {
   // própria página aplica. `notFound()` e não 403 — para quem não administra a
   // instalação, esta tela não faz parte do produto.
   if (!usuario?.is_platform_admin) notFound();
-  const idioma = normalizarIdioma(usuario.locale);
+  const idioma = usuario.idioma;
 
   // Uma ida ao banco por chave, em paralelo. Sem cache de propósito — ver o
   // cabeçalho de `lib/instalacao/config.ts`: com memo, a tela mostraria o valor
@@ -76,7 +79,9 @@ export default async function Page() {
   // servidor manda e-mail" é um assunto só, e estava dividido em duas telas.
   // O filtro é o catálogo, não uma lista escrita aqui — assim não há como as
   // duas telas mostrarem a mesma chave.
-  const daTela = CATALOGO_DA_INSTALACAO.filter((d) => (d.telaDona ?? "credenciais") === "credenciais");
+  const daTela = CATALOGO_DA_INSTALACAO.filter(
+    (d) => (d.telaDona ?? "credenciais") === "credenciais",
+  );
 
   const linhas: LinhaDaTela[] = await Promise.all(
     daTela.map(async (definicao) => ({

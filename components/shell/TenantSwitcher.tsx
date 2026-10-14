@@ -24,7 +24,10 @@ export function TenantSwitcher() {
   const [isPending, setPending] = useState(false);
   const switchTo = async (orgId: string) => {
     if (orgId === active?.orgId) return;
-    flushSync(() => { setPending(true); transition.begin(t("Carregando organização…")); });
+    flushSync(() => {
+      setPending(true);
+      transition.begin(t("Carregando organização…"));
+    });
     try {
       const result = await setActiveOrg(orgId);
       if (!result.ok) throw new Error(result.error);
@@ -33,7 +36,9 @@ export function TenantSwitcher() {
     } catch {
       transition.cancel();
       setPending(false);
-      toast.error(t("Não foi possível trocar de organização. Seu acesso pode ter mudado. Tente novamente."));
+      toast.error(
+        t("Não foi possível trocar de organização. Seu acesso pode ter mudado. Tente novamente."),
+      );
     }
   };
 
@@ -73,7 +78,7 @@ export function TenantSwitcher() {
         >
           <Storefront size={16} weight="duotone" aria-hidden />
           <span className="hidden max-w-[160px] truncate md:inline">
-            {active?.name ?? "Selecionar org"}
+            {active?.name ?? t("Selecionar org")}
           </span>
           <CaretDown size={12} aria-hidden className="hidden md:inline" />
         </Button>
@@ -83,16 +88,22 @@ export function TenantSwitcher() {
           <DropdownMenuItem
             key={org.organization_id}
             data-testid={`tenant-switcher-item-${org.organization_id}`}
-            onClick={() => { void switchTo(org.organization_id); }}
+            onClick={() => {
+              void switchTo(org.organization_id);
+            }}
             className="flex items-center justify-between"
           >
             <span className="truncate">{org.organization_name}</span>
-            {active?.orgId === org.organization_id && <span className="text-xs text-muted-foreground">✓</span>}
+            {active?.orgId === org.organization_id && (
+              <span className="text-xs text-muted-foreground">✓</span>
+            )}
           </DropdownMenuItem>
         ))}
-        {user.is_platform_admin && <DropdownMenuItem asChild>
-          <Link href="/admin/tenants">{t("Gerenciar organizações")}</Link>
-        </DropdownMenuItem>}
+        {user.is_platform_admin && (
+          <DropdownMenuItem asChild>
+            <Link href="/admin/tenants">{t("Gerenciar organizações")}</Link>
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

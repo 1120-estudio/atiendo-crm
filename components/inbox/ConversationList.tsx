@@ -105,8 +105,7 @@ export function ConversationList({
    * já é robô, e repetir o ícone em cada uma vira ruído. Nas outras abas a
    * lista é mista (ou pode ser), então o ícone segue dizendo algo.
    */
-  const mostrarAutomatico =
-    !(filters.comando?.length === 1 && filters.comando[0] === "automatico");
+  const mostrarAutomatico = !(filters.comando?.length === 1 && filters.comando[0] === "automatico");
 
   useEffect(() => {
     if (onVisibleChange) onVisibleChange(items.map((i) => i.id));
@@ -127,13 +126,8 @@ export function ConversationList({
     return (
       <div className="p-4 text-center text-sm text-muted-foreground">
         <p>{t("Erro ao carregar conversas.")}</p>
-        <Button
-          size="sm"
-          variant="outline"
-          className="mt-2"
-          onClick={() => q.refetch()}
-        >
-          Tentar novamente
+        <Button size="sm" variant="outline" className="mt-2" onClick={() => q.refetch()}>
+          {t("Tentar novamente")}{" "}
         </Button>
       </div>
     );

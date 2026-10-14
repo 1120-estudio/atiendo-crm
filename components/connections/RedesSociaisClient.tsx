@@ -63,8 +63,8 @@ export function RedesSociaisClient() {
           ...current,
           [id]:
             result.data.status === "healthy"
-              ? "Conexão verificada"
-              : "A conexão precisa de atenção",
+              ? t("Conexão verificada")
+              : t("A conexão precisa de atenção"),
         }));
       } else {
         setKey("");
@@ -91,7 +91,7 @@ export function RedesSociaisClient() {
           {t("Atualizar")}
         </Button>
       </div>
-      {params.get("error") && (
+      {params.get(t("error")) && (
         <p role="alert" className="rounded-md border p-3 text-sm">
           {t(
             "A autorização não foi concluída. Tente conectar novamente e aceite as permissões necessárias.",

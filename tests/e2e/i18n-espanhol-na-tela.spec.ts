@@ -46,6 +46,9 @@ import { test, expect, type Page } from "./helpers/test";
 
 import { credenciaisSupabaseDeTeste } from "../../scripts/lib/env-de-teste";
 import { DICIONARIO } from "../../lib/i18n/dicionario";
+import { cssDaMarca, ESCOPO_DA_INSTALACAO, ESCOPO_DA_ORGANIZACAO } from "../../lib/branding/css";
+import { resolverMarca, camadaDoAmbiente } from "../../lib/branding/resolve";
+import { REGUA_DO_PRODUTO } from "../../lib/branding/regua-do-produto";
 import { lerCreds, loginComoAdmin } from "./helpers/login-admin";
 
 const creds = lerCreds();
@@ -62,7 +65,20 @@ const PRAZO = 60_000;
  * varre tudo é o guarda estático, que alcança arquivo que ainda não existe e
  * roda em segundos.
  */
-const TELAS = ["/app/inbox", "/app/kanban", "/app/contacts", "/app/metrics", "/app/settings"];
+const TELAS = [
+  "/app/inbox",
+  "/app/kanban",
+  "/app/contacts",
+  "/app/metrics",
+  "/app/settings",
+  "/app/team",
+  "/app/connections",
+  "/app/ai/followups",
+  "/app/ai/knowledge/sources",
+  "/app/ai/evolution",
+  "/admin/configuracao",
+  "/admin/google",
+];
 
 /**
  * Chaves que o dicionário traduz de verdade — o espanhol DIFERE do português.
@@ -111,7 +127,10 @@ const CHAVES_QUE_MUDAM = new Set(
  * interface — e nenhum deles poderia acusar o defeito que ela procura.
  */
 function rotulosDeInterface(textos: string[]): string {
-  return textos.filter((t) => t in DICIONARIO).sort().join("\n");
+  return textos
+    .filter((t) => t in DICIONARIO)
+    .sort()
+    .join("\n");
 }
 
 /** Todo texto que a pessoa consegue LER nesta tela, normalizado. */
@@ -281,7 +300,8 @@ test.afterAll(async () => {
 });
 
 test.describe("o idioma escolhido chega à tela", () => {
-  test.setTimeout(180_000);
+  // La auditoría recorre doce pantallas en ambos idiomas y verifica el tema real.
+  test.setTimeout(300_000);
 
   test("espanhol cobre a interface, e o português volta byte a byte", async ({ page }) => {
     await loginComoAdmin(page, creds);
@@ -305,7 +325,10 @@ test.describe("o idioma escolhido chega à tela", () => {
     await page.goto(TELAS[0]!);
     await page.waitForLoadState("networkidle", { timeout: PRAZO });
     await porIdiomaEm(page, "es");
-    await page.screenshot({ path: path.join(EVIDENCIA, "01-inbox-em-espanhol.png"), fullPage: true });
+    await page.screenshot({
+      path: path.join(EVIDENCIA, "01-inbox-em-espanhol.png"),
+      fullPage: true,
+    });
 
     // ── 3b. A DATA saiu do português? ──────────────────────────────────────
     //
@@ -347,9 +370,7 @@ test.describe("o idioma escolhido chega à tela", () => {
     for (const tela of TELAS) {
       await page.goto(tela);
       await page.waitForLoadState("networkidle", { timeout: PRAZO });
-      const emPortugues = (await textosVisiveis(page)).filter((txt) =>
-        DATA_EM_PORTUGUES.test(txt),
-      );
+      const emPortugues = (await textosVisiveis(page)).filter((txt) => DATA_EM_PORTUGUES.test(txt));
       expect(
         emPortugues,
         `${tela}: a data continua em português com a interface em espanhol — ` +
@@ -387,6 +408,87 @@ test.describe("o idioma escolhido chega à tela", () => {
         "Cada um é uma chave que o dicionário sabe traduzir e que não passou por t() " +
         "no ponto em que a tela o renderiza.",
     ).toEqual([]);
+
+    // La paleta se mide en el CRM real, mediante el control que usa el usuario.
+    await page.goto("/app/settings");
+    await page.waitForLoadState("networkidle", { timeout: PRAZO });
+    const tema = page.getByRole("button", { name: /^Tema:/ });
+    for (
+      let i = 0;
+      i < 3 && (await page.locator("html").getAttribute("data-theme")) !== "dark";
+      i++
+    )
+      await tema.click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    // El atributo cambia antes de que transition-colors termine de pintar.
+    // Esperamos el color final; un color incorrecto sigue haciendo fallar la prueba.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const root = getComputedStyle(document.documentElement);
+            const body = getComputedStyle(document.body);
+            const sidebar = document.querySelector("aside");
+            const seleccion = document.querySelector("aside .sidebar-nav-active");
+            const tarjeta = document.querySelector("main .bg-surface");
+            return {
+              fondo: root.getPropertyValue("--color-bg").trim(),
+              superficieRaiz: root.getPropertyValue("--color-surface").trim(),
+              superficieCuerpo: body.getPropertyValue("--color-surface").trim(),
+              navegacionCuerpo: body.getPropertyValue("--color-navigation-active").trim(),
+              tarjeta: tarjeta ? getComputedStyle(tarjeta).backgroundColor : null,
+              menu: sidebar ? getComputedStyle(sidebar).backgroundColor : null,
+              seleccion: seleccion ? getComputedStyle(seleccion).backgroundColor : null,
+            };
+          }),
+        { timeout: PRAZO },
+      )
+      .toEqual({
+        fondo: "#111827",
+        superficieRaiz: "#1f2937",
+        superficieCuerpo: "#1f2937",
+        navegacionCuerpo: "#2563eb",
+        tarjeta: "rgb(31, 41, 55)",
+        menu: "rgb(23, 31, 45)",
+        seleccion: "rgb(37, 99, 235)",
+      });
+    await page.screenshot({ path: path.join(EVIDENCIA, "03-settings-dark.png"), fullPage: true });
+
+    // Verifica en el navegador el mismo CSS que emite la opción de marca,
+    // sin persistir preferencias en la cuenta compartida por otras pruebas.
+    const marca = resolverMarca(
+      [camadaDoAmbiente({ APP_ACCENT_HEX: "#7c3aed" })],
+      REGUA_DO_PRODUTO,
+    );
+    for (const escopo of [ESCOPO_DA_INSTALACAO, ESCOPO_DA_ORGANIZACAO]) {
+      const css = cssDaMarca(marca.cor, escopo).css;
+      expect(css).not.toBeNull();
+      const estilo = await page.addStyleTag({ content: css! });
+      try {
+        await expect
+          .poll(
+            () =>
+              page.evaluate(() => {
+                const item = document.querySelector("aside .sidebar-nav-active")!;
+                const tarjeta = document.querySelector("main .bg-surface")!;
+                const muestra = document.createElement("span");
+                item.append(muestra);
+                muestra.style.backgroundColor = "var(--color-accent)";
+                muestra.style.color = "var(--color-accent-fg)";
+                const esperado = getComputedStyle(muestra);
+                const coincide =
+                  getComputedStyle(item).backgroundColor === esperado.backgroundColor &&
+                  getComputedStyle(item).color === esperado.color;
+                muestra.remove();
+                return { coincide, tarjeta: getComputedStyle(tarjeta).backgroundColor };
+              }),
+            { timeout: PRAZO },
+          )
+          .toEqual({ coincide: true, tarjeta: "rgb(31, 41, 55)" });
+      } finally {
+        await estilo.evaluate((nodo) => nodo.parentNode?.removeChild(nodo));
+      }
+    }
 
     // ── 5. E a volta: o português tem de voltar ao que era ──────────────────
     //
@@ -428,6 +530,9 @@ test.describe("o idioma escolhido chega à tela", () => {
         })
         .toBe(rotulosDeInterface(antes.get(tela)!));
     }
-    await page.screenshot({ path: path.join(EVIDENCIA, "02-inbox-de-volta-em-portugues.png"), fullPage: true });
+    await page.screenshot({
+      path: path.join(EVIDENCIA, "02-inbox-de-volta-em-portugues.png"),
+      fullPage: true,
+    });
   });
 });

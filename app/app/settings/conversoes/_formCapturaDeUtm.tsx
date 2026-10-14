@@ -82,7 +82,7 @@ export function FormularioDeCapturaDeUtm({
   const [isPending, startTransition] = useTransition();
 
   const [numero, setNumero] = useState(estado?.whatsappE164 ?? numerosConectados[0] ?? "");
-  const [texto, setTexto] = useState(estado?.messageTemplate ?? TEXTO_PADRAO);
+  const [texto, setTexto] = useState(estado?.messageTemplate ?? t(TEXTO_PADRAO));
   const [habilitada, setHabilitada] = useState(estado?.habilitada ?? true);
 
   const origem = useSyncExternalStore(assinarOrigem, origemDoNavegador, origemNoServidor);
@@ -163,7 +163,7 @@ export function FormularioDeCapturaDeUtm({
             id={`${plataforma}_captura_texto`}
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
-            placeholder={TEXTO_PADRAO}
+            placeholder={t(TEXTO_PADRAO)}
           />
           <p className="text-xs text-muted-foreground">
             {t(

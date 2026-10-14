@@ -27,9 +27,9 @@ export interface FaqItem {
 const DEFAULT_LOCALE = "pt-BR";
 
 /** Regex matching both `## Pergunta:` and `## P:` (case-insensitive). */
-const QUESTION_RE = /^##\s+(?:pergunta|p)\s*:/i;
+const QUESTION_RE = /^##\s+(?:pergunta|pregunta|p)\s*:/i;
 /** Regex matching both `## Resposta:` and `## R:` (case-insensitive). */
-const ANSWER_RE = /^##\s+(?:resposta|r)\s*:/i;
+const ANSWER_RE = /^##\s+(?:resposta|respuesta|r)\s*:/i;
 
 interface Frontmatter {
   locale: string;
@@ -42,7 +42,10 @@ interface Frontmatter {
  * Returns defaults if frontmatter is absent or unparseable.
  */
 function parseFrontmatter(md: string): { frontmatter: Frontmatter; body: string } {
-  const defaultFm: Frontmatter = { locale: DEFAULT_LOCALE, tags: [] };
+  const defaultFm: Frontmatter = {
+    locale: /^##\s+(?:pregunta|respuesta)\s*:/im.test(md) ? "es" : DEFAULT_LOCALE,
+    tags: [],
+  };
 
   if (!md.trimStart().startsWith("---")) {
     return { frontmatter: defaultFm, body: md };
@@ -137,5 +140,7 @@ export function parseFaqMarkdown(md: string): FaqItem[] {
  */
 export function formatFaqChunk(item: FaqItem): string {
   const tagsStr = item.tags.length > 0 ? item.tags.join(", ") : "";
-  return `Pergunta: ${item.question}\nResposta: ${item.answer}${tagsStr ? `\nTags: ${tagsStr}` : ""}`;
+  const pergunta = item.locale.toLowerCase().startsWith("es") ? "Pregunta" : "Pergunta";
+  const resposta = item.locale.toLowerCase().startsWith("es") ? "Respuesta" : "Resposta";
+  return `${pergunta}: ${item.question}\n${resposta}: ${item.answer}${tagsStr ? `\nTags: ${tagsStr}` : ""}`;
 }

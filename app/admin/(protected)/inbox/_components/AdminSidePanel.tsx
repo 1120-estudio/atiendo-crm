@@ -26,16 +26,16 @@ export function AdminSidePanel({ data }: Props) {
     <aside className="flex h-full w-[320px] shrink-0 flex-col gap-6 overflow-y-auto border-l border-border bg-muted/20 px-4 py-4">
       {/* ── Contact info ── */}
       <section>
-        <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Contato
+        <h3 className="mb-2 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+          {t("Contato")}{" "}
         </h3>
         {contact ? (
           <div className="flex flex-col gap-1.5 text-sm">
             <div className="font-medium">
               {contact.is_anonymized ? (
-                <span className="italic text-muted-foreground">Contato anonimizado</span>
+                <span className="text-muted-foreground italic">{t("Contato anonimizado")}</span>
               ) : (
-                contact.name ?? t("Sem nome")
+                (contact.name ?? t("Sem nome"))
               )}
             </div>
             {contact.phone_number && (
@@ -49,7 +49,7 @@ export function AdminSidePanel({ data }: Props) {
             )}
             {contact.is_blocked && (
               <span className="inline-block rounded-md bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
-                Bloqueado
+                {t("Bloqueado")}{" "}
               </span>
             )}
           </div>
@@ -60,26 +60,31 @@ export function AdminSidePanel({ data }: Props) {
 
       {/* ── Tenant info ── */}
       <section>
-        <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <h3 className="mb-2 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
           Tenant
         </h3>
         {organization ? (
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 text-sm">
-              <Buildings size={14} weight="duotone" className="shrink-0 text-muted-foreground" aria-hidden />
+              <Buildings
+                size={14}
+                weight="duotone"
+                className="shrink-0 text-muted-foreground"
+                aria-hidden
+              />
               <span className="font-medium">{organization.display_name}</span>
             </div>
             <div className="text-xs text-muted-foreground">
               Slug: <span className="font-mono">{organization.slug}</span>
             </div>
-            <div className="text-xs capitalize text-muted-foreground">
-              Status: {organization.status}
+            <div className="text-xs text-muted-foreground capitalize">
+              {t("Status:")} {organization.status}
             </div>
             <Link
               href={`/admin/tenants/${organization.id}`}
               className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-2 hover:underline"
             >
-              Abrir tenant <ArrowRight size={12} aria-hidden />
+              {t("Abrir tenant")} <ArrowRight size={12} aria-hidden />
             </Link>
           </div>
         ) : (

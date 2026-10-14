@@ -14,7 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { matchReplyConfigSchema, type IfExists, type MatchReplyBranch, type ReplySaveTo } from "@/lib/followup/graph-schema";
+import {
+  matchReplyConfigSchema,
+  type IfExists,
+  type MatchReplyBranch,
+  type ReplySaveTo,
+} from "@/lib/followup/graph-schema";
 import { ESPERA_PELA_RESPOSTA, SE_INFORMACAO_JA_EXISTIR } from "@/lib/followup/vocabulario";
 import { camposDoFunil } from "@/lib/leads/campos-do-funil";
 import { Plus, Trash } from "@/lib/ui/icons";
@@ -89,7 +94,7 @@ export function MatchReplyForm({
                 value={branch.op}
                 onValueChange={(v) => atualizar(index, { op: v as MatchReplyBranch["op"] })}
               >
-                <SelectTrigger aria-label={`Comparação da regra ${index + 1}`}>
+                <SelectTrigger aria-label={`${t("Comparação da regra")} ${index + 1}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -135,7 +140,7 @@ export function MatchReplyForm({
               commit({ branches: next, graceMin, saveTo, ifExists });
             }}
           >
-            <Plus size={14} aria-hidden className="mr-1" /> Adicionar regra
+            <Plus size={14} aria-hidden className="mr-1" /> {t("Adicionar regra")}{" "}
           </Button>
         )}
       </div>
@@ -187,7 +192,9 @@ export function MatchReplyForm({
                 {c.label} ({c.key})
               </SelectItem>
             ))}
-            <SelectItem value="__livre__">{t("Chave livre (use")} {t("{{volta}}")} {t("no laço)")}</SelectItem>
+            <SelectItem value="__livre__">
+              {t("Chave livre (use")} {t("{{volta}}")} {t("no laço)")}
+            </SelectItem>
           </SelectContent>
         </Select>
         {saveTo?.kind === "lead_custom" && !camposUnicos.some((c) => c.key === saveTo.key) && (
@@ -225,7 +232,9 @@ export function MatchReplyForm({
           </div>
         )}
         <p className="text-xs text-text-muted">
-          {t("Crie os campos em Configurações → Funis. A resposta só grava quando o contato responde (não no timeout).")}
+          {t(
+            "Crie os campos em Configurações → Funis. A resposta só grava quando o contato responde (não no timeout).",
+          )}
         </p>
       </div>
       {error && <p className="text-xs text-error-fg">{error}</p>}

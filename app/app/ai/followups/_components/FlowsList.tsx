@@ -87,7 +87,9 @@ export function FlowsList({ initialData, canWrite, surface }: Props) {
         <Card className="flex flex-col items-center gap-3 p-10 text-center">
           <FlowArrow size={36} aria-hidden className="text-text-muted" />
           <h2 className="font-medium">
-            {deAtendimento ? t("Nenhum fluxo de atendimento ainda") : t("Nenhum fluxo de follow-up ainda")}
+            {deAtendimento
+              ? t("Nenhum fluxo de atendimento ainda")
+              : t("Nenhum fluxo de follow-up ainda")}
           </h2>
           <p className="max-w-sm text-sm text-text-muted">
             {deAtendimento
@@ -133,22 +135,26 @@ export function FlowsList({ initialData, canWrite, surface }: Props) {
                 <dl className="grid grid-cols-2 gap-2 pt-1 text-xs">
                   <div>
                     <dt className="text-text-muted">{t("Versão")}</dt>
-                    <dd className="font-mono">{flow.active_version_id ? "publicada" : "—"}</dd>
+                    <dd className="font-mono">{flow.active_version_id ? t("publicada") : "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-text-muted">Handoff</dt>
+                    <dt className="text-text-muted">{t("Handoff")}</dt>
                     <dd className="font-mono">{flow.handoff_policy}</dd>
                   </div>
                 </dl>
                 <p className="mt-auto pt-2 text-xs text-text-muted">
-                  Atualizado em {formatUpdatedAt(flow.updated_at, tagDoIdioma)}
+                  {t("Atualizado em")} {formatUpdatedAt(flow.updated_at, tagDoIdioma)}
                 </p>
               </Link>
               {canWrite && (
                 <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-2">
                   <RenameFollowupFlowButton flowId={flow.id} flowName={flow.name} />
                   <DuplicateFollowupFlowButton flowId={flow.id} />
-                  <DeleteFollowupFlowButton flowId={flow.id} flowName={flow.name} listHref={baseHref} />
+                  <DeleteFollowupFlowButton
+                    flowId={flow.id}
+                    flowName={flow.name}
+                    listHref={baseHref}
+                  />
                 </div>
               )}
             </Card>

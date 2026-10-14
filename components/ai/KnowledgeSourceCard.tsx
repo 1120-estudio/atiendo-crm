@@ -75,11 +75,11 @@ function formatRelative(
   const diffSec = Math.floor((Date.now() - then) / 1000);
   if (diffSec < 60) return t("agora há pouco");
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `há ${diffMin} min`;
+  if (diffMin < 60) return `${t("há")} ${diffMin} min`;
   const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `há ${diffHr} h`;
+  if (diffHr < 24) return `${t("há")} ${diffHr} h`;
   const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 30) return `há ${diffDay} d`;
+  if (diffDay < 30) return `${t("há")} ${diffDay} d`;
   return new Date(iso).toLocaleDateString(tagDoIdioma);
 }
 
@@ -156,7 +156,7 @@ export function KnowledgeSourceCard({
                 )}
               </p>
             ) : null}
-            <p className="mt-1 whitespace-pre-wrap break-words">{source.last_index_error}</p>
+            <p className="mt-1 break-words whitespace-pre-wrap">{source.last_index_error}</p>
           </details>
         ) : null}
       </CardContent>

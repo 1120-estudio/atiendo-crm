@@ -297,8 +297,8 @@ export function DetalheDoCompromisso({
                 <div className="flex flex-wrap gap-2">
                   {(
                     [
-                      ["completed", "Compareceu"],
-                      ["no_show", "Faltou"],
+                      ["completed", t("Compareceu")],
+                      ["no_show", t("Faltou")],
                     ] as const
                   ).map(([status, label]) => (
                     <Button

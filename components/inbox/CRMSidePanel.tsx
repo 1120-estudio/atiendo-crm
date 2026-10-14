@@ -31,7 +31,13 @@ import { NewLeadDialog } from "@/components/kanban/NewLeadDialog";
 import { CustomFieldsEditor, type CustomFieldDef } from "@/components/contacts/CustomFieldsEditor";
 import { useEditLead } from "@/hooks/kanban/useUpdateLead";
 import { useBulkAction } from "@/hooks/kanban/useBulkAction";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { phoneForDisplay } from "@/lib/channels/phone-variants";
@@ -114,7 +120,13 @@ interface DesfechoDraft {
   salvando: boolean;
 }
 
-function EncerrarDemanda({ draft, onAbrir, onAlterar, onFechar, onPronto }: {
+function EncerrarDemanda({
+  draft,
+  onAbrir,
+  onAlterar,
+  onFechar,
+  onPronto,
+}: {
   draft: DesfechoDraft | null;
   onAbrir: () => void;
   onAlterar: (patch: Partial<Pick<DesfechoDraft, "desfecho" | "salvando">>) => void;
@@ -122,31 +134,77 @@ function EncerrarDemanda({ draft, onAbrir, onAlterar, onFechar, onPronto }: {
   onPronto: () => void;
 }) {
   const t = useT();
-  if (!draft) return <Button size="sm" variant="ghost" onClick={onAbrir}>{t("Encerrar demanda")}</Button>;
-  return <form className="mt-2 space-y-2" onSubmit={async (event) => {
-    event.preventDefault(); onAlterar({ salvando: true });
-    try {
-      await apiClient.patch(`/api/v1/demandas/${draft.demandaId}`, { action: "encerrar", desfecho: draft.desfecho, expected_revision: draft.revision });
-      toast.success(t("Desfecho registrado.")); onFechar(); onPronto();
-    } catch { toast.error(t("Não foi possível encerrar. Cancele esta edição e abra novamente para revisar o desfecho.")); onPronto(); }
-    finally { onAlterar({ salvando: false }); }
-  }}>
-    <label className="block">{t("Desfecho")}
-      <select aria-label={t("Desfecho da demanda")} className="mt-1 w-full rounded-md border bg-background p-2" value={draft.desfecho} onChange={(e) => onAlterar({ desfecho: e.target.value })}>
-        <option value="resolvida">{t("Resolvida")}</option><option value="convertida">{t("Convertida")}</option>
-        <option value="nao_procede">{t("Não procede")}</option><option value="encerrada_pelo_cliente">{t("Encerrada pelo cliente")}</option>
-        <option value="perdida">{t("Perdida")}</option><option value="expirada_sem_resposta">{t("Expirada sem resposta")}</option>
-      </select>
-    </label>
-    <p>{t("Registra o resultado desta demanda. As conversas dos outros canais permanecem disponíveis.")}</p>
-    <Button size="sm" disabled={draft.salvando} type="submit">{t("Confirmar desfecho")}</Button>
-    <Button size="sm" variant="ghost" type="button" disabled={draft.salvando} onClick={onFechar}>{t("Cancelar")}</Button>
-  </form>;
+  if (!draft)
+    return (
+      <Button size="sm" variant="ghost" onClick={onAbrir}>
+        {t("Encerrar demanda")}
+      </Button>
+    );
+  return (
+    <form
+      className="mt-2 space-y-2"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        onAlterar({ salvando: true });
+        try {
+          await apiClient.patch(`/api/v1/demandas/${draft.demandaId}`, {
+            action: "encerrar",
+            desfecho: draft.desfecho,
+            expected_revision: draft.revision,
+          });
+          toast.success(t("Desfecho registrado."));
+          onFechar();
+          onPronto();
+        } catch {
+          toast.error(
+            t(
+              "Não foi possível encerrar. Cancele esta edição e abra novamente para revisar o desfecho.",
+            ),
+          );
+          onPronto();
+        } finally {
+          onAlterar({ salvando: false });
+        }
+      }}
+    >
+      <label className="block">
+        {t("Desfecho")}
+        <select
+          aria-label={t("Desfecho da demanda")}
+          className="mt-1 w-full rounded-md border bg-background p-2"
+          value={draft.desfecho}
+          onChange={(e) => onAlterar({ desfecho: e.target.value })}
+        >
+          <option value="resolvida">{t("Resolvida")}</option>
+          <option value="convertida">{t("Convertida")}</option>
+          <option value="nao_procede">{t("Não procede")}</option>
+          <option value="encerrada_pelo_cliente">{t("Encerrada pelo cliente")}</option>
+          <option value="perdida">{t("Perdida")}</option>
+          <option value="expirada_sem_resposta">{t("Expirada sem resposta")}</option>
+        </select>
+      </label>
+      <p>
+        {t(
+          "Registra o resultado desta demanda. As conversas dos outros canais permanecem disponíveis.",
+        )}
+      </p>
+      <Button size="sm" disabled={draft.salvando} type="submit">
+        {t("Confirmar desfecho")}
+      </Button>
+      <Button size="sm" variant="ghost" type="button" disabled={draft.salvando} onClick={onFechar}>
+        {t("Cancelar")}
+      </Button>
+    </form>
+  );
 }
 
 const DESFECHO_LEGIVEL: Record<string, string> = {
-  resolvida: "Resolvida", convertida: "Convertida", nao_procede: "Não procede",
-  encerrada_pelo_cliente: "Encerrada pelo cliente", perdida: "Perdida", expirada_sem_resposta: "Expirada sem resposta",
+  resolvida: "Resolvida",
+  convertida: "Convertida",
+  nao_procede: "Não procede",
+  encerrada_pelo_cliente: "Encerrada pelo cliente",
+  perdida: "Perdida",
+  expirada_sem_resposta: "Expirada sem resposta",
 };
 
 /** Vocabulário de quem atende, não o do banco. */
@@ -224,7 +282,7 @@ function MarcarProximoPasso({ demandaId, onPronto }: { demandaId: string; onPron
         placeholder={t("O que acontece a seguir?")}
         aria-label={t("Próximo passo desta demanda")}
         data-testid="campo-proximo-passo"
-        className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-hidden focus:ring-1 focus:ring-ring"
+        className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs focus:ring-1 focus:ring-ring focus:outline-hidden"
       />
       <div className="flex gap-1.5">
         <Button
@@ -236,12 +294,7 @@ function MarcarProximoPasso({ demandaId, onPronto }: { demandaId: string; onPron
         >
           {salvando ? t("Salvando…") : t("Salvar")}
         </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-7 text-xs"
-          onClick={() => setAberto(false)}
-        >
+        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setAberto(false)}>
           {t("Cancelar")}
         </Button>
       </div>
@@ -385,7 +438,9 @@ function InboxLeadEditor({
       )}
       {leads.length === 1 && (
         <div data-testid="inbox-lead-unico" className="text-xs text-muted-foreground">
-          <p>{ativo.title} · {status(ativo)}</p>
+          <p>
+            {ativo.title} · {status(ativo)}
+          </p>
           <p className={CLASSES_DE_ONDE_ESTA} title={ondeEstaOLead(ativo)}>
             {ondeEstaOLead(ativo)}
           </p>
@@ -423,7 +478,11 @@ function EtapaDoNegocio({ lead, onMovido }: { lead: LeadRow; onMovido: () => voi
   async function escolher(stageId: string) {
     if (stageId === lead.stage_id) return;
     try {
-      await mover.mutateAsync({ action: "move", lead_ids: [lead.id], params: { stage_id: stageId } });
+      await mover.mutateAsync({
+        action: "move",
+        lead_ids: [lead.id],
+        params: { stage_id: stageId },
+      });
       toast.success(t("Etapa atualizada."));
       onMovido();
     } catch {
@@ -436,8 +495,16 @@ function EtapaDoNegocio({ lead, onMovido }: { lead: LeadRow; onMovido: () => voi
       <label className="block text-xs font-medium text-text" htmlFor={`etapa-${lead.id}`}>
         {t("Etapa do funil")}
       </label>
-      <Select value={lead.stage_id} onValueChange={(v) => void escolher(v)} disabled={mover.isPending}>
-        <SelectTrigger id={`etapa-${lead.id}`} className="h-8 w-full text-xs" data-testid="inbox-etapa-select">
+      <Select
+        value={lead.stage_id}
+        onValueChange={(v) => void escolher(v)}
+        disabled={mover.isPending}
+      >
+        <SelectTrigger
+          id={`etapa-${lead.id}`}
+          className="h-8 w-full text-xs"
+          data-testid="inbox-etapa-select"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -470,7 +537,9 @@ function CamposDoFunil({
   const [customFields, setCustomFields] = useState(valores);
 
   if (fieldDefs.length === 0) {
-    return <p className="text-xs text-muted-foreground">{t("Este funil não tem campos extras.")}</p>;
+    return (
+      <p className="text-xs text-muted-foreground">{t("Este funil não tem campos extras.")}</p>
+    );
   }
 
   async function salvar() {
@@ -498,7 +567,7 @@ function CamposDoFunil({
         disabled={edit.isPending}
         onClick={() => void salvar()}
       >
-        {edit.isPending ? "Salvando…" : "Salvar"}
+        {edit.isPending ? t("Salvando…") : t("Salvar")}
       </Button>
     </div>
   );
@@ -515,18 +584,26 @@ export function CRMSidePanel({ conversation }: Props) {
   // A saída do filtro produz null enquanto o detalhe carrega. O rascunho não
   // some nessa lacuna; outra conversa/contato real o descarta, sem expô-lo.
   useEffect(() => {
-    if (conversation && desfechoDraft && (conversation.id !== desfechoDraft.conversationId || contactId !== desfechoDraft.contactId)) setDesfechoDraft(null);
+    if (
+      conversation &&
+      desfechoDraft &&
+      (conversation.id !== desfechoDraft.conversationId || contactId !== desfechoDraft.contactId)
+    )
+      setDesfechoDraft(null);
   }, [conversation, contactId, desfechoDraft]);
 
-
-  const [enrichment, setEnrichment] = useState<(ProspectEnrichment & { collected_at: string }) | null>(null);
+  const [enrichment, setEnrichment] = useState<
+    (ProspectEnrichment & { collected_at: string }) | null
+  >(null);
   const [enrichmentError, setEnrichmentError] = useState(false);
   const [leads, setLeads] = useState<LeadRow[] | null>(null);
   const [orders, setOrders] = useState<OrderRow[] | null>(null);
   const [activities, setActivities] = useState<ActivityRow[] | null>(null);
   const [demandas, setDemandas] = useState<DemandaRow[] | null>(null);
   const [fatos, setFatos] = useState<Array<{ id: string; headline: string; body: string }>>([]);
-  const [historico, setHistorico] = useState<Array<{ id: string; desfecho: string; fechada_em: string }>>([]);
+  const [historico, setHistorico] = useState<
+    Array<{ id: string; desfecho: string; fechada_em: string }>
+  >([]);
   const [summaryContactId, setSummaryContactId] = useState<string | null>(null);
   /**
    * O TERCEIRO ESTADO. Antes existiam dois — carregando e "tem N itens" — e a
@@ -555,7 +632,8 @@ export function CRMSidePanel({ conversation }: Props) {
       setOrders(null);
       setActivities(null);
       setDemandas(null);
-      setFatos([]); setHistorico([]);
+      setFatos([]);
+      setHistorico([]);
       setLeadAtivoId(null);
       return;
     }
@@ -592,7 +670,8 @@ export function CRMSidePanel({ conversation }: Props) {
         // mostraria esqueleto para sempre num contato sem demanda aberta —
         // que é o caso saudável.
         setDemandas(r.data.demandas ?? []);
-        setFatos(r.data.fatos ?? []); setHistorico(r.data.historico ?? []);
+        setFatos(r.data.fatos ?? []);
+        setHistorico(r.data.historico ?? []);
       } catch {
         if (cancelled) return;
         // Falha NÃO vira lista vazia. Os dados ficam `null` e o painel diz que
@@ -602,7 +681,8 @@ export function CRMSidePanel({ conversation }: Props) {
         setOrders(null);
         setActivities(null);
         setDemandas(null);
-        setFatos([]); setHistorico([]);
+        setFatos([]);
+        setHistorico([]);
       }
     }
 
@@ -622,7 +702,15 @@ export function CRMSidePanel({ conversation }: Props) {
     // Depender do DADO que muda é mais honesto que um contador de invalidação:
     // `assigned_to_user_id` cobre assumir/transferir/liberar e `bot_silenced_until`
     // cobre pausar e devolver — que são exatamente os quatro gestos que geram linha.
-  }, [contactId, contact?.is_anonymized, tentativa, conversation?.assigned_to_user_id, conversation?.bot_silenced_until, conversation?.service_revision, conversation?.current_demanda_id]);
+  }, [
+    contactId,
+    contact?.is_anonymized,
+    tentativa,
+    conversation?.assigned_to_user_id,
+    conversation?.bot_silenced_until,
+    conversation?.service_revision,
+    conversation?.current_demanda_id,
+  ]);
 
   // Recarrega o resumo pelo MESMO caminho do "Tentar de novo": o efeito depende
   // de `tentativa`, então a demanda recém-marcada volta do servidor em vez de
@@ -642,7 +730,8 @@ export function CRMSidePanel({ conversation }: Props) {
   const sectionsLoading = useMemo(
     () =>
       !erro &&
-      (summaryContactId !== contactId || (leads === null && orders === null && activities === null && demandas === null)),
+      (summaryContactId !== contactId ||
+        (leads === null && orders === null && activities === null && demandas === null)),
     [erro, summaryContactId, contactId, leads, orders, activities, demandas],
   );
 
@@ -657,13 +746,13 @@ export function CRMSidePanel({ conversation }: Props) {
   return (
     <aside className="flex h-full flex-col gap-4 overflow-y-auto border-l border-border bg-background p-4">
       <section>
-        <h3 className="text-xs font-semibold text-text">
-          {t("Contato")}
-        </h3>
+        <h3 className="text-xs font-semibold text-text">{t("Contato")}</h3>
         <Card className="mt-2 space-y-2 p-3 text-sm">
           <div className="font-medium">{displayName}</div>
           {contact?.phone_number && (
-            <div className="text-xs text-muted-foreground">{phoneForDisplay(contact.phone_number)}</div>
+            <div className="text-xs text-muted-foreground">
+              {phoneForDisplay(contact.phone_number)}
+            </div>
           )}
           {tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
@@ -673,7 +762,14 @@ export function CRMSidePanel({ conversation }: Props) {
             </div>
           )}
           <div className="flex flex-wrap gap-2 pt-1">
-            {contactId&&conversation?<Link className="underline" href={`/app/agenda?contato=${contactId}&conversa=${conversation.id}`}>{t("Marcar compromisso")}</Link>:null}
+            {contactId && conversation ? (
+              <Link
+                className="underline"
+                href={`/app/agenda?contato=${contactId}&conversa=${conversation.id}`}
+              >
+                {t("Marcar compromisso")}
+              </Link>
+            ) : null}
             <Button
               size="sm"
               variant="outline"
@@ -703,12 +799,20 @@ export function CRMSidePanel({ conversation }: Props) {
               </Button>
             )}
           </div>
-          {tagEditorOpen && contactId && <ContactTagsEditor contactId={contactId} orgId={conversation.organization_id} tags={tags} />}
+          {tagEditorOpen && contactId && (
+            <ContactTagsEditor
+              contactId={contactId}
+              orgId={conversation.organization_id}
+              tags={tags}
+            />
+          )}
         </Card>
       </section>
 
       <LeadEnrichment
-        data={summaryContactId === contactId && !erro && !contact?.is_anonymized ? enrichment : null}
+        data={
+          summaryContactId === contactId && !erro && !contact?.is_anonymized ? enrichment : null
+        }
         loading={sectionsLoading}
         error={erro || (summaryContactId === contactId && enrichmentError)}
         onRetry={recarregar}
@@ -730,11 +834,13 @@ export function CRMSidePanel({ conversation }: Props) {
 
       <Separator />
 
-      {!readonly && <ConversationTagsEditor
-        conversationId={conversation.id}
-        orgId={conversation.organization_id}
-        tags={conversation.tags ?? []}
-      />}
+      {!readonly && (
+        <ConversationTagsEditor
+          conversationId={conversation.id}
+          orgId={conversation.organization_id}
+          tags={conversation.tags ?? []}
+        />
+      )}
 
       <Separator />
 
@@ -743,9 +849,7 @@ export function CRMSidePanel({ conversation }: Props) {
           conversa está atendendo alguém que pediu alguma coisa — a primeira
           pergunta a responder é o que ainda está pendente, não quanto vale. */}
       <section data-testid="inbox-demandas">
-        <h3 className="text-xs font-semibold text-text">
-          {t("Demandas abertas")}
-        </h3>
+        <h3 className="text-xs font-semibold text-text">{t("Demandas abertas")}</h3>
         {sectionsLoading ? (
           <Skeleton className="mt-2 h-14 w-full" />
         ) : demandas && demandas.length > 0 ? (
@@ -765,7 +869,7 @@ export function CRMSidePanel({ conversation }: Props) {
                     <span className="truncate font-medium">
                       {t(ESTADO_LEGIVEL[d.estado] ?? d.estado)}
                     </span>
-                    <span className="shrink-0 tabular-nums text-muted-foreground">
+                    <span className="shrink-0 text-muted-foreground tabular-nums">
                       {t("há")} {horasDesde(d.aberta_em)}h
                     </span>
                   </div>
@@ -778,22 +882,60 @@ export function CRMSidePanel({ conversation }: Props) {
                       vazamento e tinha de sair da tela para resolver — peça que
                       só recebe é ilha pelo invariante 1, e foi o gate dos mapas
                       de arquitetura que apontou isso. */}
-                  {d.id === conversation.current_demanda_id && <Badge variant="outline">{t("Demanda vigente neste canal")}</Badge>}
-                  {!readonly && <EncerrarDemanda
-                    draft={desfechoDraft?.conversationId === conversation.id && desfechoDraft.contactId === contactId && desfechoDraft.demandaId === d.id ? desfechoDraft : null}
-                    onAbrir={() => { if (contactId) setDesfechoDraft({ conversationId: conversation.id, contactId, demandaId: d.id, revision: d.revision, desfecho: "resolvida", salvando: false }); }}
-                    onAlterar={(patch) => setDesfechoDraft((current) => current?.conversationId === conversation.id && current.contactId === contactId && current.demandaId === d.id ? { ...current, ...patch } : current)}
-                    onFechar={() => setDesfechoDraft((current) => current?.conversationId === conversation.id && current.contactId === contactId && current.demandaId === d.id ? null : current)}
-                    onPronto={recarregar}
-                  />}
-                  {semPasso && !readonly ? <MarcarProximoPasso demandaId={d.id} onPronto={recarregar} /> : null}
+                  {d.id === conversation.current_demanda_id && (
+                    <Badge variant="outline">{t("Demanda vigente neste canal")}</Badge>
+                  )}
+                  {!readonly && (
+                    <EncerrarDemanda
+                      draft={
+                        desfechoDraft?.conversationId === conversation.id &&
+                        desfechoDraft.contactId === contactId &&
+                        desfechoDraft.demandaId === d.id
+                          ? desfechoDraft
+                          : null
+                      }
+                      onAbrir={() => {
+                        if (contactId)
+                          setDesfechoDraft({
+                            conversationId: conversation.id,
+                            contactId,
+                            demandaId: d.id,
+                            revision: d.revision,
+                            desfecho: "resolvida",
+                            salvando: false,
+                          });
+                      }}
+                      onAlterar={(patch) =>
+                        setDesfechoDraft((current) =>
+                          current?.conversationId === conversation.id &&
+                          current.contactId === contactId &&
+                          current.demandaId === d.id
+                            ? { ...current, ...patch }
+                            : current,
+                        )
+                      }
+                      onFechar={() =>
+                        setDesfechoDraft((current) =>
+                          current?.conversationId === conversation.id &&
+                          current.contactId === contactId &&
+                          current.demandaId === d.id
+                            ? null
+                            : current,
+                        )
+                      }
+                      onPronto={recarregar}
+                    />
+                  )}
+                  {semPasso && !readonly ? (
+                    <MarcarProximoPasso demandaId={d.id} onPronto={recarregar} />
+                  ) : null}
                 </li>
               );
             })}
           </ul>
         ) : (
           <SemLista
-            vazio="Nenhuma demanda aberta."
+            vazio={t("Nenhuma demanda aberta.")}
             erro={erro}
             onTentarDeNovo={() => setTentativa((n) => n + 1)}
           />
@@ -804,41 +946,67 @@ export function CRMSidePanel({ conversation }: Props) {
 
       <section data-testid="inbox-memoria">
         <h3 className="text-xs font-semibold">{t("Memória do contato")}</h3>
-        <p className="mt-1 text-xs text-muted-foreground">{t("Fatos duráveis registrados nas notas. Pendências pertencem à demanda vigente.")}</p>
-        {!sectionsLoading && fatos.map((f) => <details key={f.id} className="mt-2 text-xs"><summary>{f.headline}</summary><p className="mt-1 whitespace-pre-wrap">{f.body}</p></details>)}
-        {!sectionsLoading && fatos.length === 0 && <p className="mt-2 text-xs text-muted-foreground">{t("Nenhum fato durável registrado.")}</p>}
-        {!sectionsLoading && historico.length > 0 && <div className="mt-3 text-xs"><h4>{t("Histórico encerrado — sem tarefas pendentes")}</h4>{historico.map((h) => <p key={h.id}>{t(DESFECHO_LEGIVEL[h.desfecho] ?? h.desfecho)}{h.fechada_em ? ` · ${shortDate(h.fechada_em, localeDaData)}` : ""}</p>)}</div>}
+        <p className="mt-1 text-xs text-muted-foreground">
+          {t("Fatos duráveis registrados nas notas. Pendências pertencem à demanda vigente.")}
+        </p>
+        {!sectionsLoading &&
+          fatos.map((f) => (
+            <details key={f.id} className="mt-2 text-xs">
+              <summary>{f.headline}</summary>
+              <p className="mt-1 whitespace-pre-wrap">{f.body}</p>
+            </details>
+          ))}
+        {!sectionsLoading && fatos.length === 0 && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {t("Nenhum fato durável registrado.")}
+          </p>
+        )}
+        {!sectionsLoading && historico.length > 0 && (
+          <div className="mt-3 text-xs">
+            <h4>{t("Histórico encerrado — sem tarefas pendentes")}</h4>
+            {historico.map((h) => (
+              <p key={h.id}>
+                {t(DESFECHO_LEGIVEL[h.desfecho] ?? h.desfecho)}
+                {h.fechada_em ? ` · ${shortDate(h.fechada_em, localeDaData)}` : ""}
+              </p>
+            ))}
+          </div>
+        )}
       </section>
       <Separator />
 
       {/* O que os roteiros de atendimento coletaram (módulo opcional; desligado
           ou sem roteiro, não desenha nada). */}
-      {contactId && !contact?.is_anonymized && <RoteirosDoContato contactId={contactId} variante="painel" />}
+      {contactId && !contact?.is_anonymized && (
+        <RoteirosDoContato contactId={contactId} variante="painel" />
+      )}
 
       <section data-testid="inbox-campos-lead">
-        <h3 className="text-xs font-semibold text-text">
-          {t("Leads recentes")}
-        </h3>
+        <h3 className="text-xs font-semibold text-text">{t("Leads recentes")}</h3>
         {sectionsLoading ? (
           <Skeleton className="mt-2 h-14 w-full" />
         ) : leads && leads.length > 0 ? (
-          <fieldset disabled={readonly}><InboxLeadEditor
-            leads={leads}
-            selecionadoId={leadAtivoId}
-            onSelecionar={setLeadAtivoId}
-            onSalvo={recarregar}
-          /></fieldset>
+          <fieldset disabled={readonly}>
+            <InboxLeadEditor
+              leads={leads}
+              selecionadoId={leadAtivoId}
+              onSelecionar={setLeadAtivoId}
+              onSalvo={recarregar}
+            />
+          </fieldset>
         ) : (
-          <SemLista vazio="Sem leads." erro={erro} onTentarDeNovo={() => setTentativa((n) => n + 1)} />
+          <SemLista
+            vazio={t("Sem leads.")}
+            erro={erro}
+            onTentarDeNovo={() => setTentativa((n) => n + 1)}
+          />
         )}
       </section>
 
       <Separator />
 
       <section>
-        <h3 className="text-xs font-semibold text-text">
-          {t("Pedidos recentes")}
-        </h3>
+        <h3 className="text-xs font-semibold text-text">{t("Pedidos recentes")}</h3>
         {sectionsLoading ? (
           <Skeleton className="mt-2 h-14 w-full" />
         ) : orders && orders.length > 0 ? (
@@ -861,16 +1029,18 @@ export function CRMSidePanel({ conversation }: Props) {
             ))}
           </ul>
         ) : (
-          <SemLista vazio="Sem pedidos." erro={erro} onTentarDeNovo={() => setTentativa((n) => n + 1)} />
+          <SemLista
+            vazio={t("Sem pedidos.")}
+            erro={erro}
+            onTentarDeNovo={() => setTentativa((n) => n + 1)}
+          />
         )}
       </section>
 
       <Separator />
 
       <section>
-        <h3 className="text-xs font-semibold text-text">
-          {t("Atividade")}
-        </h3>
+        <h3 className="text-xs font-semibold text-text">{t("Atividade")}</h3>
         {sectionsLoading ? (
           <Skeleton className="mt-2 h-14 w-full" />
         ) : activities && activities.length > 0 ? (
@@ -894,15 +1064,22 @@ export function CRMSidePanel({ conversation }: Props) {
                   />
                   {t(activityLabel(a.type))}
                 </div>
-                {a.reason && <div className="mt-0.5 truncate text-muted-foreground">{t(a.reason)}</div>}
+                {a.reason && (
+                  <div className="mt-0.5 truncate text-muted-foreground">{t(a.reason)}</div>
+                )}
                 <div className="text-muted-foreground">
-                  {a.performed_by_name ?? t(actorLabel(a.actor_kind))} · {shortDate(a.performed_at, localeDaData)}
+                  {a.performed_by_name ?? t(actorLabel(a.actor_kind))} ·{" "}
+                  {shortDate(a.performed_at, localeDaData)}
                 </div>
               </li>
             ))}
           </ul>
         ) : (
-          <SemLista vazio="Sem atividade." erro={erro} onTentarDeNovo={() => setTentativa((n) => n + 1)} />
+          <SemLista
+            vazio={t("Sem atividade.")}
+            erro={erro}
+            onTentarDeNovo={() => setTentativa((n) => n + 1)}
+          />
         )}
       </section>
     </aside>

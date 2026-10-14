@@ -1,3 +1,4 @@
+import { idiomaDaInstalacao } from "@/lib/i18n/idiomaDaInstalacao";
 /**
  * Nuvemshop integration status page.
  *
@@ -20,7 +21,6 @@ import { ConnectButton, DisconnectButton } from "./_components/ConnectButton";
 import { StatusToast } from "./_components/StatusToast";
 import { Suspense } from "react";
 import { tagDeIdioma } from "@/lib/i18n/datas";
-import { normalizarIdioma } from "@/lib/i18n/idiomas";
 import { traduzir } from "@/lib/i18n/dicionario";
 
 interface IntegrationRow {
@@ -47,12 +47,12 @@ export default async function NuvemshopIntegrationPage() {
   const user = await loadAuthUser();
   const activeOrg = user ? await resolveActiveOrg(user) : null;
   const configured = isConfigured();
-  const idioma = normalizarIdioma(user?.locale ?? null);
+  const idioma = user?.idioma ?? idiomaDaInstalacao();
 
-  const integration =
-    activeOrg && configured ? await loadIntegration(activeOrg.orgId) : null;
+  const integration = activeOrg && configured ? await loadIntegration(activeOrg.orgId) : null;
 
-  const isAdmin = activeOrg?.role === "admin" || (user?.is_platform_admin === true && !user.support);
+  const isAdmin =
+    activeOrg?.role === "admin" || (user?.is_platform_admin === true && !user.support);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
@@ -81,7 +81,9 @@ export default async function NuvemshopIntegrationPage() {
               <code className="rounded-md bg-muted px-1 py-0.5 text-xs">NUVEMSHOP_APP_ID</code>,{" "}
               <code className="rounded-md bg-muted px-1 py-0.5 text-xs">NUVEMSHOP_CLIENT_ID</code>{" "}
               {traduzir("e", idioma)}{" "}
-              <code className="rounded-md bg-muted px-1 py-0.5 text-xs">NUVEMSHOP_CLIENT_SECRET</code>{" "}
+              <code className="rounded-md bg-muted px-1 py-0.5 text-xs">
+                NUVEMSHOP_CLIENT_SECRET
+              </code>{" "}
               {traduzir("em", idioma)}{" "}
               <code className="rounded-md bg-muted px-1 py-0.5 text-xs">.env.local</code>{" "}
               {traduzir("para ativar a integração.", idioma)}

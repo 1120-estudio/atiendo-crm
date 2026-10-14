@@ -122,7 +122,7 @@ ${ultimoSalvo.from_domain ? `from_domain=${ultimoSalvo.from_domain}` : ""}
 type=auth
 auth_type=userpass
 username=${ultimoSalvo.username}
-password=${ultimoSalvo.password || "(senha não alterada nesta sessão — use a já configurada)"}
+password=${ultimoSalvo.password || t("(senha não alterada nesta sessão — use a já configurada)")}
 
 [${trunk?.endpoint_name ?? ""}-aor]
 type=aor
@@ -210,7 +210,11 @@ retry_interval=60`
             <Label htmlFor="is_active">{t("Ativo")}</Label>
           </div>
           {canWrite && (
-            <Button onClick={() => mutation.mutate()} disabled={mutation.isPending} className="w-fit">
+            <Button
+              onClick={() => mutation.mutate()}
+              disabled={mutation.isPending}
+              className="w-fit"
+            >
               {mutation.isPending ? t("Salvando...") : t("Salvar")}
             </Button>
           )}

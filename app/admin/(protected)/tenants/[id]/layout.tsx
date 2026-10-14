@@ -1,3 +1,4 @@
+import { idiomaDaInstalacao } from "@/lib/i18n/idiomaDaInstalacao";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -59,7 +60,9 @@ export default async function TenantDetailLayout({ children, params }: TenantLay
   // Auth check — outer (protected)/layout.tsx already guards, but we need
   // org data server-side for the header. requirePlatformAdmin is cheap (cached).
   const { user } = await requirePlatformAdmin();
-  const idioma = normalizarIdioma((user.user_metadata?.locale as string | undefined) ?? null);
+  const idioma = normalizarIdioma(
+    (user.user_metadata?.locale as string | undefined) ?? idiomaDaInstalacao(),
+  );
 
   const { id } = await params;
   const admin = createAdminClient();

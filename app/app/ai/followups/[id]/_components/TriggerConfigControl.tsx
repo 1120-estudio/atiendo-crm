@@ -21,7 +21,11 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useUpdateTriggerConfig } from "@/hooks/followup/useFollowupFlow";
-import { etapasPorFunil, nomeDaEtapa, useEtapasDeGatilho } from "@/hooks/followup/useEtapasDeGatilho";
+import {
+  etapasPorFunil,
+  nomeDaEtapa,
+  useEtapasDeGatilho,
+} from "@/hooks/followup/useEtapasDeGatilho";
 import {
   DEFAULT_THRESHOLD_MINUTES as DEFAULT_RETORNO_MINUTES,
   UNIDADES_DE_LIMIAR,
@@ -88,7 +92,7 @@ const DEFAULT_THRESHOLD_MINUTES = 60;
 const MIN_THRESHOLD_MINUTES = 5;
 
 const KIND_LABEL: Record<TriggerKind, string> = {
-  appointment_no_show:"Falta confirmada pela equipe",
+  appointment_no_show: "Falta confirmada pela equipe",
   manual: "Manual",
   silence: "Silêncio",
   stage_change: "Etapa do funil",
@@ -128,7 +132,14 @@ function parseTriggerConfig(raw: Record<string, unknown>): TriggerFormState {
                   ? "lead_created"
                   : "manual";
   const params =
-    (raw.params as { threshold_minutes?: number; segments?: string[]; stage_id?: string; event_type_ids?: string[] } | undefined) ?? {};
+    (raw.params as
+      | {
+          threshold_minutes?: number;
+          segments?: string[];
+          stage_id?: string;
+          event_type_ids?: string[];
+        }
+      | undefined) ?? {};
   const minutosRetorno =
     kind === "inbound_after_silence" && typeof params.threshold_minutes === "number"
       ? params.threshold_minutes
@@ -154,7 +165,8 @@ function parseTriggerConfig(raw: Record<string, unknown>): TriggerFormState {
 
 function toTriggerConfig(form: TriggerFormState): Record<string, unknown> {
   const cancelOnReply = form.cancelOnReply ? { cancel_on_reply: true } : {};
-  if (form.kind === "appointment_no_show") return {kind:"appointment_no_show",params:{event_type_ids:form.eventTypeIds}};
+  if (form.kind === "appointment_no_show")
+    return { kind: "appointment_no_show", params: { event_type_ids: form.eventTypeIds } };
   if (form.kind === "manual") return { kind: "manual", ...cancelOnReply };
 
   if (form.kind === "stage_change") {
@@ -186,7 +198,10 @@ function toTriggerConfig(form: TriggerFormState): Record<string, unknown> {
 
   return {
     kind: "silence",
-    params: { threshold_minutes: form.thresholdMinutes, ...(segments.length > 0 ? { segments } : {}) },
+    params: {
+      threshold_minutes: form.thresholdMinutes,
+      ...(segments.length > 0 ? { segments } : {}),
+    },
     ...cancelOnReply,
   };
 }
@@ -196,7 +211,7 @@ function summaryLabel(
   etapa: { stageName: string; pipelineName: string } | null,
   t: (texto: string) => string = (texto) => texto,
 ): string {
-  if(cfg.kind === "appointment_no_show") return t("Gatilho: falta confirmada pela equipe");
+  if (cfg.kind === "appointment_no_show") return t("Gatilho: falta confirmada pela equipe");
   if (cfg.kind === "silence") {
     const minutes = (cfg.params as { threshold_minutes?: number } | undefined)?.threshold_minutes;
     return `${t("Gatilho")}: ${t("Silêncio")}${typeof minutes === "number" ? ` (${minutes} min)` : ""}`;
@@ -247,8 +262,13 @@ export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState<TriggerFormState>(() => parseTriggerConfig(triggerConfig));
   const [form, setForm] = useState<TriggerFormState>(saved);
-  const eventTypes=useQuery({queryKey:["agenda","tipos"],enabled:open&&form.kind==="appointment_no_show",queryFn:async()=>
-    (await apiClient.get<{data:Array<{id:string;name:string}>}>("/api/v1/agenda/tipos")).data});
+  const eventTypes = useQuery({
+    queryKey: ["agenda", "tipos"],
+    enabled: open && form.kind === "appointment_no_show",
+    queryFn: async () =>
+      (await apiClient.get<{ data: Array<{ id: string; name: string }> }>("/api/v1/agenda/tipos"))
+        .data,
+  });
   // A leitura das etapas acompanha o botão, não o popover: o rótulo fechado
   // precisa do nome da etapa para não exibir «Etapa do funil» genérico num
   // fluxo já configurado.
@@ -265,8 +285,7 @@ export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
   }, [triggerConfig, open]);
 
   const minutosRetorno = minutosDoLimiar(form.thresholdValor, form.thresholdUnidade);
-  const retornoInvalid =
-    form.kind === "inbound_after_silence" && !limiarValido(minutosRetorno);
+  const retornoInvalid = form.kind === "inbound_after_silence" && !limiarValido(minutosRetorno);
   const thresholdInvalid =
     (form.kind === "silence" &&
       (!Number.isFinite(form.thresholdMinutes) || form.thresholdMinutes < MIN_THRESHOLD_MINUTES)) ||
@@ -276,9 +295,11 @@ export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
   const stageInvalid = form.kind === "stage_change" && form.stageId.trim().length === 0;
   const dirty =
     form.kind !== saved.kind ||
-    (form.kind === "appointment_no_show" && form.eventTypeIds.join() !== saved.eventTypeIds.join()) ||
+    (form.kind === "appointment_no_show" &&
+      form.eventTypeIds.join() !== saved.eventTypeIds.join()) ||
     form.cancelOnReply !== saved.cancelOnReply ||
-    (form.kind === "silence" && (form.thresholdMinutes !== saved.thresholdMinutes || form.segments !== saved.segments)) ||
+    (form.kind === "silence" &&
+      (form.thresholdMinutes !== saved.thresholdMinutes || form.segments !== saved.segments)) ||
     (form.kind === "inbound_after_silence" &&
       (form.thresholdValor !== saved.thresholdValor ||
         form.thresholdUnidade !== saved.thresholdUnidade ||
@@ -317,7 +338,12 @@ export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
                   const kind = v as TriggerKind;
                   if (kind === "inbound_after_silence" && f.kind !== "inbound_after_silence") {
                     const tela = limiarDaTela(DEFAULT_RETORNO_MINUTES);
-                    return { ...f, kind, thresholdValor: tela.valor, thresholdUnidade: tela.unidade };
+                    return {
+                      ...f,
+                      kind,
+                      thresholdValor: tela.valor,
+                      thresholdUnidade: tela.unidade,
+                    };
                   }
                   return { ...f, kind };
                 })
@@ -330,9 +356,13 @@ export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
                 <SelectItem value="manual">{t(KIND_LABEL.manual)}</SelectItem>
                 <SelectItem value="silence">{t(KIND_LABEL.silence)}</SelectItem>
                 <SelectItem value="stage_change">{t(KIND_LABEL.stage_change)}</SelectItem>
-                <SelectItem value="appointment_no_show">{t(KIND_LABEL.appointment_no_show)}</SelectItem>
+                <SelectItem value="appointment_no_show">
+                  {t(KIND_LABEL.appointment_no_show)}
+                </SelectItem>
                 <SelectItem value="case_opened">{t(KIND_LABEL.case_opened)}</SelectItem>
-                <SelectItem value="inbound_after_silence">{t(KIND_LABEL.inbound_after_silence)}</SelectItem>
+                <SelectItem value="inbound_after_silence">
+                  {t(KIND_LABEL.inbound_after_silence)}
+                </SelectItem>
                 <SelectItem value="lead_created">{t(KIND_LABEL.lead_created)}</SelectItem>
                 <SelectItem value="webhook">{t(KIND_LABEL.webhook)}</SelectItem>
               </SelectContent>
@@ -347,8 +377,14 @@ export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
                 onValueChange={(v) => setForm((f) => ({ ...f, stageId: v }))}
                 disabled={etapasCarregando || etapas.length === 0}
               >
-                <SelectTrigger id="trigger-stage" data-testid="trigger-stage-select" aria-invalid={stageInvalid}>
-                  <SelectValue placeholder={etapasCarregando ? "Carregando etapas…" : "Escolha a etapa"} />
+                <SelectTrigger
+                  id="trigger-stage"
+                  data-testid="trigger-stage-select"
+                  aria-invalid={stageInvalid}
+                >
+                  <SelectValue
+                    placeholder={etapasCarregando ? "Carregando etapas…" : "Escolha a etapa"}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {funis.map((funil) => (
@@ -374,28 +410,59 @@ export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
                 </p>
               )}
               <p className="text-xs text-muted-foreground">
-                {t("O fluxo começa quando um negócio entra nesta etapa, por arrasto no quadro ou por automação. A entrada na fila leva poucos minutos, não é instantânea.")}
+                {t(
+                  "O fluxo começa quando um negócio entra nesta etapa, por arrasto no quadro ou por automação. A entrada na fila leva poucos minutos, não é instantânea.",
+                )}
               </p>
             </div>
           )}
 
-          {form.kind === "appointment_no_show" && <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">{t("Só começa após falta confirmada pela equipe. Remarcação, cancelamento ou nova resposta interrompem a recuperação. Outro acompanhamento ativo impede o início.")}</p>
-            <p className="text-xs">{t("Tipos de compromisso (nenhum selecionado = todos)")}</p>
-            {eventTypes.data?.map(type=><label key={type.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.eventTypeIds.includes(type.id)} onChange={e=>setForm(f=>({...f,eventTypeIds:e.target.checked?[...f.eventTypeIds,type.id]:f.eventTypeIds.filter(id=>id!==type.id)}))}/>{type.name}</label>)}
-            {eventTypes.isError?<p role="alert">{t("Não foi possível carregar os tipos de compromisso.")}</p>:null}
-          </div>}
+          {form.kind === "appointment_no_show" && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  "Só começa após falta confirmada pela equipe. Remarcação, cancelamento ou nova resposta interrompem a recuperação. Outro acompanhamento ativo impede o início.",
+                )}
+              </p>
+              <p className="text-xs">{t("Tipos de compromisso (nenhum selecionado = todos)")}</p>
+              {eventTypes.data?.map((type) => (
+                <label key={type.id} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.eventTypeIds.includes(type.id)}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        eventTypeIds: e.target.checked
+                          ? [...f.eventTypeIds, type.id]
+                          : f.eventTypeIds.filter((id) => id !== type.id),
+                      }))
+                    }
+                  />
+                  {type.name}
+                </label>
+              ))}
+              {eventTypes.isError ? (
+                <p role="alert">{t("Não foi possível carregar os tipos de compromisso.")}</p>
+              ) : null}
+            </div>
+          )}
           {form.kind === "case_opened" && (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">
-                {t("O fluxo começa quando o agente abre um caso — o momento em que ele diz que precisa de uma pessoa. Não há o que escolher aqui: vale para qualquer caso desta conta.")}
+                {t(
+                  "O fluxo começa quando o agente abre um caso — o momento em que ele diz que precisa de uma pessoa. Não há o que escolher aqui: vale para qualquer caso desta conta.",
+                )}
               </p>
               {/* ⚠️ ESTA FRASE NÃO É DICA, É A DEFESA PRINCIPAL. Abrir um caso não
                   cala o agente: ele continua conversando. Um fluxo que fale no mesmo
                   instante põe duas vozes na mesma conversa. O atraso é do FLUXO, e
                   quem monta precisa saber disso antes de publicar. */}
               <p className="text-xs text-muted-foreground">
-                <strong className="font-medium">{t("Comece o fluxo por uma espera.")}</strong> {t("O agente continua conversando depois de abrir o caso — sem espera, o cliente recebe duas mensagens ao mesmo tempo.")}
+                <strong className="font-medium">{t("Comece o fluxo por uma espera.")}</strong>{" "}
+                {t(
+                  "O agente continua conversando depois de abrir o caso — sem espera, o cliente recebe duas mensagens ao mesmo tempo.",
+                )}
               </p>
               <p className="text-xs text-muted-foreground">
                 {t("Se o caso for resolvido antes, o follow-up é cancelado sozinho.")}
@@ -437,12 +504,16 @@ export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
                     type="number"
                     min={1}
                     value={form.thresholdValor}
-                    onChange={(e) => setForm((f) => ({ ...f, thresholdValor: Number(e.target.value) }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, thresholdValor: Number(e.target.value) }))
+                    }
                     aria-invalid={retornoInvalid}
                   />
                   <Select
                     value={form.thresholdUnidade}
-                    onValueChange={(v) => setForm((f) => ({ ...f, thresholdUnidade: v as UnidadeDeLimiar }))}
+                    onValueChange={(v) =>
+                      setForm((f) => ({ ...f, thresholdUnidade: v as UnidadeDeLimiar }))
+                    }
                   >
                     <SelectTrigger id="trigger-retorno-unidade" className="w-32">
                       <SelectValue />
@@ -488,15 +559,19 @@ export function TriggerConfigControl({ flowId, triggerConfig }: Props) {
                   type="number"
                   min={MIN_THRESHOLD_MINUTES}
                   value={form.thresholdMinutes}
-                  onChange={(e) => setForm((f) => ({ ...f, thresholdMinutes: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, thresholdMinutes: Number(e.target.value) }))
+                  }
                   aria-invalid={thresholdInvalid}
                 />
                 {thresholdInvalid && (
-                  <p className="text-xs text-error-fg">{t("Mínimo de")} {MIN_THRESHOLD_MINUTES} {t("minutos.")}</p>
+                  <p className="text-xs text-error-fg">
+                    {t("Mínimo de")} {MIN_THRESHOLD_MINUTES} {t("minutos.")}
+                  </p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="trigger-segments">Segmentos (tags, opcional)</Label>
+                <Label htmlFor="trigger-segments">{t("Segmentos (tags, opcional)")}</Label>
                 <Input
                   id="trigger-segments"
                   placeholder={t("ex: vip, carrinho-abandonado")}

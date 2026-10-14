@@ -706,11 +706,11 @@ export function AgendaClient({
           <div className="grid shrink-0 gap-3 rounded-lg border p-3 lg:grid-cols-2">
             {!remarcandoId ? (
               <div className="lg:col-span-2">
-              <VinculoDaMarcacao
-                contactId={contactId}
-                conversationId={conversationId}
-                onChange={(contact, conversation) => escolherVinculo({ contact, conversation })}
-              />
+                <VinculoDaMarcacao
+                  contactId={contactId}
+                  conversationId={conversationId}
+                  onChange={(contact, conversation) => escolherVinculo({ contact, conversation })}
+                />
               </div>
             ) : null}
             {tiposIniciais.length > 1 && (
@@ -737,7 +737,10 @@ export function AgendaClient({
                       )}
                     >
                       {opcao.nome}
-                      <span className="ml-1 tabular-nums opacity-70">{opcao.duracaoMin}min</span>
+                      <span className="ml-1 tabular-nums opacity-70">
+                        {opcao.duracaoMin}
+                        {t("min")}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -789,10 +792,7 @@ export function AgendaClient({
             </div>
             {!remarcandoId ? (
               <>
-                <EnderecoDaMarcacao
-                  value={endereco}
-                  onChange={setEnderecoEditado}
-                />
+                <EnderecoDaMarcacao value={endereco} onChange={setEnderecoEditado} />
                 <div>
                   <label className="block" htmlFor="observacao-do-compromisso">
                     {t("Observação")}{" "}

@@ -262,7 +262,7 @@ export function NewTenantForm() {
 
             {/* cnpj */}
             <div className="space-y-1.5">
-              <Label htmlFor="cnpj">CNPJ</Label>
+              <Label htmlFor="cnpj">{t("CNPJ")}</Label>
               <Input
                 id="cnpj"
                 placeholder="00.000.000/0000-00"

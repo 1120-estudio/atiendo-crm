@@ -1,7 +1,8 @@
+import { tituloNoIdiomaDaInstalacao } from "@/lib/i18n/idiomaDaInstalacao";
 import { LgpdRequestAdminDetail } from "./_client";
 
 export const metadata = {
-  title: "Solicitação LGPD — Admin",
+  title: tituloNoIdiomaDaInstalacao("Solicitação LGPD — Admin"),
 };
 
 export default async function AdminLgpdRequestPage({

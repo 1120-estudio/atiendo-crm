@@ -32,7 +32,10 @@ export type ActionItem =
     }
   | { type: "add_tag"; config: { tags: string[] } }
   | { type: "assign_owner"; config: { user_id: string } }
-  | { type: "call_webhook"; config: { url: string; secret?: string; secret_enc?: string; include_owner?: boolean } }
+  | {
+      type: "call_webhook";
+      config: { url: string; secret?: string; secret_enc?: string; include_owner?: boolean };
+    }
   | { type: "start_message_flow"; config: { flow_pointer_id: string } };
 
 export function defaultActionConfig(type: ActionItem["type"]): ActionItem {
@@ -165,7 +168,9 @@ function SendWhatsappForm({
         </Select>
         {(sessions ?? []).some((s) => s.status !== "WORKING") ? (
           <p className="text-xs text-muted-foreground">
-            {t("Números desconectados aparecem desabilitados — reconecte em Conexões antes de usar.")}
+            {t(
+              "Números desconectados aparecem desabilitados — reconecte em Conexões antes de usar.",
+            )}
           </p>
         ) : null}
       </div>
@@ -189,13 +194,15 @@ function SendWhatsappForm({
           rows={4}
           value={config.template}
           onChange={(e) => onChange({ ...config, template: e.target.value })}
-          placeholder="Oi {{nome}}, tudo bem?"
+          placeholder={t("Oi {{nome}}, tudo bem?")}
         />
         <p className="text-xs text-muted-foreground">
           {/* NÃO cravar "7h e 22h": a janela passou a vir dos ajustes DO NÚMERO
               (Conexões), no fuso da sua organização, e quem a mudou lá veria a
               tela continuar prometendo outro horário. Rótulo visível é contrato. */}
-          {t("Respeitamos a janela de envio e o limite diário configurados para esse número em Conexões — fora da janela, a mensagem espera a próxima.")}
+          {t(
+            "Respeitamos a janela de envio e o limite diário configurados para esse número em Conexões — fora da janela, a mensagem espera a próxima.",
+          )}
         </p>
       </div>
     </div>
@@ -229,10 +236,7 @@ function SendAiMessageForm({
     <div className="space-y-3">
       <div className="space-y-1">
         <Label>{t("Qual agente escreve")}</Label>
-        <Select
-          value={config.agent_id}
-          onValueChange={(v) => onChange({ ...config, agent_id: v })}
-        >
+        <Select value={config.agent_id} onValueChange={(v) => onChange({ ...config, agent_id: v })}>
           <SelectTrigger>
             <SelectValue placeholder={t("Escolha o agente")} />
           </SelectTrigger>
@@ -246,7 +250,9 @@ function SendAiMessageForm({
         </Select>
         <p className="text-xs text-muted-foreground">
           {semPublicado
-            ? t("Nenhum agente está publicado. Publique um em Agentes de IA para poder usá-lo aqui.")
+            ? t(
+                "Nenhum agente está publicado. Publique um em Agentes de IA para poder usá-lo aqui.",
+              )
             : t("Ele escreve com o mesmo tom e o mesmo conhecimento que usa no atendimento.")}
         </p>
       </div>
@@ -284,7 +290,9 @@ function SendAiMessageForm({
           }
         />
         <p className="text-xs text-muted-foreground">
-          {t("O agente já sabe que é a PRIMEIRA mensagem, logo depois de a pessoa preencher o formulário, e recebe todos os campos que ela respondeu. Aqui você diz o que fazer com eles — quanto mais concreto, melhor a mensagem.")}
+          {t(
+            "O agente já sabe que é a PRIMEIRA mensagem, logo depois de a pessoa preencher o formulário, e recebe todos os campos que ela respondeu. Aqui você diz o que fazer com eles — quanto mais concreto, melhor a mensagem.",
+          )}
         </p>
       </div>
     </div>
@@ -356,7 +364,7 @@ function CallWebhookForm({
         />
       </div>
       <div className="space-y-1">
-        <Label>Segredo (opcional)</Label>
+        <Label>{t("Segredo (opcional)")}</Label>
         <Input
           type="password"
           value={config.secret ?? ""}
@@ -366,12 +374,18 @@ function CallWebhookForm({
             const { secret_enc: _enc, ...rest } = config;
             onChange(next ? { ...rest, secret: next } : { ...rest, secret: undefined });
           }}
-          placeholder={hasStoredSecret ? "•••••••• (definido — digite para trocar)" : "uma senha só sua"}
+          placeholder={
+            hasStoredSecret ? "•••••••• (definido — digite para trocar)" : "uma senha só sua"
+          }
         />
         <p className="text-xs text-muted-foreground">
           {hasStoredSecret
-            ? t("Já existe um segredo guardado com segurança. Digitar aqui substitui; limpar remove.")
-            : t("Se preencher, enviaremos uma assinatura para o outro sistema conferir que fomos nós.")}
+            ? t(
+                "Já existe um segredo guardado com segurança. Digitar aqui substitui; limpar remove.",
+              )
+            : t(
+                "Se preencher, enviaremos uma assinatura para o outro sistema conferir que fomos nós.",
+              )}
         </p>
       </div>
       {/* Opt-in do responsável (#1612) — DESLIGADO é o padrão, e a frase diz o
