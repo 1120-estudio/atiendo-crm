@@ -146,7 +146,6 @@ function readCategorias(settings: Record<string, unknown> | null): Record<string
   return saida;
 }
 
-
 function readWonReasons(settings: Record<string, unknown> | null): string[] {
   const r = (settings as { won_reasons?: unknown } | null)?.won_reasons;
   return Array.isArray(r) ? r.filter((v): v is string => typeof v === "string") : [];
@@ -176,7 +175,9 @@ export function PipelinesClient({
     // procurando um botão que não existe em lugar nenhum.
     return (
       <Card className="p-6 text-sm leading-relaxed text-muted-foreground">
-        {t("Você ainda não tem nenhum funil. Enquanto for assim, o agente atende normalmente, mas não tem para onde levar o card de ninguém — não há etapas para onde mover. Criar o funil é feito por quem instalou o sistema, direto no banco; depois ele aparece aqui para você escolher a etapa de cada passo.")}
+        {t(
+          "Você ainda não tem nenhum funil. Enquanto for assim, o agente atende normalmente, mas não tem para onde levar o card de ninguém — não há etapas para onde mover. Criar o funil é feito por quem instalou o sistema, direto no banco; depois ele aparece aqui para você escolher a etapa de cada passo.",
+        )}
       </Card>
     );
   }
@@ -204,13 +205,7 @@ export function PipelinesClient({
   );
 }
 
-function PipelineEditor({
-  pipeline,
-  etapas,
-}: {
-  pipeline: PipelineRow;
-  etapas: EtapaDoFunil[];
-}) {
+function PipelineEditor({ pipeline, etapas }: { pipeline: PipelineRow; etapas: EtapaDoFunil[] }) {
   const t = useT();
   const v = pipeline.vocabulary ?? {};
   const [lead, setLead] = useState(v.lead ?? "Lead");
@@ -218,7 +213,9 @@ function PipelineEditor({
   const [won, setWon] = useState(v.won ?? "Ganho");
   const [lost, setLost] = useState(v.lost ?? "Perdido");
   const [reasonsText, setReasonsText] = useState(readLostReasons(pipeline.settings).join(", "));
-  const [wonReasonsText, setWonReasonsText] = useState(readWonReasons(pipeline.settings).join(", "));
+  const [wonReasonsText, setWonReasonsText] = useState(
+    readWonReasons(pipeline.settings).join(", "),
+  );
   const [categorias, setCategorias] = useState<Record<string, string>>(() =>
     readCategorias(pipeline.settings),
   );
@@ -295,7 +292,6 @@ function PipelineEditor({
     });
   }
 
-
   const motivosDaCaixa = reasonsText
     .split(",")
     .map((s) => s.trim())
@@ -307,7 +303,7 @@ function PipelineEditor({
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div className="space-y-1">
-          <Label className="text-xs">Lead</Label>
+          <Label className="text-xs">{t("Lead")}</Label>
           <Input value={lead} onChange={(e) => setLead(e.target.value)} />
         </div>
         <div className="space-y-1">
@@ -409,10 +405,15 @@ function PipelineEditor({
       <div className="space-y-2">
         <Label className="text-xs">{t("Campos do lead neste funil")}</Label>
         <p className="text-xs text-muted-foreground">
-          {t("Aparecem no dossiê do negócio. No follow-up, você escolhe em qual campo gravar a resposta.")}
+          {t(
+            "Aparecem no dossiê do negócio. No follow-up, você escolhe em qual campo gravar a resposta.",
+          )}
         </p>
         {fields.map((f, i) => (
-          <div key={`${f.key}-${i}`} className="grid gap-2 rounded-md border border-border p-2 md:grid-cols-[1fr_1fr_8rem_auto]">
+          <div
+            key={`${f.key}-${i}`}
+            className="grid gap-2 rounded-md border border-border p-2 md:grid-cols-[1fr_1fr_8rem_auto]"
+          >
             <Input
               aria-label={`${t("Chave do campo")} ${i + 1}`}
               placeholder={t("chave (endereco)")}
@@ -527,7 +528,11 @@ function PipelineEditor({
                       const next = [...fields];
                       next[i] = {
                         ...f,
-                        obrigatorio_em: comGatilho(f.obrigatorio_em, "ao_ganhar", ev.target.checked),
+                        obrigatorio_em: comGatilho(
+                          f.obrigatorio_em,
+                          "ao_ganhar",
+                          ev.target.checked,
+                        ),
                       };
                       setFields(next);
                     }}
@@ -543,7 +548,11 @@ function PipelineEditor({
                       const next = [...fields];
                       next[i] = {
                         ...f,
-                        obrigatorio_em: comGatilho(f.obrigatorio_em, "ao_perder", ev.target.checked),
+                        obrigatorio_em: comGatilho(
+                          f.obrigatorio_em,
+                          "ao_perder",
+                          ev.target.checked,
+                        ),
                       };
                       setFields(next);
                     }}

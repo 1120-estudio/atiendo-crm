@@ -38,23 +38,24 @@ export function NewFlowDialog({ open, onOpenChange, surface }: Props) {
     create.mutate(
       { name: name.trim(), ...(surface ? { surface } : {}) },
       {
-      onSuccess: () => {
-        setName("");
-        setErro(null);
-        onOpenChange(false);
+        onSuccess: () => {
+          setName("");
+          setErro(null);
+          onOpenChange(false);
+        },
+        // Sem isto o POST podia falhar e o diálogo ficava lá, parado, sem dizer
+        // nada: o usuário clica "Criar fluxo" de novo achando que não pegou. O
+        // erro fica DENTRO do diálogo (não num toast que some) porque é ali que
+        // ele está olhando, e o diálogo NÃO fecha — fechar apagaria o nome digitado.
+        onError: (err: unknown) => {
+          setErro(
+            err instanceof Error && err.message
+              ? t(err.message)
+              : t("Não consegui criar o fluxo. Tente de novo."),
+          );
+        },
       },
-      // Sem isto o POST podia falhar e o diálogo ficava lá, parado, sem dizer
-      // nada: o usuário clica "Criar fluxo" de novo achando que não pegou. O
-      // erro fica DENTRO do diálogo (não num toast que some) porque é ali que
-      // ele está olhando, e o diálogo NÃO fecha — fechar apagaria o nome digitado.
-      onError: (err: unknown) => {
-        setErro(
-          err instanceof Error && err.message
-            ? t(err.message)
-            : t("Não consegui criar o fluxo. Tente de novo."),
-        );
-      },
-    });
+    );
   };
 
   return (
@@ -75,13 +76,15 @@ export function NewFlowDialog({ open, onOpenChange, surface }: Props) {
           </DialogTitle>
           <DialogDescription>
             {deAtendimento
-              ? t("Nasce como rascunho. Você cadastra as perguntas e a finalização no editor em seguida.")
+              ? t(
+                  "Nasce como rascunho. Você cadastra as perguntas e a finalização no editor em seguida.",
+                )
               : t("Nasce como rascunho. Você monta as etapas no editor visual em seguida.")}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="flow-name">Nome</Label>
+            <Label htmlFor="flow-name">{t("Nome")}</Label>
             <Input
               id="flow-name"
               value={name}
@@ -104,10 +107,10 @@ export function NewFlowDialog({ open, onOpenChange, surface }: Props) {
               onClick={() => onOpenChange(false)}
               disabled={create.isPending}
             >
-              Cancelar
+              {t("Cancelar")}{" "}
             </Button>
             <Button type="submit" disabled={create.isPending || name.trim().length === 0}>
-              {create.isPending ? "Criando…" : "Criar fluxo"}
+              {create.isPending ? t("Criando…") : t("Criar fluxo")}
             </Button>
           </DialogFooter>
         </form>

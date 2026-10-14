@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { loadAuthUser } from "@/lib/auth/server";
 import { traduzir } from "@/lib/i18n/dicionario";
-import { normalizarIdioma } from "@/lib/i18n/idiomas";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { tituloNoIdiomaDaInstalacao } from "@/lib/i18n/idiomaDaInstalacao";
 
@@ -47,12 +46,15 @@ export const dynamic = "force-dynamic";
 export default async function Page() {
   const usuario = await loadAuthUser();
   if (!usuario?.is_platform_admin) notFound();
-  const idioma = normalizarIdioma(usuario.locale);
+  const idioma = usuario.idioma;
   const t = (s: string) => traduzir(s, idioma);
 
   const db = createAdminClient();
   const [catalogos, instalacoes, vinculos] = await Promise.all([
-    db.from("extension_catalogs").select("id,origin,revision,digest,admitted_at").order("admitted_at", { ascending: false }),
+    db
+      .from("extension_catalogs")
+      .select("id,origin,revision,digest,admitted_at")
+      .order("admitted_at", { ascending: false }),
     // Remoção aqui é soft delete: a linha fica, com `removed_at` preenchido. Sem
     // este filtro a tela chamaria de "instalada" uma extensão que o operador já
     // removeu — e contaria os vínculos dela junto. A irmã de produção
@@ -133,7 +135,11 @@ export default async function Page() {
             (instalacoes.data ?? []).map((e) => {
               const uso = porInstalacao.get(e.id) ?? { ligadas: 0, total: 0 };
               return (
-                <div key={e.id} data-testid={`extensao-${e.publisher}-${e.name}`} className="text-sm">
+                <div
+                  key={e.id}
+                  data-testid={`extensao-${e.publisher}-${e.name}`}
+                  className="text-sm"
+                >
                   <p className="font-medium">
                     {e.publisher}/{e.name}{" "}
                     <span className="font-normal text-text-muted">v{e.version}</span>

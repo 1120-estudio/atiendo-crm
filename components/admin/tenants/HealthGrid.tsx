@@ -3,12 +3,7 @@
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 
 import { HealthCard } from "./HealthCard";
-import {
-  WifiHigh,
-  Storefront,
-  Brain,
-  ClipboardText,
-} from "@/lib/ui/icons";
+import { WifiHigh, Storefront, Brain, ClipboardText } from "@/lib/ui/icons";
 import type { TenantHealthResponse } from "@/app/api/v1/admin/tenants/[id]/health/route";
 import { useT } from "@/hooks/i18n/useT";
 import { formatCentsUSD } from "@/lib/money";
@@ -120,7 +115,7 @@ export function HealthGrid({ health }: HealthGridProps) {
       />
 
       <HealthCard
-        title="Nuvemshop"
+        title={t("Nuvemshop")}
         status={nuvemshop.status}
         icon={<Storefront size={18} aria-hidden />}
         primaryValue={nuPrimary}

@@ -101,7 +101,7 @@ export function AuditDetailClient({ entryId }: AuditDetailClientProps) {
   return (
     <div className="space-y-6">
       {/* Back */}
-      <Button asChild variant="ghost" size="sm" className="gap-1.5 -ml-2">
+      <Button asChild variant="ghost" size="sm" className="-ml-2 gap-1.5">
         <Link href="/admin/audit">
           <CaretLeft size={14} aria-hidden />
           {t("Audit Log")}
@@ -124,7 +124,8 @@ export function AuditDetailClient({ entryId }: AuditDetailClientProps) {
           )}
         </div>
         <p className="text-sm text-muted-foreground">
-          {formatDate(entry.created_at, localeDaData)}&nbsp;·&nbsp;{relativeDate(entry.created_at, localeDaData)}
+          {formatDate(entry.created_at, localeDaData)}&nbsp;·&nbsp;
+          {relativeDate(entry.created_at, localeDaData)}
         </p>
       </div>
 
@@ -138,42 +139,36 @@ export function AuditDetailClient({ entryId }: AuditDetailClientProps) {
           </pre>
 
           {/* Extra entry fields */}
-          <div className="rounded-md border p-4 space-y-2 text-sm">
+          <div className="space-y-2 rounded-md border p-4 text-sm">
             <Row label="Request ID" value={entry.request_id ?? "—"} mono />
             <Row label="Resource Type" value={entry.resource_type ?? "—"} />
             <Row label="Resource ID" value={entry.resource_id ?? "—"} mono />
             <Row label="Bypassed RLS" value={entry.bypassed_rls ? t("Sim") : t("Não")} />
             <Row label="Actor IP" value={entry.actor_ip ?? "—"} mono />
-            <Row
-              label="User Agent"
-              value={entry.actor_user_agent ?? "—"}
-              truncate
-            />
+            <Row label="User Agent" value={entry.actor_user_agent ?? "—"} truncate />
           </div>
         </div>
 
         {/* Right sidebar: actor + tenant + resource link */}
         <div className="space-y-4">
           {/* Actor card */}
-          <div className="rounded-md border p-4 space-y-2">
+          <div className="space-y-2 rounded-md border p-4">
             <h2 className="text-sm font-medium">Actor</h2>
             {actor ? (
               <div className="space-y-1 text-sm">
                 <Row label="User ID" value={actor.id} mono />
-                <Row label="Email" value={maskEmail(actor.email)} />
+                <Row label={t("Email")} value={maskEmail(actor.email)} />
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                {entry.actor_user_id
-                  ? `ID: ${entry.actor_user_id}`
-                  : t("Sem actor registrado")}
+                {entry.actor_user_id ? `ID: ${entry.actor_user_id}` : t("Sem actor registrado")}
               </p>
             )}
           </div>
 
           {/* Tenant card */}
           {tenant && (
-            <div className="rounded-md border p-4 space-y-2">
+            <div className="space-y-2 rounded-md border p-4">
               <h2 className="text-sm font-medium">Tenant</h2>
               <div className="space-y-1 text-sm">
                 <Row label={t("Nome")} value={tenant.display_name} />
@@ -181,9 +176,7 @@ export function AuditDetailClient({ entryId }: AuditDetailClientProps) {
                 <Row label={t("Status")} value={tenant.status} />
               </div>
               <Button asChild variant="outline" size="sm" className="mt-2">
-                <Link href={`/admin/tenants/${tenant.id}`}>
-                  {t("Ver tenant")}
-                </Link>
+                <Link href={`/admin/tenants/${tenant.id}`}>{t("Ver tenant")}</Link>
               </Button>
             </div>
           )}
@@ -191,15 +184,13 @@ export function AuditDetailClient({ entryId }: AuditDetailClientProps) {
           {/* Resource deep link */}
           {deepLink && (
             <div className="rounded-md border p-4">
-              <h2 className="text-sm font-medium mb-2">{t("Recurso")}</h2>
-              <p className="text-sm text-muted-foreground mb-3">
+              <h2 className="mb-2 text-sm font-medium">{t("Recurso")}</h2>
+              <p className="mb-3 text-sm text-muted-foreground">
                 {entry.resource_type}&nbsp;·&nbsp;
                 <span className="font-mono">{entry.resource_id}</span>
               </p>
               <Button asChild variant="outline" size="sm">
-                <Link href={deepLink}>
-                  {t("Abrir recurso")}
-                </Link>
+                <Link href={deepLink}>{t("Abrir recurso")}</Link>
               </Button>
             </div>
           )}

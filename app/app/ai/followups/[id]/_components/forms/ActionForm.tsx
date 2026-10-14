@@ -67,7 +67,9 @@ function SeletorDeModelo({
   if (!soAprovados && prontos.length === 0 && doCanal.length === 0) {
     return (
       <p className="text-xs text-text-muted">
-        {t("Você ainda não tem modelos de mensagem. Crie um em Ajustes → Modelos e ele aparece aqui.")}
+        {t(
+          "Você ainda não tem modelos de mensagem. Crie um em Ajustes → Modelos e ele aparece aqui.",
+        )}
       </p>
     );
   }
@@ -107,10 +109,14 @@ function SeletorDeModelo({
           )}
         </SelectContent>
       </Select>
-      {escolhido && <p className="whitespace-pre-line text-xs text-text-muted">{escolhido.texto}</p>}
+      {escolhido && (
+        <p className="text-xs whitespace-pre-line text-text-muted">{escolhido.texto}</p>
+      )}
       {soAprovados && doCanal.length === 0 && (
         <p className="text-xs text-text-muted">
-          {t("Nenhum modelo aprovado no WhatsApp ainda. Crie um em Conexões → Modelos e ele aparece aqui quando for aprovado.")}
+          {t(
+            "Nenhum modelo aprovado no WhatsApp ainda. Crie um em Conexões → Modelos e ele aparece aqui quando for aprovado.",
+          )}
         </p>
       )}
     </div>
@@ -127,11 +133,15 @@ export function ActionForm({
   const t = useT();
   const [mode, setMode] = useState(config.mode);
   const [body, setBody] = useState(config.mode === "text" ? config.body : "");
-  const [promptHint, setPromptHint] = useState(config.mode === "ai_message" ? config.prompt_hint : "");
+  const [promptHint, setPromptHint] = useState(
+    config.mode === "ai_message" ? config.prompt_hint : "",
+  );
   const [fallbackTemplateId, setFallbackTemplateId] = useState(
     config.mode === "ai_message" ? (config.fallback_template_id ?? "") : "",
   );
-  const [templateId, setTemplateId] = useState(config.mode === "template" ? config.template_id : "");
+  const [templateId, setTemplateId] = useState(
+    config.mode === "template" ? config.template_id : "",
+  );
   const [error, setError] = useState<string | null>(null);
 
   const commit = (next: {
@@ -148,7 +158,9 @@ export function ActionForm({
           ? {
               mode: "ai_message" as const,
               prompt_hint: next.promptHint,
-              ...(next.fallbackTemplateId.trim() ? { fallback_template_id: next.fallbackTemplateId } : {}),
+              ...(next.fallbackTemplateId.trim()
+                ? { fallback_template_id: next.fallbackTemplateId }
+                : {}),
             }
           : { mode: "template" as const, template_id: next.templateId };
     const parsed = actionConfigSchema.safeParse(candidate);
@@ -200,7 +212,8 @@ export function ActionForm({
             }}
           />
           <p className="text-xs text-text-muted">
-            {t("Sai exatamente assim, sem IA. No laço,")} {t("{{volta}}")} e {t("{{voltas}}")} {t("viram o número da volta.")}
+            {t("Sai exatamente assim, sem IA. No laço,")} {t("{{volta}}")} {t("e")}{" "}
+            {t("{{voltas}}")} {t("viram o número da volta.")}
           </p>
         </div>
       ) : mode === "ai_message" ? (
@@ -219,7 +232,9 @@ export function ActionForm({
           </div>
           <div className="space-y-2">
             <Label htmlFor="action-fallback">
-              {t("Se a janela de 24 horas já tiver fechado, mandar este modelo aprovado no lugar da IA")}
+              {t(
+                "Se a janela de 24 horas já tiver fechado, mandar este modelo aprovado no lugar da IA",
+              )}
             </Label>
             <SeletorDeModelo
               id="action-fallback"
@@ -247,7 +262,9 @@ export function ActionForm({
             }}
           />
           <p className="text-xs text-text-muted">
-            {t("Depois de 24 horas sem resposta do cliente, só um modelo aprovado no WhatsApp chega até ele.")}
+            {t(
+              "Depois de 24 horas sem resposta do cliente, só um modelo aprovado no WhatsApp chega até ele.",
+            )}
           </p>
         </div>
       )}

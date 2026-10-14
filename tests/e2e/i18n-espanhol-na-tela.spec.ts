@@ -62,7 +62,20 @@ const PRAZO = 60_000;
  * varre tudo é o guarda estático, que alcança arquivo que ainda não existe e
  * roda em segundos.
  */
-const TELAS = ["/app/inbox", "/app/kanban", "/app/contacts", "/app/metrics", "/app/settings"];
+const TELAS = [
+  "/app/inbox",
+  "/app/kanban",
+  "/app/contacts",
+  "/app/metrics",
+  "/app/settings",
+  "/app/team",
+  "/app/connections",
+  "/app/ai/followups",
+  "/app/ai/knowledge/sources",
+  "/app/ai/evolution",
+  "/admin/configuracao",
+  "/admin/google",
+];
 
 /**
  * Chaves que o dicionário traduz de verdade — o espanhol DIFERE do português.
@@ -111,7 +124,10 @@ const CHAVES_QUE_MUDAM = new Set(
  * interface — e nenhum deles poderia acusar o defeito que ela procura.
  */
 function rotulosDeInterface(textos: string[]): string {
-  return textos.filter((t) => t in DICIONARIO).sort().join("\n");
+  return textos
+    .filter((t) => t in DICIONARIO)
+    .sort()
+    .join("\n");
 }
 
 /** Todo texto que a pessoa consegue LER nesta tela, normalizado. */
@@ -281,7 +297,8 @@ test.afterAll(async () => {
 });
 
 test.describe("o idioma escolhido chega à tela", () => {
-  test.setTimeout(180_000);
+  // La auditoría recorre doce pantallas en ambos idiomas y verifica el tema real.
+  test.setTimeout(300_000);
 
   test("espanhol cobre a interface, e o português volta byte a byte", async ({ page }) => {
     await loginComoAdmin(page, creds);
@@ -305,7 +322,10 @@ test.describe("o idioma escolhido chega à tela", () => {
     await page.goto(TELAS[0]!);
     await page.waitForLoadState("networkidle", { timeout: PRAZO });
     await porIdiomaEm(page, "es");
-    await page.screenshot({ path: path.join(EVIDENCIA, "01-inbox-em-espanhol.png"), fullPage: true });
+    await page.screenshot({
+      path: path.join(EVIDENCIA, "01-inbox-em-espanhol.png"),
+      fullPage: true,
+    });
 
     // ── 3b. A DATA saiu do português? ──────────────────────────────────────
     //
@@ -347,9 +367,7 @@ test.describe("o idioma escolhido chega à tela", () => {
     for (const tela of TELAS) {
       await page.goto(tela);
       await page.waitForLoadState("networkidle", { timeout: PRAZO });
-      const emPortugues = (await textosVisiveis(page)).filter((txt) =>
-        DATA_EM_PORTUGUES.test(txt),
-      );
+      const emPortugues = (await textosVisiveis(page)).filter((txt) => DATA_EM_PORTUGUES.test(txt));
       expect(
         emPortugues,
         `${tela}: a data continua em português com a interface em espanhol — ` +
@@ -387,6 +405,36 @@ test.describe("o idioma escolhido chega à tela", () => {
         "Cada um é uma chave que o dicionário sabe traduzir e que não passou por t() " +
         "no ponto em que a tela o renderiza.",
     ).toEqual([]);
+
+    // La paleta se mide en el CRM real, mediante el control que usa el usuario.
+    await page.goto("/app/settings");
+    await page.waitForLoadState("networkidle", { timeout: PRAZO });
+    const tema = page.getByRole("button", { name: /^Tema:/ });
+    for (
+      let i = 0;
+      i < 3 && (await page.locator("html").getAttribute("data-theme")) !== "dark";
+      i++
+    )
+      await tema.click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    const colores = await page.evaluate(() => {
+      const root = getComputedStyle(document.documentElement);
+      const sidebar = document.querySelector("aside");
+      const seleccion = document.querySelector("aside .bg-navigation-active");
+      return {
+        fondo: root.getPropertyValue("--color-bg").trim(),
+        tarjeta: root.getPropertyValue("--color-surface").trim(),
+        menu: sidebar ? getComputedStyle(sidebar).backgroundColor : null,
+        seleccion: seleccion ? getComputedStyle(seleccion).backgroundColor : null,
+      };
+    });
+    expect(colores).toEqual({
+      fondo: "#111827",
+      tarjeta: "#1f2937",
+      menu: "rgb(23, 31, 45)",
+      seleccion: "rgb(37, 99, 235)",
+    });
+    await page.screenshot({ path: path.join(EVIDENCIA, "03-settings-dark.png"), fullPage: true });
 
     // ── 5. E a volta: o português tem de voltar ao que era ──────────────────
     //
@@ -428,6 +476,9 @@ test.describe("o idioma escolhido chega à tela", () => {
         })
         .toBe(rotulosDeInterface(antes.get(tela)!));
     }
-    await page.screenshot({ path: path.join(EVIDENCIA, "02-inbox-de-volta-em-portugues.png"), fullPage: true });
+    await page.screenshot({
+      path: path.join(EVIDENCIA, "02-inbox-de-volta-em-portugues.png"),
+      fullPage: true,
+    });
   });
 });

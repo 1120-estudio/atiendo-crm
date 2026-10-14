@@ -9,12 +9,7 @@ import { Eye, ChartBar, Warning } from "@/lib/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useLgpdPreview, type LgpdPreviewCounts } from "@/hooks/useLgpdPreview";
 
 interface PreviewPanelProps {
@@ -43,12 +38,7 @@ export function PreviewPanel({ requestId }: PreviewPanelProps) {
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setOpen(true)}
-        className="gap-2"
-      >
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="gap-2">
         <Eye size={16} aria-hidden />
         {t("Pré-visualizar dados")}
       </Button>
@@ -112,7 +102,7 @@ export function PreviewPanel({ requestId }: PreviewPanelProps) {
                 {(Object.entries(preview.counts) as [keyof LgpdPreviewCounts, number][]).map(
                   ([key, value]) => (
                     <Card key={key} className="py-3">
-                      <CardHeader className="px-3 pb-0 pt-0">
+                      <CardHeader className="px-3 pt-0 pb-0">
                         <CardTitle className="text-xs font-normal text-muted-foreground">
                           {t(COUNT_LABELS[key])}
                         </CardTitle>
@@ -141,10 +131,13 @@ export function PreviewPanel({ requestId }: PreviewPanelProps) {
                     <SampleBlock label={t("Conversas")} rows={preview.sample.conversations} />
                   )}
                   {preview.sample.messages_recent.length > 0 && (
-                    <SampleBlock label={t("Mensagens (recentes)")} rows={preview.sample.messages_recent} />
+                    <SampleBlock
+                      label={t("Mensagens (recentes)")}
+                      rows={preview.sample.messages_recent}
+                    />
                   )}
                   {preview.sample.leads.length > 0 && (
-                    <SampleBlock label="Leads" rows={preview.sample.leads} />
+                    <SampleBlock label={t("Leads")} rows={preview.sample.leads} />
                   )}
                   {preview.sample.orders.length > 0 && (
                     <SampleBlock label={t("Pedidos")} rows={preview.sample.orders} />
@@ -169,7 +162,7 @@ function SampleBlock({ label, rows }: { label: string; rows: unknown[] }) {
     <div className="space-y-1">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <div className="max-h-40 overflow-y-auto rounded-md border bg-muted/20 p-2">
-        <pre className="text-xs leading-relaxed whitespace-pre-wrap break-all">
+        <pre className="text-xs leading-relaxed break-all whitespace-pre-wrap">
           {JSON.stringify(rows, null, 2)}
         </pre>
       </div>

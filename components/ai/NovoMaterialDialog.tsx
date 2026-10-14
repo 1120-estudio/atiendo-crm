@@ -46,12 +46,7 @@ import {
   type TipoDeFonteId,
 } from "@/lib/ai/rag/tipos-de-fonte";
 
-// Os DOIS exemplos ficam em português de propósito. O de FAQ é obrigação:
-// `## Pergunta:`/`## Resposta:` são os marcadores que
-// `lib/ai/rag/ingest/faq.ts` casa por regex de língua fixa, e um exemplo
-// traduzido ensinaria um formato que o parser recusa. O de documento vai junto
-// porque meio exemplo traduzido, meio não, dentro do mesmo campo, lê pior que
-// os dois iguais.
+// Los ejemplos siguen el idioma de la interfaz; el parser acepta ambos idiomas.
 const EXEMPLO_FAQ = `## Pergunta: Qual o prazo de entrega?
 ## Resposta: De 2 a 3 dias úteis após a confirmação do pagamento.
 
@@ -113,7 +108,9 @@ export function NovoMaterialDialog({ aberto, onFechar, onCriado, podeIndexar }: 
         });
         const json = (await res.json()) as { error?: { message?: string } };
         if (!res.ok) {
-          toast.error(json.error?.message ? t(json.error.message) : t("Não consegui guardar o arquivo."));
+          toast.error(
+            json.error?.message ? t(json.error.message) : t("Não consegui guardar o arquivo."),
+          );
           return;
         }
       } else {
@@ -192,7 +189,9 @@ export function NovoMaterialDialog({ aberto, onFechar, onCriado, podeIndexar }: 
             <Input
               id="material-nome"
               data-testid="material-nome"
-              placeholder={tipo === "faq" ? t("Perguntas frequentes da loja") : t("Política de troca")}
+              placeholder={
+                tipo === "faq" ? t("Perguntas frequentes da loja") : t("Política de troca")
+              }
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               disabled={enviando || porRotina}
@@ -228,15 +227,16 @@ export function NovoMaterialDialog({ aberto, onFechar, onCriado, podeIndexar }: 
                 id="material-conteudo"
                 data-testid="material-conteudo"
                 rows={10}
-                placeholder={ePerguntaEResposta(tipo) ? EXEMPLO_FAQ : EXEMPLO_DOCUMENTO}
+                placeholder={ePerguntaEResposta(tipo) ? t(EXEMPLO_FAQ) : t(EXEMPLO_DOCUMENTO)}
                 value={conteudo}
                 onChange={(e) => setConteudo(e.target.value)}
                 disabled={enviando}
               />
               {ePerguntaEResposta(tipo) ? (
                 <p className="text-xs text-text-muted">
-                  {t("Uma linha")} <code>## Pergunta:</code> {t("e uma")}{" "}
-                  <code>## Resposta:</code> {t("por item, separados por uma linha em branco.")}
+                  {t("Uma linha")} <code>{t("## Pergunta:")}</code> {t("e uma")}{" "}
+                  <code>{t("## Resposta:")}</code>{" "}
+                  {t("por item, separados por uma linha em branco.")}
                 </p>
               ) : null}
             </div>

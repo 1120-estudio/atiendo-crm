@@ -161,3 +161,7 @@ Sage foi escolhida também por segurança em deficiências de visão:
 - **Tritanopia** (azul-amarelo, raro): menos afetada — Sage permanece reconhecível como verde dessaturado.
 
 Em todos os casos, **nunca dependa só de cor pra comunicar estado**. Use ícone Phosphor + cor + label de texto. Ex: badge de SLA estourado tem cor error, ícone `Warning`, e texto "Vencido há 2h".
+
+En Atiendo, barra y menú usan `--color-shell` (#171f2d en oscuro). La selección
+usa `--color-navigation-active` (#2563eb) y frente blanca, con contraste AA.
+Los acentos de marca y los colores de estado conservan su función.

@@ -54,7 +54,7 @@ interface Props {
 
 export function SetupAiForm({ capacidades, conferencias }: Props) {
   const t = useT();
-  const [name, setName] = useState("Atendente IA");
+  const [name, setName] = useState(() => t("Atendente IA"));
   const [jeito, setJeito] = useState<PromptTemplate>("ecommerce_friendly");
   const [regras, setRegras] = useState("");
   const [naoPublicado, setNaoPublicado] = useState<string | null>(null);
@@ -243,7 +243,9 @@ export function SetupAiForm({ capacidades, conferencias }: Props) {
           ) : (
             <p className="text-sm">
               {t("Não achei chave")} {provedorLegivel(provedor, t)}{" "}
-              {t("nem cadastrada aqui, nem vinda da instalação. Cole a chave no campo acima («o cérebro dele») e crie o atendente de novo — ou cadastre em")}{" "}
+              {t(
+                "nem cadastrada aqui, nem vinda da instalação. Cole a chave no campo acima («o cérebro dele») e crie o atendente de novo — ou cadastre em",
+              )}{" "}
               <strong>{t("IA › Credenciais")}</strong>.
             </p>
           )}
@@ -295,8 +297,8 @@ export function SetupAiForm({ capacidades, conferencias }: Props) {
             </p>
           ) : (
             <p className="text-sm">
-              {t("Esta instalação ainda não tem a lista de modelos")} {provedorLegivel(provedor, t)}.{" "}
-              {t("Ela é baixada automaticamente uma vez por dia; depois disso, publique em")}{" "}
+              {t("Esta instalação ainda não tem a lista de modelos")} {provedorLegivel(provedor, t)}
+              . {t("Ela é baixada automaticamente uma vez por dia; depois disso, publique em")}{" "}
               <strong>{t("IA › Agentes")}</strong>.
             </p>
           )}
@@ -330,7 +332,9 @@ export function SetupAiForm({ capacidades, conferencias }: Props) {
             {t("Erro do banco de dados:")} <code className="break-all">{naoPublicado}</code>
           </p>
           <p className="text-sm">
-            {t("Tente de novo no botão abaixo (clicar de novo não cria um segundo agente) ou siga agora e publique depois em")}{" "}
+            {t(
+              "Tente de novo no botão abaixo (clicar de novo não cria um segundo agente) ou siga agora e publique depois em",
+            )}{" "}
             <strong>{t("IA › Agentes")}</strong>.
           </p>
           <div className="flex sm:justify-end">

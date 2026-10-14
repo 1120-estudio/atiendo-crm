@@ -42,7 +42,10 @@ export function LinksRastreaveis({
 }) {
   const t = (v: string) => traduzir(v, idioma);
   const router = useRouter();
-  const [form, setForm] = useState<LinkInput>(initial);
+  const [form, setForm] = useState<LinkInput>(() => ({
+    ...initial,
+    message_template: t("Olá! Gostaria de saber mais."),
+  }));
   const [pending, start] = useTransition();
   const [site, setSite] = useState("");
   const [verification, setVerification] = useState("");
@@ -284,7 +287,7 @@ export function LinksRastreaveis({
             type="button"
             variant="outline"
             onClick={() => {
-              setForm(initial);
+              setForm({ ...initial, message_template: t("Olá! Gostaria de saber mais.") });
               setVerification("");
               cleanup.current?.();
             }}

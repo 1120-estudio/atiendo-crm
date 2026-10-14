@@ -3,6 +3,8 @@
 import * as Sentry from "@sentry/nextjs";
 import { useEffect, useState } from "react";
 
+import { traduzir } from "@/lib/i18n/dicionario";
+import { normalizarIdioma, type Idioma } from "@/lib/i18n/idiomas";
 import { copyToClipboard } from "@/lib/clipboard";
 
 export default function GlobalError({
@@ -12,10 +14,13 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const [idioma, setIdioma] = useState<Idioma>("es");
+  const t = (texto: string) => traduzir(texto, idioma);
   const [eventId, setEventId] = useState<string | undefined>(undefined);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    setIdioma(normalizarIdioma(document.documentElement.lang || "es"));
     const id = Sentry.captureException(error);
     setEventId(id);
   }, [error]);
@@ -23,12 +28,11 @@ export default function GlobalError({
   const displayId = eventId ?? error.digest ?? "—";
 
   return (
-    <html lang="pt-BR">
+    <html lang={idioma}>
       <body
         style={{
           margin: 0,
-          fontFamily:
-            "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+          fontFamily: "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
           background: "#fafaf9",
           color: "#1c1917",
           minHeight: "100vh",
@@ -50,10 +54,10 @@ export default function GlobalError({
           }}
         >
           <h1 style={{ fontSize: "1.5rem", margin: "0 0 0.5rem", fontWeight: 600 }}>
-            Algo deu errado
+            {t("Algo deu errado")}
           </h1>
           <p style={{ color: "#57534e", margin: "0 0 1.5rem" }}>
-            Tente novamente em instantes. Se persistir, contate o suporte com o ID abaixo.
+            {t("Tente novamente em instantes. Se persistir, contate o suporte com o ID abaixo.")}
           </p>
           <div
             style={{
@@ -87,7 +91,7 @@ export default function GlobalError({
                 cursor: "pointer",
               }}
             >
-              {copied ? "Copiado!" : "Copiar ID"}
+              {copied ? t("Copiado!") : t("Copiar ID")}
             </button>
             <button
               type="button"
@@ -101,7 +105,7 @@ export default function GlobalError({
                 cursor: "pointer",
               }}
             >
-              Tentar de novo
+              {t("Tentar de novo")}
             </button>
           </div>
         </div>

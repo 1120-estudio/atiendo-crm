@@ -29,8 +29,8 @@ Lista canônica do que **não fazer** no DeskcommCRM. Anti-patterns ficam aqui p
 
 ## 4. ❌ `bg-zinc-900` ou `bg-slate-900` em dark mode
 
-**Por quê:** zinc/slate são cool-gray geométricos. A paleta é warm (greige). Misturar quebra coerência.
-**✅ Sim:** `bg: #161510` (warm dark canônico). Ver `02-palette-sage.md`.
+**En Atiendo:** el tema oscuro usa neutros fríos aprobados; el claro conserva neutros cálidos. Usa los tokens de cada tema para mantener la coherencia.
+**✅ Sí:** `bg-bg`, resuelto como `#111827` en el tema oscuro. Ver `02-palette-sage.md`.
 
 ---
 

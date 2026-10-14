@@ -113,12 +113,6 @@ const FORA_DO_PRODUTO: Record<string, string> = {
  */
 const EM_PORTUGUES_DE_PROPOSITO: { arquivo: string; texto: string; motivo: string }[] = [
   {
-    arquivo: "app/global-error.tsx",
-    texto: "Tente novamente em instantes. Se persistir, contate o suporte com o ID abaixo.",
-    motivo:
-      "é o error boundary da RAIZ: renderiza fora de qualquer provider, quando o app já falhou. Chamar um hook de contexto ali é justamente o que não pode falhar de novo",
-  },
-  {
     arquivo: "app/app/settings/tenant/pipelines/_stages.tsx",
     texto: "nenhum",
     motivo: "valor de wire do papel da etapa; o rótulo visível já sai por t(ROTULO_DO_PAPEL[p])",
@@ -142,7 +136,7 @@ function ehExcecaoDeclarada(arquivo: string, texto: string): boolean {
  * um imposto — daí só caractere e palavra sem ambiguidade.
  */
 const MARCA_DE_PORTUGUES =
-  /[çãõêôàáéíóúâ]|(lh|nh)[aeiouáéíóúãõ]|\b(não|você|está|estão|são|também|através|então|aqui|desta|deste|nesta|neste|dele|dela|quem|quando|onde|para|pelo|pela|com|sem|mais|menos|todos|todas|cada|ainda|já|só|muito|entre|sobre|antes|depois|agora|nunca|sempre|seu|sua|isso|este|essa|esse)\b/iu;
+  /[çãõêôàáéíóúâ]|(lh|nh)[aeiouáéíóúãõ]|\b(não|você|está|estão|são|também|através|então|aqui|desta|deste|nesta|neste|dele|dela|quem|quando|onde|para|pelo|pela|com|sem|mais|menos|todos|todas|cada|ainda|já|só|muito|entre|sobre|antes|depois|agora|nunca|sempre|seu|sua|isso|este|essa|esse|nome|nomes|telefone|telefones|salvar|salvando|excluir|excluindo|fechar|carregando|rascunho|atendente|atendentes|criar|criando|senha|senhas)\b/iu;
 
 /** Atributos cujo valor chega ao olho — ou ao leitor de tela — de quem usa. */
 const ATRIBUTOS_VISIVEIS = new Set([
@@ -296,7 +290,12 @@ function textoCruDasTelas(): Achado[] {
       const visita = (no: ts.Node): void => {
         if (ts.isJsxText(no)) {
           const texto = no.text.replace(/\s+/g, " ").trim();
-          if (texto && TEM_PALAVRA.test(texto) && !soEnderecosDeRede(texto)) {
+          if (
+            texto &&
+            TEM_PALAVRA.test(texto) &&
+            !soEnderecosDeRede(texto) &&
+            !/^\{\{[a-z_]+\}\}$/.test(texto)
+          ) {
             achados.push({ local: local(no), texto, origem: "texto na tela" });
           }
         }
@@ -308,6 +307,7 @@ function textoCruDasTelas(): Achado[] {
           (ts.isStringLiteral(no) || ts.isNoSubstitutionTemplateLiteral(no)) &&
           !dentroDeChamadaDeTraducao(no) &&
           !ehOperandoDeComparacao(no) &&
+          !/^\{\{[a-z_]+\}\}$/.test(no.text) &&
           TEM_PALAVRA.test(no.text) &&
           !soEnderecosDeRede(no.text) &&
           !ehPadraoDeData(no.text) &&

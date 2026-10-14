@@ -6,6 +6,8 @@ import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import { useLocaleDeData } from "@/hooks/i18n/useLocaleDeData";
+import { localizarBriefing } from "@/lib/escalacao/localizar-briefing";
+import { useIdioma } from "@/lib/i18n/IdiomaProvider";
 import { useT } from "@/hooks/i18n/useT";
 import type { CartaoDaPassagem } from "@/lib/escalacao/cartao-da-passagem";
 import { Robot, Warning } from "@/lib/ui/icons";
@@ -65,6 +67,7 @@ interface Props {
  */
 export function PassagemCard({ cartao, contatoId, onAssumir, assumindo }: Props) {
   const t = useT();
+
   const localeDaData = useLocaleDeData();
   const tituloId = useId();
   const hora = format(new Date(cartao.criadoEm), "dd/MM HH:mm", { locale: localeDaData });
@@ -113,12 +116,7 @@ export function PassagemCard({ cartao, contatoId, onAssumir, assumindo }: Props)
 
         <Corpo cartao={cartao} tituloId={tituloId} />
 
-        <Rodape
-          cartao={cartao}
-          contatoId={contatoId}
-          onAssumir={onAssumir}
-          assumindo={assumindo}
-        />
+        <Rodape cartao={cartao} contatoId={contatoId} onAssumir={onAssumir} assumindo={assumindo} />
       </article>
     </div>
   );
@@ -127,6 +125,7 @@ export function PassagemCard({ cartao, contatoId, onAssumir, assumindo }: Props)
 /** As seções. Separado do invólucro porque o estado recolhido reusa exatamente isto. */
 function Corpo({ cartao, tituloId }: { cartao: CartaoDaPassagem; tituloId: string }) {
   const t = useT();
+  const idioma = useIdioma();
 
   if (cartao.anonimizada) {
     return (
@@ -145,7 +144,7 @@ function Corpo({ cartao, tituloId }: { cartao: CartaoDaPassagem; tituloId: strin
 
       {cartao.clienteQuer !== null && (
         <Secao rotulo={t("O cliente quer")}>
-          <p className="whitespace-pre-wrap break-words">{cartao.clienteQuer}</p>
+          <p className="break-words whitespace-pre-wrap">{cartao.clienteQuer}</p>
         </Secao>
       )}
 
@@ -153,7 +152,7 @@ function Corpo({ cartao, tituloId }: { cartao: CartaoDaPassagem; tituloId: strin
         <Secao rotulo={t("A IA já tentou")}>
           <ol className="list-decimal space-y-0.5 pl-4" data-testid="passagem-tentativas">
             {cartao.tentativas.map((tentativa, i) => (
-              <li key={`${tituloId}-t${i}`} className="whitespace-pre-wrap break-words">
+              <li key={`${tituloId}-t${i}`} className="break-words whitespace-pre-wrap">
                 {tentativa.o_que}
                 {tentativa.desfecho !== undefined && ` → ${tentativa.desfecho}`}
               </li>
@@ -167,7 +166,7 @@ function Corpo({ cartao, tituloId }: { cartao: CartaoDaPassagem; tituloId: strin
           injeção pelo histórico levada para a tela, não só para o prompt. */}
       {cartao.falaDoCliente !== null && (
         <Secao rotulo={t("Últimas palavras do cliente")}>
-          <blockquote className="whitespace-pre-wrap break-words border-l-2 border-border pl-2 italic">
+          <blockquote className="border-l-2 border-border pl-2 break-words whitespace-pre-wrap italic">
             {`“${cartao.falaDoCliente}”`}
           </blockquote>
         </Secao>
@@ -178,21 +177,23 @@ function Corpo({ cartao, tituloId }: { cartao: CartaoDaPassagem; tituloId: strin
           piso evita o cabeçalho órfão — três linhas para dizer nada. */}
       {cartao.resumo !== null && (
         <Secao rotulo={t("Resumo da IA (confira)")}>
-          <p className="whitespace-pre-wrap break-words" data-testid="passagem-resumo">
-            {cartao.resumo}
+          <p className="break-words whitespace-pre-wrap" data-testid="passagem-resumo">
+            {localizarBriefing(cartao.resumo, idioma)}
           </p>
         </Secao>
       )}
 
       {cartao.textoDeQuemPassou !== null && (
         <Secao rotulo={t("Escrito por quem passou")}>
-          <p className="whitespace-pre-wrap break-words">{cartao.textoDeQuemPassou}</p>
+          <p className="break-words whitespace-pre-wrap">{cartao.textoDeQuemPassou}</p>
         </Secao>
       )}
 
       {cartao.semContexto && !cartao.anonimizada && (
         <p className="mt-1.5 text-xs text-muted-foreground">
-          {t("Sem resumo acumulado ainda — a conversa é recente. Role para cima para ver tudo o que foi dito.")}
+          {t(
+            "Sem resumo acumulado ainda — a conversa é recente. Role para cima para ver tudo o que foi dito.",
+          )}
         </p>
       )}
 
@@ -221,7 +222,7 @@ function Corpo({ cartao, tituloId }: { cartao: CartaoDaPassagem; tituloId: strin
 function Secao({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
   return (
     <div className="mt-2">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
         {rotulo}
       </p>
       <div className="mt-0.5">{children}</div>
@@ -300,7 +301,9 @@ function Rodape({
       return (
         <p className="mt-2 text-[11px] text-muted-foreground">
           {cartao.acao.donoNome === null
-            ? t("Outra pessoa está atendendo. Se precisar assumir, use Transferir no topo da conversa.")
+            ? t(
+                "Outra pessoa está atendendo. Se precisar assumir, use Transferir no topo da conversa.",
+              )
             : `${cartao.acao.donoNome} ${t("está atendendo. Se precisar assumir, use Transferir no topo da conversa.")}`}
         </p>
       );

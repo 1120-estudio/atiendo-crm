@@ -16,15 +16,13 @@ interface Props {
 }
 
 /** O que o ensaio devolveu — ou por que ele não aconteceu. */
-type Desfecho =
-  | { tipo: "resposta"; texto: string }
-  | { tipo: "erro"; mensagem: string };
+type Desfecho = { tipo: "resposta"; texto: string } | { tipo: "erro"; mensagem: string };
 
 const EXEMPLO = "Oi! Vocês atendem hoje? Queria saber o preço.";
 
 export function TestarClient({ nome, agenteId, versaoId }: Props) {
   const t = useT();
-  const [mensagem, setMensagem] = useState(EXEMPLO);
+  const [mensagem, setMensagem] = useState(() => t(EXEMPLO));
   const [desfecho, setDesfecho] = useState<Desfecho | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -48,7 +46,12 @@ export function TestarClient({ nome, agenteId, versaoId }: Props) {
         body: JSON.stringify({ sample_message: mensagem }),
       });
       const json = (await res.json()) as {
-        data?: { final_text?: string; status?: string; error_code?: string; error_message?: string };
+        data?: {
+          final_text?: string;
+          status?: string;
+          error_code?: string;
+          error_message?: string;
+        };
         error?: { message?: string };
       };
       if (!res.ok) {
@@ -69,7 +72,8 @@ export function TestarClient({ nome, agenteId, versaoId }: Props) {
       if (d?.status && d.status !== "completed") {
         setDesfecho({
           tipo: "erro",
-          mensagem: d.error_message ?? d.error_code ?? `${t("o ensaio terminou como")} "${d.status}"`,
+          mensagem:
+            d.error_message ?? d.error_code ?? `${t("o ensaio terminou como")} "${d.status}"`,
         });
         return;
       }
@@ -102,7 +106,8 @@ export function TestarClient({ nome, agenteId, versaoId }: Props) {
       {rascunho && (
         <div className="rounded-lg border bg-background p-6" role="status">
           <p className="text-sm font-medium">
-            {funcionario} {t("está como")} <strong>{t("rascunho")}</strong> — {t("ainda não foi para o ar.")}
+            {funcionario} {t("está como")} <strong>{t("rascunho")}</strong> —{" "}
+            {t("ainda não foi para o ar.")}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             {t(
@@ -137,10 +142,10 @@ export function TestarClient({ nome, agenteId, versaoId }: Props) {
 
           {desfecho?.tipo === "resposta" && (
             <div className="space-y-2 rounded-md border bg-muted/40 p-4">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground">
+              <p className="text-xs tracking-wider text-muted-foreground uppercase">
                 {funcionario} {t("respondeu")}
               </p>
-              <p className="whitespace-pre-wrap text-sm">{desfecho.texto}</p>
+              <p className="text-sm whitespace-pre-wrap">{desfecho.texto}</p>
               <p className="text-xs text-muted-foreground">
                 {t("Esta conversa não foi enviada a ninguém e não aparece no seu inbox.")}
               </p>

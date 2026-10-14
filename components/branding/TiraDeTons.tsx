@@ -1,3 +1,5 @@
+"use client";
+import { useT } from "@/hooks/i18n/useT";
 /**
  * A tira dos 11 tons — o controle PRINCIPAL da cor, e não um enfeite.
  *
@@ -51,6 +53,7 @@ interface Props {
 }
 
 export function TiraDeTons({ tons, legenda }: Props) {
+  const t = useT();
   const marcados = new Set(
     legenda.map((item) => item.indice).filter((i): i is number => i !== null),
   );
@@ -59,10 +62,9 @@ export function TiraDeTons({ tons, legenda }: Props) {
     <div className="space-y-3">
       <div
         role="img"
-        aria-label={
-          `Escala de ${tons.length} tons gerada a partir da sua cor, do mais claro ao mais ` +
-          `escuro. Os tons em uso estão descritos na lista abaixo.`
-        }
+        aria-label={t(
+          "Escala de {quantidade} tons gerada a partir da sua cor, do mais claro ao mais escuro. Os tons em uso estão descritos na lista abaixo.",
+        ).replace("{quantidade}", String(tons.length))}
         className="flex overflow-hidden rounded-md border border-border"
       >
         {tons.map((hex, i) => (

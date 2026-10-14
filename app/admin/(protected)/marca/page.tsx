@@ -6,7 +6,6 @@ import { REGUA_DO_PRODUTO } from "@/lib/branding/regua-do-produto";
 import { camadaDaInstalacao, camadaDoAmbiente, resolverMarca } from "@/lib/branding/resolve";
 import { env } from "@/lib/env";
 import { tagDeIdioma } from "@/lib/i18n/datas";
-import { normalizarIdioma } from "@/lib/i18n/idiomas";
 import { traduzir } from "@/lib/i18n/dicionario";
 
 import { FormularioDaMarca } from "./_form";
@@ -58,16 +57,13 @@ function instanteLegivel(iso: string | null, idioma: string): string | null {
 export default async function Page() {
   const usuario = await loadAuthUser();
   if (!usuario?.is_platform_admin) notFound();
-  const idioma = normalizarIdioma(usuario.locale);
+  const idioma = usuario.idioma;
 
   const linha = await marcaDaInstalacao();
   // A MESMA pilha do `app/layout.tsx` — banco acima, arquivo de instalação
   // embaixo. Montar outra aqui faria a tela relatar uma precedência que o
   // produto não usa, que é a pior mentira possível numa tela de diagnóstico.
-  const marca = resolverMarca(
-    [camadaDaInstalacao(linha), camadaDoAmbiente(env)],
-    REGUA_DO_PRODUTO,
-  );
+  const marca = resolverMarca([camadaDaInstalacao(linha), camadaDoAmbiente(env)], REGUA_DO_PRODUTO);
 
   // O que apareceria SEM o arquivo subido — a MESMA pilha com `logo_path`
   // zerado, e não uma leitura solta de `APP_LOGO_URL`. É assim que a prévia

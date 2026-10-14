@@ -8,7 +8,7 @@ O DeskcommCRM é uma ferramenta operacional para **atendentes que ficam 8 horas 
 
 Por isso a direção é **soft-tech / calmo**:
 
-- **Soft** — neutros greige (warm-gray), nunca slate/zinc; acentos baixos em saturação; sombras em cor neutra, não preto puro.
+- **Soft** — el tema claro mantiene neutros cálidos. En el fork Atiendo, el tema oscuro usa gris azulado y selección azul, según la propuesta aprobada; los colores viven en tokens compartidos.
 - **Tech** — tipografia precisa, dados em mono tabular, hierarquia disciplinada, microinterações com propósito.
 - **Calmo** — sem decoração, sem celebração, sem AI-sparkle, sem gradientes. Confiança vem de consistência, não de efeito.
 

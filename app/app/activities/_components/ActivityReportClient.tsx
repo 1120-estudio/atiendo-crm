@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useIdioma } from "@/lib/i18n/IdiomaProvider";
 import { useT } from "@/hooks/i18n/useT";
 import { useActivityReport } from "@/hooks/reports/useActivityReport";
 import type {
@@ -76,7 +77,7 @@ function SerieDiaria({ dias }: { dias: LinhaDoDia[] }) {
             data-dia={d.data}
             data-quantidade={d.quantidade}
           />
-          <span className="text-[10px] tabular-nums text-muted-foreground">{d.rotulo}</span>
+          <span className="text-[10px] text-muted-foreground tabular-nums">{d.rotulo}</span>
         </div>
       ))}
     </div>
@@ -85,6 +86,7 @@ function SerieDiaria({ dias }: { dias: LinhaDoDia[] }) {
 
 export function ActivityReportClient() {
   const t = useT();
+  const idioma = useIdioma();
   const [dias, setDias] = useState<number>(7);
   const { data, isLoading, isError } = useActivityReport(dias);
 
@@ -226,8 +228,8 @@ export function ActivityReportClient() {
                     key={i.id}
                     className="flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-md border border-border p-2 text-sm"
                   >
-                    <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
-                      {quandoLegivel(i.quando, "pt-BR")}
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                      {quandoLegivel(i.quando, idioma)}
                     </span>
                     <MarcadorDeAtor forma={i.atorForma} />
                     <span className="font-medium">{i.rotulo}</span>
@@ -314,7 +316,7 @@ function LinhaComBarra({
           {forma && <MarcadorDeAtor forma={forma} />}
           <span className="truncate">{nome}</span>
         </span>
-        <span className="shrink-0 tabular-nums text-muted-foreground">{quantidade}</span>
+        <span className="shrink-0 text-muted-foreground tabular-nums">{quantidade}</span>
       </div>
       <BarraDeLinha fatia={fatia} />
     </div>

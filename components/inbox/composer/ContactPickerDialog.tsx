@@ -76,11 +76,13 @@ export function ContactPickerDialog({
 
   const list = useContactList({ search: debounced || undefined });
   const contacts =
-    list.data?.pages.flatMap((p) => p.data).filter((c) => {
-      if (excludeContactId && c.id === excludeContactId) return false;
-      if (c.is_anonymized) return false;
-      return Boolean(c.phone_number);
-    }) ?? [];
+    list.data?.pages
+      .flatMap((p) => p.data)
+      .filter((c) => {
+        if (excludeContactId && c.id === excludeContactId) return false;
+        if (c.is_anonymized) return false;
+        return Boolean(c.phone_number);
+      }) ?? [];
 
   const resolvedManualPhone = parseDialablePhone(manualPhone);
   const phoneAlreadyInList =
@@ -132,13 +134,13 @@ export function ContactPickerDialog({
         <div className="relative">
           <MagnifyingGlass
             size={16}
-            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground"
             aria-hidden
           />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome ou telefone…"
+            placeholder={t("Buscar por nome ou telefone…")}
             className="pl-8"
             autoFocus
           />
@@ -146,10 +148,14 @@ export function ContactPickerDialog({
 
         <div className="max-h-48 overflow-y-auto rounded-md border border-border">
           {list.isLoading && contacts.length === 0 ? (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">Carregando…</p>
+            <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+              {t("Carregando…")}
+            </p>
           ) : contacts.length === 0 ? (
             <p className="px-3 py-4 text-center text-sm text-muted-foreground">
-              {debounced ? t("Nenhum contato encontrado na base.") : t("Nenhum contato com telefone na base.")}
+              {debounced
+                ? t("Nenhum contato encontrado na base.")
+                : t("Nenhum contato com telefone na base.")}
             </p>
           ) : (
             <ul className="divide-y divide-border">
@@ -170,7 +176,9 @@ export function ContactPickerDialog({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{displayName(c)}</span>
                       {c.phone_number && (
-                        <span className="block truncate text-xs text-muted-foreground">{phoneForDisplay(c.phone_number)}</span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {phoneForDisplay(c.phone_number)}
+                        </span>
                       )}
                     </span>
                   </button>
@@ -198,7 +206,7 @@ export function ContactPickerDialog({
             <p className="text-xs font-medium text-muted-foreground">
               {searchPhone && !phoneAlreadyInList
                 ? t("Enviar número informado")
-                : "Ou informe um contato"}
+                : t("Ou informe um contato")}
             </p>
             {searchPhone && !phoneAlreadyInList && (
               <button
@@ -217,12 +225,14 @@ export function ContactPickerDialog({
                   <span className="block truncate font-medium">
                     {manualName.trim() || searchPhone}
                   </span>
-                  <span className="block truncate text-xs text-muted-foreground">{searchPhone}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {searchPhone}
+                  </span>
                 </span>
               </button>
             )}
             <div className="space-y-1.5">
-              <Label htmlFor="manual-contact-name">Nome (opcional)</Label>
+              <Label htmlFor="manual-contact-name">{t("Nome (opcional)")}</Label>
               <Input
                 id="manual-contact-name"
                 value={manualName}
@@ -247,14 +257,14 @@ export function ContactPickerDialog({
               disabled={sending || !resolvedManualPhone}
               onClick={pickManual}
             >
-              Enviar contato
+              {t("Enviar contato")}{" "}
             </Button>
           </div>
         )}
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => close(false)} disabled={sending}>
-            Cancelar
+            {t("Cancelar")}{" "}
           </Button>
         </DialogFooter>
       </DialogContent>

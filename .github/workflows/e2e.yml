@@ -1957,6 +1957,15 @@ jobs:
             test-results/
           retention-days: 7
 
+      - name: Evidencia de interfaz en español y paleta
+        if: always() && matrix.parte == 2
+        uses: actions/upload-artifact@v7
+        with:
+          name: interfaz-espanol-paleta
+          path: evidence/i18n-es/03-settings-dark.png
+          if-no-files-found: warn
+          retention-days: 7
+
       # ── ONDE A MEDIÇÃO FICA ───────────────────────────────────────────────
       # A medição que só existe no log se perde: quem decide repartir as listas
       # é quem olha o resumo do job, e o resumo é este. Os três relógios saem
