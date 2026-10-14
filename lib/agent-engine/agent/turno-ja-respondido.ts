@@ -46,6 +46,9 @@ export interface AlvoDoTurno {
  * Anota no job a inbound mais nova visível AGORA — chamar antes de o turno ler
  * a conversa. Um statement: o `||` do jsonb não pisa em chave alheia do payload
  * (`held_run_after` do session-watchdog, por exemplo).
+ * Depois de um envio aceito/enfileirado, a anotação pertence àquela resposta:
+ * retentar o checkpoint não pode atribuir mensagens novas a um envio antigo.
+ * Sem envio, uma nova tentativa pode ler e responder ao contexto atualizado.
  */
 export async function anotarUltimaInboundVista(db: Queryable, alvo: AlvoDoTurno): Promise<void> {
   await db.query(
@@ -54,7 +57,11 @@ export async function anotarUltimaInboundVista(db: Queryable, alvo: AlvoDoTurno)
           'ultima_inbound_vista_em',
           (select max(m.created_at) from messages m
             where m.organization_id = $1 and m.conversation_id = $2 and m.direction = 'inbound'))
-      where organization_id = $1 and id = $3`,
+      where organization_id = $1 and id = $3
+        and not exists (
+          select 1 from send_ledger s
+           where s.organization_id = $1 and s.job_id = $3
+             and s.status in ('accepted', 'queued'))`,
     [alvo.organizationId, alvo.conversationId, alvo.jobId],
   );
 }
@@ -86,6 +93,8 @@ export async function ultimaInboundJaRespondida(
           and o.conversation_id = $2
           and u.em is not null
           and (j.payload->>'ultima_inbound_vista_em')::timestamptz >= u.em
+          -- Também protege jobs cuja anotação já foi sobrescrita por versão antiga.
+          and o.created_at >= u.em
      ) as respondida`,
     [alvo.organizationId, alvo.conversationId, alvo.contactId, alvo.jobId],
   );
