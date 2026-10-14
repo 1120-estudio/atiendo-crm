@@ -42,7 +42,10 @@ interface Frontmatter {
  * Returns defaults if frontmatter is absent or unparseable.
  */
 function parseFrontmatter(md: string): { frontmatter: Frontmatter; body: string } {
-  const defaultFm: Frontmatter = { locale: DEFAULT_LOCALE, tags: [] };
+  const defaultFm: Frontmatter = {
+    locale: /^##\s+(?:pregunta|respuesta)\s*:/im.test(md) ? "es" : DEFAULT_LOCALE,
+    tags: [],
+  };
 
   if (!md.trimStart().startsWith("---")) {
     return { frontmatter: defaultFm, body: md };
@@ -137,5 +140,7 @@ export function parseFaqMarkdown(md: string): FaqItem[] {
  */
 export function formatFaqChunk(item: FaqItem): string {
   const tagsStr = item.tags.length > 0 ? item.tags.join(", ") : "";
-  return `Pergunta: ${item.question}\nResposta: ${item.answer}${tagsStr ? `\nTags: ${tagsStr}` : ""}`;
+  const pergunta = item.locale.toLowerCase().startsWith("es") ? "Pregunta" : "Pergunta";
+  const resposta = item.locale.toLowerCase().startsWith("es") ? "Respuesta" : "Resposta";
+  return `${pergunta}: ${item.question}\n${resposta}: ${item.answer}${tagsStr ? `\nTags: ${tagsStr}` : ""}`;
 }

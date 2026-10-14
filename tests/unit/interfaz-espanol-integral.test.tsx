@@ -10,7 +10,7 @@ import { DICIONARIO, traduzir } from "@/lib/i18n/dicionario";
 import { IdiomaProvider } from "@/lib/i18n/IdiomaProvider";
 import { avisoDeEventoMorto, IA_QUE_NAO_RESPONDEU } from "@/lib/event-log/aviso-de-evento-morto";
 import { localizarBriefing } from "@/lib/escalacao/localizar-briefing";
-import { parseFaqMarkdown } from "@/lib/ai/rag/ingest/faq";
+import { formatFaqChunk, parseFaqMarkdown } from "@/lib/ai/rag/ingest/faq";
 import { razaoDeContraste } from "@/lib/branding/contraste";
 import { arquivosDeCodigo, caminhoRelativo } from "./helpers/varrer-codigo";
 
@@ -100,6 +100,12 @@ describe("resúmenes y ejemplos en español", () => {
     expect(es).toHaveLength(1);
     expect(es[0]?.question).toBe("¿Cuánto cuesta?");
     expect(es[0]?.answer).toBe("₡24.950");
+    expect(es[0]?.locale).toBe("es");
+    expect(formatFaqChunk(es[0]!)).toBe("Pregunta: ¿Cuánto cuesta?\nRespuesta: ₡24.950");
+    expect(
+      parseFaqMarkdown("---\nlocale: pt-BR\n---\n## Pregunta: Precio?\n## Respuesta: 10")[0]
+        ?.locale,
+    ).toBe("pt-BR");
     expect(parseFaqMarkdown("## Pergunta: Preço?\n## Resposta: 10")).toHaveLength(1);
     expect(parseFaqMarkdown("## P: Preço?\n## R: 10")).toHaveLength(1);
   });

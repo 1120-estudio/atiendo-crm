@@ -58,7 +58,9 @@ los mensajes con nombres variables usan patrones completos; los valores se
 conservan literalmente. Los encabezados de transferencias existentes se traducen
 al mostrarlos en `PassagemCard`, sin reescribir conversaciones ni citas.
 Los ejemplos de preguntas frecuentes están en español y el parser acepta
-`Pregunta`/`Respuesta`, además de los formatos anteriores.
+`Pregunta`/`Respuesta`, además de los formatos anteriores. Los fragmentos
+conservan esos encabezados en español. Sin idioma declarado en el documento,
+se detectan los marcadores españoles; un `locale` explícito tiene prioridad.
 
 El PDF de acceso usa `organizations.locale` y `organizations.timezone`, recogidos
 junto con los datos del responsable del tratamiento. Las etiquetas y fechas se
