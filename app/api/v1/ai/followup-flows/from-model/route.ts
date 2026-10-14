@@ -31,6 +31,7 @@ import { createClient } from "@/lib/supabase/server";
 import { instalarModeloSchema, triggerConfigSchema } from "@/lib/followup/api-schemas";
 import { flowGraphSchema } from "@/lib/followup/graph-schema";
 import { validateFlowForPublish } from "@/lib/followup/validate-publish";
+import { localizarGrafoDeModelo } from "@/lib/followup/modelos/localizar";
 import { modeloPorId } from "@/lib/followup/modelos";
 import { traduzir } from "@/lib/i18n/dicionario";
 
@@ -106,20 +107,15 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   const gatilho = triggerConfigSchema.safeParse(modelo.gatilho({ stageId: parsed.data.stage_id }));
-  const grafo = flowGraphSchema.safeParse(modelo.grafo);
+  const grafo = flowGraphSchema.safeParse(localizarGrafoDeModelo(modelo.grafo, t));
   // Sem contexto de conexão: o modelo do catálogo tem de ser publicável em
   // QUALQUER organização, inclusive a que tem canal com janela de 24 h.
   const publicavel = grafo.success ? validateFlowForPublish(grafo.data) : null;
   if (!gatilho.success || !grafo.success || (publicavel && !publicavel.ok)) {
-    return fail(
-      "internal_error",
-      `modelo_invalido: ${modelo.id}`,
-      500,
-      { requestId },
-    );
+    return fail("internal_error", `modelo_invalido: ${modelo.id}`, 500, { requestId });
   }
 
-  const nome = parsed.data.name ?? modelo.nome;
+  const nome = parsed.data.name ?? t(modelo.nome);
   const { data: criado, error: insErr } = await supabase
     .from("followup_flow_pointers")
     .insert({

@@ -46,6 +46,18 @@ describe("el español alcanza los mensajes del servidor", () => {
             if (!DICIONARIO[mensagem.text]?.es)
               sem.push(`${caminhoRelativo(arquivo)} → ${mensagem.text}`);
           }
+          if (
+            mensagem &&
+            ts.isTemplateExpression(mensagem) &&
+            !mensagem.getText(fonte).includes("t(")
+          ) {
+            const modelo =
+              mensagem.head.text +
+              mensagem.templateSpans
+                .map((parte, indice) => `{valor${indice + 1}}${parte.literal.text}`)
+                .join("");
+            if (!DICIONARIO[modelo]?.es) sem.push(`${caminhoRelativo(arquivo)} → ${modelo}`);
+          }
         }
         ts.forEachChild(no, visita);
       };

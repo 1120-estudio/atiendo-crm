@@ -127,7 +127,8 @@ export function ModelosDialog({ open, onOpenChange, nomesExistentes }: Props) {
 
         <ul className="flex flex-col gap-3">
           {MODELOS_DE_FOLLOWUP.map((modelo) => {
-            const jaInstalado = nomesExistentes.includes(modelo.nome);
+            const jaInstalado =
+              nomesExistentes.includes(modelo.nome) || nomesExistentes.includes(t(modelo.nome));
             const etapaEscolhida = etapaPorModelo[modelo.id];
             const faltaEtapa = modelo.pedeEtapa && !etapaEscolhida;
             const instalando = instalar.isPending && instalar.variables?.model_id === modelo.id;

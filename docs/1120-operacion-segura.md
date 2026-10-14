@@ -84,3 +84,9 @@ avisos y PDF. Las puertas son las actuales del catálogo de navegación.
 No se añade un proceso ni una tarea automática. Los errores siguen usando los
 avisos y reintentos existentes; la catraca de idioma impide incorporar nuevos
 textos sin traducción. No se cambia el motor de atención IA/humano ni su latencia.
+
+Los modelos de seguimiento de fábrica se copian en el idioma de la interfaz
+al instalarse como borrador: nombre, etiquetas, mensajes, notas y patrones de
+respuesta. El grafo conserva identificadores, conexiones, plazos y políticas;
+no se publica ni se conecta a un agente automáticamente. Los flujos existentes
+y los nombres personalizados conservan el contenido registrado.
