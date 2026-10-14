@@ -46,6 +46,9 @@ import { test, expect, type Page } from "./helpers/test";
 
 import { credenciaisSupabaseDeTeste } from "../../scripts/lib/env-de-teste";
 import { DICIONARIO } from "../../lib/i18n/dicionario";
+import { cssDaMarca, ESCOPO_DA_INSTALACAO, ESCOPO_DA_ORGANIZACAO } from "../../lib/branding/css";
+import { resolverMarca, camadaDoAmbiente } from "../../lib/branding/resolve";
+import { REGUA_DO_PRODUTO } from "../../lib/branding/regua-do-produto";
 import { lerCreds, loginComoAdmin } from "./helpers/login-admin";
 
 const creds = lerCreds();
@@ -417,32 +420,75 @@ test.describe("o idioma escolhido chega à tela", () => {
     )
       await tema.click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    const colores = await page.evaluate(() => {
-      const root = getComputedStyle(document.documentElement);
-      const body = getComputedStyle(document.body);
-      const sidebar = document.querySelector("aside");
-      const seleccion = document.querySelector("aside .sidebar-nav-active");
-      const tarjeta = document.querySelector("main .bg-surface");
-      return {
-        fondo: root.getPropertyValue("--color-bg").trim(),
-        superficieRaiz: root.getPropertyValue("--color-surface").trim(),
-        superficieCuerpo: body.getPropertyValue("--color-surface").trim(),
-        navegacionCuerpo: body.getPropertyValue("--color-navigation-active").trim(),
-        tarjeta: tarjeta ? getComputedStyle(tarjeta).backgroundColor : null,
-        menu: sidebar ? getComputedStyle(sidebar).backgroundColor : null,
-        seleccion: seleccion ? getComputedStyle(seleccion).backgroundColor : null,
-      };
-    });
-    expect(colores).toEqual({
-      fondo: "#111827",
-      superficieRaiz: "#1f2937",
-      superficieCuerpo: "#1f2937",
-      navegacionCuerpo: "#2563eb",
-      tarjeta: "rgb(31, 41, 55)",
-      menu: "rgb(23, 31, 45)",
-      seleccion: "rgb(37, 99, 235)",
-    });
+    // El atributo cambia antes de que transition-colors termine de pintar.
+    // Esperamos el color final; un color incorrecto sigue haciendo fallar la prueba.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const root = getComputedStyle(document.documentElement);
+            const body = getComputedStyle(document.body);
+            const sidebar = document.querySelector("aside");
+            const seleccion = document.querySelector("aside .sidebar-nav-active");
+            const tarjeta = document.querySelector("main .bg-surface");
+            return {
+              fondo: root.getPropertyValue("--color-bg").trim(),
+              superficieRaiz: root.getPropertyValue("--color-surface").trim(),
+              superficieCuerpo: body.getPropertyValue("--color-surface").trim(),
+              navegacionCuerpo: body.getPropertyValue("--color-navigation-active").trim(),
+              tarjeta: tarjeta ? getComputedStyle(tarjeta).backgroundColor : null,
+              menu: sidebar ? getComputedStyle(sidebar).backgroundColor : null,
+              seleccion: seleccion ? getComputedStyle(seleccion).backgroundColor : null,
+            };
+          }),
+        { timeout: PRAZO },
+      )
+      .toEqual({
+        fondo: "#111827",
+        superficieRaiz: "#1f2937",
+        superficieCuerpo: "#1f2937",
+        navegacionCuerpo: "#2563eb",
+        tarjeta: "rgb(31, 41, 55)",
+        menu: "rgb(23, 31, 45)",
+        seleccion: "rgb(37, 99, 235)",
+      });
     await page.screenshot({ path: path.join(EVIDENCIA, "03-settings-dark.png"), fullPage: true });
+
+    // Verifica en el navegador el mismo CSS que emite la opción de marca,
+    // sin persistir preferencias en la cuenta compartida por otras pruebas.
+    const marca = resolverMarca(
+      [camadaDoAmbiente({ APP_ACCENT_HEX: "#7c3aed" })],
+      REGUA_DO_PRODUTO,
+    );
+    for (const escopo of [ESCOPO_DA_INSTALACAO, ESCOPO_DA_ORGANIZACAO]) {
+      const css = cssDaMarca(marca.cor, escopo).css;
+      expect(css).not.toBeNull();
+      const estilo = await page.addStyleTag({ content: css! });
+      try {
+        await expect
+          .poll(
+            () =>
+              page.evaluate(() => {
+                const item = document.querySelector("aside .sidebar-nav-active")!;
+                const tarjeta = document.querySelector("main .bg-surface")!;
+                const muestra = document.createElement("span");
+                item.append(muestra);
+                muestra.style.backgroundColor = "var(--color-accent)";
+                muestra.style.color = "var(--color-accent-fg)";
+                const esperado = getComputedStyle(muestra);
+                const coincide =
+                  getComputedStyle(item).backgroundColor === esperado.backgroundColor &&
+                  getComputedStyle(item).color === esperado.color;
+                muestra.remove();
+                return { coincide, tarjeta: getComputedStyle(tarjeta).backgroundColor };
+              }),
+            { timeout: PRAZO },
+          )
+          .toEqual({ coincide: true, tarjeta: "rgb(31, 41, 55)" });
+      } finally {
+        await estilo.evaluate((nodo) => nodo.parentNode?.removeChild(nodo));
+      }
+    }
 
     // ── 5. E a volta: o português tem de voltar ao que era ──────────────────
     //

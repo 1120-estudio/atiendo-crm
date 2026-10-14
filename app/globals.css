@@ -919,17 +919,6 @@
   background-color: var(--color-navigation-hover);
 }
 
-/* O item selecionado usa a cor fixa da navegação escura mesmo quando a marca
-   muda o accent herdado de uma organização. */
-html[data-theme="dark"] .sidebar-nav-active {
-  background-color: #2563eb;
-  color: #ffffff;
-}
-
-html[data-theme="dark"] .sidebar-nav-hover:hover {
-  background-color: rgba(59, 130, 246, 0.16);
-}
-
 /* ---- Agenda · a coluna de horários que desliza para dentro ----------------
    O painel de marcação tem três tempos (escolher dia → escolher horário →
    confirmar) e a coluna de horários NÃO existe no primeiro. Quando o dia é

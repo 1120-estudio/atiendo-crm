@@ -163,5 +163,7 @@ Sage foi escolhida também por segurança em deficiências de visão:
 Em todos os casos, **nunca dependa só de cor pra comunicar estado**. Use ícone Phosphor + cor + label de texto. Ex: badge de SLA estourado tem cor error, ícone `Warning`, e texto "Vencido há 2h".
 
 En Atiendo, barra y menú usan `--color-shell` (#171f2d en oscuro). La selección
-usa `--color-navigation-active` (#2563eb) y frente blanca, con contraste AA.
-Los acentos de marca y los colores de estado conservan su función.
+usa `--color-navigation-active` (#2563eb por defecto) y frente blanca, con contraste AA.
+Una marca personalizada reemplaza la selección y su texto por los colores
+derivados de esa marca; las superficies conservan el gris azulado.
+Los colores de estado conservan su función.

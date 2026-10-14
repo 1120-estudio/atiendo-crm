@@ -69,8 +69,10 @@ usa el de la instalación; sin zona, muestra fechas en UTC.
 
 Los tokens de `app/globals.css` definen fondo `#111827`, tarjetas `#1f2937`,
 superficies elevadas `#273449`, barra y menú `#171f2d` y selección `#2563eb`
-con texto blanco. La selección es independiente del color de marca configurable;
-los botones conservan la derivación de marca y su contraste. El tema claro
+con texto blanco como valores predeterminados. Si se elige un color de marca
+en la aplicación, los botones y la selección del menú usan la derivación de
+esa marca y su contraste, tanto para la instalación como para la empresa.
+La marca no cambia las superficies oscuras. El tema claro
 conserva su paleta y el cambio de tema sigue disponible.
 
 La cobertura se verifica con `tests/unit/interfaz-espanol-integral.test.tsx`,

@@ -54,10 +54,7 @@ import { GRAUS, stop } from "./rampa";
 import type { CorResolvida } from "./resolve";
 
 export type CodigoDoCss =
-  | "nome_de_token_invalido"
-  | "valor_fora_da_allowlist"
-  | "saida_suspeita"
-  | "token_nao_serializado";
+  "nome_de_token_invalido" | "valor_fora_da_allowlist" | "saida_suspeita" | "token_nao_serializado";
 
 export type MotivoDoCss = {
   readonly codigo: CodigoDoCss;
@@ -168,6 +165,11 @@ function declaracoesDoTema(cor: CorResolvida, tema: "claro" | "escuro"): Declara
     ["--color-accent-fg", t.accentFg],
     ["--color-accent-hover", t.accentHover],
     ["--color-accent-soft", t.accentSoft],
+    // La marca elegida en la aplicación también controla la navegación.
+    // Sin marca, estos tokens conservan el azul predeterminado del tema oscuro.
+    ["--color-navigation-active", t.accent],
+    ["--color-navigation-fg", t.accentFg],
+    ["--color-navigation-hover", t.accentSoft],
   );
   return saida;
 }
