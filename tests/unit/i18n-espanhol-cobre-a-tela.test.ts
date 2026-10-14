@@ -253,6 +253,15 @@ function ehOperandoDeComparacao(no: ts.Node): boolean {
   );
 }
 
+/** La primera posición de [id, t(etiqueta)] es una clave interna. */
+function ehChaveDeTuplaTraduzida(no: ts.Node): boolean {
+  const pai = no.parent;
+  if (!pai || !ts.isArrayLiteralExpression(pai) || pai.elements.length !== 2 || pai.elements[0] !== no) return false;
+  const rotulo = pai.elements[1];
+  return !!rotulo && ts.isCallExpression(rotulo) && ts.isIdentifier(rotulo.expression) &&
+    (rotulo.expression.text === "t" || rotulo.expression.text === "traduzir");
+}
+
 function dentroDeChamadaDeTraducao(no: ts.Node): boolean {
   for (let p = no.parent; p; p = p.parent) {
     if (ts.isCallExpression(p)) {
@@ -307,6 +316,7 @@ function textoCruDasTelas(): Achado[] {
           (ts.isStringLiteral(no) || ts.isNoSubstitutionTemplateLiteral(no)) &&
           !dentroDeChamadaDeTraducao(no) &&
           !ehOperandoDeComparacao(no) &&
+          !ehChaveDeTuplaTraduzida(no) &&
           !/^\{\{[a-z_]+\}\}$/.test(no.text) &&
           TEM_PALAVRA.test(no.text) &&
           !soEnderecosDeRede(no.text) &&
@@ -508,7 +518,7 @@ describe("toda chave usada na tela tem espanhol", () => {
 describe("nenhuma prosa em português escapa de t()", () => {
   it("toda tela de produto passa o texto por t() antes de renderizar", () => {
     const vazando = textoCruDasTelas()
-      .filter((a) => MARCA_DE_PORTUGUES.test(a.texto))
+      .filter((a) => MARCA_DE_PORTUGUES.test(a.texto) || Boolean(DICIONARIO[a.texto]?.es && DICIONARIO[a.texto]?.es !== a.texto))
       .filter((a) => !ehExcecaoDeclarada(a.local.split(":")[0] ?? "", a.texto))
       .map((a) => `${a.local} [${a.origem}] ${JSON.stringify(a.texto.slice(0, 90))}`);
     expect(

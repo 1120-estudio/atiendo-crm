@@ -1958,7 +1958,7 @@ jobs:
           retention-days: 7
 
       - name: Evidencia de interfaz en español y paleta
-        if: always() && matrix.parte == 2
+        if: always() && matrix.parte == 5
         uses: actions/upload-artifact@v7
         with:
           name: interfaz-espanol-paleta
