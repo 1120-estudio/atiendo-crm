@@ -212,6 +212,8 @@ export interface RunModelCallInput {
    * agente), nunca constante.
    */
   maxSteps?: number;
+  /** Recuperação de resposta: exige uma tool sem transformar texto livre em envio. */
+  toolChoice?: { type: 'tool'; toolName: string };
   /**
    * Encerra o loop quando o predicado for verdadeiro ao fim de uma etapa (além
    * do teto de `maxSteps`). É predicado, e não nome de tool, de propósito: o
@@ -673,6 +675,7 @@ export async function runModelCall(db: pg.Pool, cfg: LlmEdgeConfig, input: RunMo
       messages: input.messages,
       abortSignal: input.abortSignal,
       tools: guardServiceTools(prefix.tools),
+      ...(input.toolChoice !== undefined ? { toolChoice: input.toolChoice } : {}),
       stopWhen:
         input.maxSteps === undefined
           ? undefined

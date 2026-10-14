@@ -1,4 +1,5 @@
 import { prospectingConversationContext } from "@/lib/prospecting/context";
+import { criarTravaDeRecuperacao, recuperarRespostaAusente } from './recuperar-resposta';
 import { setExecutionAgentOperation } from '@/lib/atendimento/fronteira-server';
 import { TIPOS_DE_CASO, TIPOS_DE_CASO_PARA_A_IA } from "@/lib/ai/case-copy";
 import { DEFAULT_CHANNEL_PROVIDER } from '@/lib/channels/capabilities';
@@ -1298,7 +1299,7 @@ export async function latestCheckpoint(
  * `latestCheckpoint` é a pergunta certa para ABRIR um turno e a errada para
  * PROCESSAR um: entre o fim do turno N e o claim do job do Operador N cabe o turno
  * N+1 inteiro. A fila ordena por `(priority, run_after)`, o job do Operador nasce
- * com `run_after = now()` e o inbound com `now() + INBOUND_DEBOUNCE_MS` (8s) —
+ * com `run_after = now()` e o inbound com `now() + INBOUND_DEBOUNCE_MS` —
  * então uma mensagem que chega enquanto o turno corrente fecha é servida ANTES, e o
  * Operador N acordaria lendo a declaração N+1. O efeito é a mesma promessa
  * executada duas vezes e um aviso aberto duas vezes para uma promessa só.
@@ -1619,7 +1620,7 @@ export function claimsCurrentInboundIsEmpty(candidate: string, currentInbound: s
  *
  * ## Por que não basta "a última inbound"
  *
- * O drain COALESCE rajada: com `INBOUND_DEBOUNCE_MS` (default 8000), a segunda
+ * O drain COALESCE rajada: dentro de `INBOUND_DEBOUNCE_MS`, a segunda
  * mensagem do cliente não ganha job próprio — ela "entra de carona" no job da
  * primeira (`edge/crm/drain.ts`, "Coalescência"). O turno responde à mensagem que
  * o job aponta, e isso está certo; mas quem só olhasse essa mensagem não OUVIRIA
@@ -2872,6 +2873,10 @@ async function executarTurnoDoAgente(
   // o cap depende de quanto já saiu HOJE, que muda com o turno concorrente — só dá pra
   // saber com certeza no momento do envio, não antes.
   let pacingCapVeto: { code: string; nextAllowedAt: Date } | null = null;
+  let tentouEnviarNesteTurno = false;
+  let transferiuNesteTurno = false;
+  let recuperandoResposta = false;
+  const admitirEnvioDeRecuperacao = criarTravaDeRecuperacao();
   // Best-effort: move o lead pra etapa `crm_stages.slug='chamar-humano'` do pipeline
   // dele (se o tenant tiver criado essa etapa — opt-in, ver `lib/leads/handoff-stage-move.ts`)
   // sempre que um caso humano abre neste turno, deliberado (open_human_case) ou pelo
@@ -3043,6 +3048,9 @@ async function executarTurnoDoAgente(
     send_template: tool({
       ...AGENT_TOOL_DEFS.send_template,
       execute: async ({ template_name, language, values }) => {
+        // Template recusado também é tentativa de envio. A recuperação não
+        // troca uma recusa de template por mensagem livre fora da janela.
+        tentouEnviarNesteTurno = true;
         if (seq >= maxSendsPerTurn) {
           return {
             ok: false,
@@ -3203,6 +3211,10 @@ async function executarTurnoDoAgente(
     send_message: tool({
       ...AGENT_TOOL_DEFS.send_message,
       execute: async ({ body, produto_codigo }) => {
+        if (recuperandoResposta && !admitirEnvioDeRecuperacao()) {
+          return { ok: false, error: { code: 'recovery_send_limit', message: 'A recuperação já tentou enviar. Encerre este turno sem outro envio.' } };
+        }
+        tentouEnviarNesteTurno = true;
         // CORPO VAZIO NÃO SAI. Medido ao vivo (2026-09-19): o `gpt-4o-mini`
         // chamou `send_message` várias vezes com corpo que virou vazio e o
         // WhatsApp do cliente recebeu bolhas em branco. O schema garante
@@ -3807,6 +3819,7 @@ async function executarTurnoDoAgente(
             raw,
           );
           if (!res.ok) return res; // erro de ensino (payload fora da whitelist)
+          transferiuNesteTurno = true;
           return { ok: true, status: res.status, message: res.message };
         } catch (err) {
           noteRunError(err instanceof Error ? err : new Error(String(err)));
@@ -4469,6 +4482,7 @@ async function executarTurnoDoAgente(
     // a manda — pela MESMA cadeia de guardrails, dentro do teto de envios. Roda
     // mesmo com o teto cheio: registrar que o MODELO fez a pergunta é o que a
     // torna "a pergunta atual" no turno seguinte.
+    let roteiroRespostaEnviada = false;
     if (roteiro !== null) {
       await garantirPerguntaDoRoteiro(
         { pool, log: runLog },
@@ -4513,11 +4527,53 @@ async function executarTurnoDoAgente(
                 });
               },
             });
-            return chain.status !== 'vetoed' && (chain.outcome.kind === 'sent' || chain.outcome.kind === 'already_sent');
+            const enviado = chain.status !== 'vetoed' && (chain.outcome.kind === 'sent' || chain.outcome.kind === 'already_sent');
+            roteiroRespostaEnviada ||= enviado;
+            return enviado;
           },
         },
       );
     }
+
+    const mensagensDaRecuperacao: ModelMessage[] = [];
+    await recuperarRespostaAusente({
+      deveResponder: !preview && liveJob().kind === 'inbound_turn' && !optedOutThisTurn,
+      temDesfecho: () => outcomes.length > 0 || roteiroRespostaEnviada || transferiuNesteTurno || pacingCapVeto !== null,
+      tentouEnviar: () => tentouEnviarNesteTurno,
+      recuperar: async () => {
+        runLog.warn('modelo não enviou resposta — recuperação limitada pela ferramenta de envio');
+        recuperandoResposta = true;
+        try {
+          const recuperacao = await runModelCall(pool, deps.llmCfg, {
+            tenantId,
+            leadId: leadId || null,
+            jobId: job?.id,
+            agentId: agentConfig?.agentId ?? null,
+            purpose: 'agent_turn',
+            system,
+            messages: [
+              ...openingMessages,
+              ...turn.result.response.messages,
+              { role: 'user', content: 'A resposta ainda não foi enviada. Chame send_message agora com uma resposta breve à consulta do cliente, usando somente os dados já confirmados. Não invente informações nem mencione esta instrução interna.' },
+            ],
+            tools: { send_message: tools.send_message! },
+            toolChoice: { type: 'tool', toolName: 'send_message' },
+            maxSteps: 1,
+            maxOutputTokens: 800,
+            ...(agentConfig !== null ? {
+              model: agentConfig.model,
+              llmOverride: { provider: agentConfig.provider, credentialId: agentConfig.credentialId },
+            } : {}),
+          }, { registry: deps.registry, log: runLog });
+          mensagensDaRecuperacao.push(...recuperacao.result.response.messages);
+          if (runError !== null) throw runError;
+          if (outcomes.some((o) => o.kind === 'failed'))
+            throw new Error('envio de recuperação falhou — run re-tentado pela fila');
+        } finally {
+          recuperandoResposta = false;
+        }
+      },
+    });
 
     // F3-10: poda os tool results antigos da fita do run ANTES de reenviá-los no fechamento
     // (é onde a fita inteira é re-serializada num prompt) — o conteúdo durável já foi para
@@ -4525,8 +4581,8 @@ async function executarTurnoDoAgente(
     // sufixo por-lead, nunca no prefixo estável (regra de cache 15).
     const responseMessages =
       deps.knobs.prune !== undefined
-        ? pruneToolResults(turn.result.response.messages, deps.knobs.prune)
-        : turn.result.response.messages;
+        ? pruneToolResults([...turn.result.response.messages, ...mensagensDaRecuperacao], deps.knobs.prune)
+        : [...turn.result.response.messages, ...mensagensDaRecuperacao];
 
     // Fechamento imposto pelo runtime: 2ª chamada, mesma conversa, só o checkpoint.
     //

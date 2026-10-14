@@ -14,6 +14,16 @@ const REQUIRED: NodeJS.ProcessEnv = {
   SUPABASE_SERVICE_ROLE_KEY: "service-key",
 };
 
+describe('espera de rajada inbound', () => {
+  it('instalação sem override agrupa por dois segundos', () => {
+    expect(loadEnv(REQUIRED).INBOUND_DEBOUNCE_MS).toBe(2000);
+  });
+  it('preserva a escolha explícita da instalação, inclusive zero', () => {
+    expect(loadEnv({ ...REQUIRED, INBOUND_DEBOUNCE_MS: '8000' }).INBOUND_DEBOUNCE_MS).toBe(8000);
+    expect(loadEnv({ ...REQUIRED, INBOUND_DEBOUNCE_MS: '0' }).INBOUND_DEBOUNCE_MS).toBe(0);
+  });
+});
+
 describe("loadEnv — vazio é ausente (contrato BYOK do README)", () => {
   it("ANTHROPIC_API_KEY= (vazia) é tratada como ausente — worker sobe", () => {
     const env = loadEnv({ ...REQUIRED, ANTHROPIC_API_KEY: "" });

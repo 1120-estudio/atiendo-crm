@@ -122,8 +122,16 @@
       "col": 3,
       "type": "backend",
       "label": "Turno IA",
-      "sublabel": "contexto + RAG · 2 chamadas: resposta + fechamento · kinds: inbound_turn, followup_turn, case_reply_turn",
+      "sublabel": "contexto + RAG · resposta + fechamento; recuperação limitada se faltar envio · kinds: inbound_turn, followup_turn, case_reply_turn",
       "tag": "runAgentTurn"
+    },
+    {
+      "id": "recuperacao-resposta",
+      "lane": "worker",
+      "col": 4,
+      "type": "backend",
+      "label": "Recuperação limitada",
+      "sublabel": "send_message obrigatório; sem desfecho → retry da fila, depois aviso job_dead na Central"
     },
     {
       "id": "toolbreaker",
@@ -330,6 +338,18 @@
     }
   ],
   "edges": [
+    {
+      "id": "turn-recuperacao",
+      "from": "turn",
+      "to": "recuperacao-resposta",
+      "label": "inbound sem envio nem handoff"
+    },
+    {
+      "id": "recuperacao-gates",
+      "from": "recuperacao-resposta",
+      "to": "gates",
+      "label": "mesma ferramenta e validações"
+    },
     {
       "id": "inbound-ingest",
       "from": "inbound",

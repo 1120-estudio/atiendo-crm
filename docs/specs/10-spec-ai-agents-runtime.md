@@ -12,6 +12,36 @@ owner: Rafael Melgaço
 
 # Spec 10 — AI Agents Module (Runtime, Schema, Endpoints)
 
+## Recuperação de resposta e latência do inbound
+
+O turno inbound não pode terminar em sucesso sem um envio aceito, transferência
+confirmada ou adiamento imposto pelo ritmo do canal. Se o modelo omitir a tool de
+envio, o runtime faz uma única chamada limitada, exigindo `send_message` pelo
+mesmo seam e pela mesma cadeia `before_send`. Texto livre nunca é enviado
+diretamente. Se essa recuperação não produzir desfecho, `agent_no_reply` falha o
+job: a fila aplica o retry existente e, esgotado, o aviso de `job_dead` fica na
+Central. Uma tentativa vetada não ganha um caminho alternativo; prévias,
+opt-out, handoff confirmado e turnos que não devem falar não são recuperados.
+
+A recuperação gera log estruturado sem texto do cliente. O checkpoint recebe
+também o resultado da ferramenta de recuperação. `INBOUND_DEBOUNCE_MS` define a
+janela de agrupamento; confira seu default em `lib/agent-engine/env.ts` e sua
+propagação em `workers/agent-worker/main.ts`. Valores explícitos são preservados.
+Reduzir essa janela não altera o anti-ban nem elimina a latência do modelo,
+da derivação de mídia, de consultas ou do checkpoint.
+
+Checklist do Sistema Vivo deste conserto (destino: núcleo, pois nenhuma
+consulta recebida deve morrer mesmo sem extensões):
+
+| Pergunta | Artefato concreto |
+| --- | --- |
+| Entrada e saída | `inbound-turn.ts` → `recuperar-resposta.ts` → `send_message` com `before_send` |
+| Registro e tela | chamada de recuperação em `llm_calls`, vista em Execuções do agente; falha esgotada em `agent_inbox_items`, vista na Central |
+| Porta e configuração | tela `/app/ai/agents/[id]` para modelo/limites; `.env.example` para a janela de agrupamento |
+| Anti-morte e continuidade | uma recuperação limitada, depois retry da `job_queue`; `job_dead` dá próximo passo ao atendente; handoff confirmado não é reaberto |
+| Laço de retorno | desfecho real encerra a recuperação; ausência impede sucesso e muda o estado da fila para nova tentativa/aviso; resultados aceitos alimentam o checkpoint |
+| Mapa | nó `recuperacao-resposta` e arestas `turn-recuperacao`/`recuperacao-gates` em `agent-turn.workflow.json` |
+
 > Camada de **agentes configuráveis por tenant** que processam mensagens WhatsApp inbound usando LLM + tools MCP. Estende o módulo IA-RAG existente (Spec 05): onde a Spec 05 define **um bot single-tenant com RAG sobre KB**, esta spec define **N agentes por tenant com tool-calling sobre MCP server interno** (Spec 11), versionamento Save/Publish, gatilhos configuráveis, prioridade, e UI de gestão (Spec 12).
 >
 > A Spec 05 e a Spec 10 **coexistem**: o bot RAG da 05 é uma forma especializada (com KB) do que a 10 generaliza. O dispatcher decide qual caminho ativar — se há agente publicado matching o gatilho, usa Spec 10; senão, fallback Spec 05 se `ai_agents.is_default` ainda apontar para o bot legado.

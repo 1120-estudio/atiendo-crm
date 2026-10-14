@@ -86,12 +86,20 @@ const USO = {
 };
 
 /**
- * Modelo de CONTROLE: encerra o turno com um checkpoint válido e conta quantas
- * vezes foi chamado. Num turno de pedido explícito ele tem de ficar em ZERO.
+ * Modelo de CONTROLE: omite o envio inicial, mas honra a recuperação obrigatória.
+ * Num turno de pedido explícito ele tem de ficar em ZERO.
  */
 function modeloDeControle() {
-  return async () => {
+  return async (opts: { toolChoice?: { type: string; toolName?: string } }) => {
     modeloChamado += 1;
+    if (opts.toolChoice?.type === 'tool' && opts.toolChoice.toolName === 'send_message') {
+      return {
+        content: [{ type: 'tool-call' as const, toolCallId: 'recuperacao-1', toolName: 'send_message', input: JSON.stringify({ body: 'Olá! Como posso ajudar?' }) }],
+        finishReason: { unified: 'tool-calls' as const, raw: undefined },
+        usage: USO,
+        warnings: [],
+      };
+    }
     return {
       content: [
         {
@@ -315,6 +323,7 @@ describe("pedido explícito de atendente", () => {
     );
     expect(rows[0]!.force_human, "mensagem comum virou passagem para humano").toBe(false);
     expect(modeloChamado, "turno normal não chamou o modelo — o harness não rodou").toBeGreaterThan(0);
+    expect(enviados, 'a recuperação deve entregar exatamente uma resposta sem handoff').toHaveLength(1);
   });
 
   /**
