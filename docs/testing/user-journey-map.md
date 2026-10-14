@@ -1963,9 +1963,8 @@ seguimentos, fontes de conhecimento, evolução, configuração da plataforma e
 Google). Ela troca o idioma pelo seletor real, detecta rótulos conhecidos que
 permanecem sem tradução, verifica a data, retorna ao português e mede no CSS
 renderizado o fundo `#111827`, os cartões `#1f2937`, o menu `#171f2d` e a
-seleção azul `#2563eb`. A captura do tema novo fica em
-`evidence/i18n-es/03-settings-dark.png`. A verificação de texto estático cobre
-também as telas que não aparecem nessas 12 rotas.
+seleção azul `#2563eb`. A verificação de texto estático cobre também as telas
+que não aparecem nessas 12 rotas.
 
 **Achados, todos consertados neste mesmo passe:**
 

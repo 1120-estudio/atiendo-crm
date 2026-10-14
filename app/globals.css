@@ -909,9 +909,7 @@
   }
 }
 
-/* Navegação usa o token no momento de pintar. O alias em `@theme inline`
-   pode ser expandido pela marca durante o build e manter o verde claro mesmo
-   no tema escuro; as classes diretas respeitam a variável vigente no DOM. */
+/* Navegação usa o token no momento de pintar. */
 .sidebar-nav-active {
   background-color: var(--color-navigation-active);
   color: var(--color-navigation-fg);
@@ -919,6 +917,17 @@
 
 .sidebar-nav-hover:hover {
   background-color: var(--color-navigation-hover);
+}
+
+/* O item selecionado usa a cor fixa da navegação escura mesmo quando a marca
+   muda o accent herdado de uma organização. */
+html[data-theme="dark"] .sidebar-nav-active {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .sidebar-nav-hover:hover {
+  background-color: rgba(59, 130, 246, 0.16);
 }
 
 /* ---- Agenda · a coluna de horários que desliza para dentro ----------------

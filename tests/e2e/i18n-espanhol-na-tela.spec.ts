@@ -419,18 +419,26 @@ test.describe("o idioma escolhido chega à tela", () => {
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     const colores = await page.evaluate(() => {
       const root = getComputedStyle(document.documentElement);
+      const body = getComputedStyle(document.body);
       const sidebar = document.querySelector("aside");
       const seleccion = document.querySelector("aside .sidebar-nav-active");
+      const tarjeta = document.querySelector("main .bg-surface");
       return {
         fondo: root.getPropertyValue("--color-bg").trim(),
-        tarjeta: root.getPropertyValue("--color-surface").trim(),
+        superficieRaiz: root.getPropertyValue("--color-surface").trim(),
+        superficieCuerpo: body.getPropertyValue("--color-surface").trim(),
+        navegacionCuerpo: body.getPropertyValue("--color-navigation-active").trim(),
+        tarjeta: tarjeta ? getComputedStyle(tarjeta).backgroundColor : null,
         menu: sidebar ? getComputedStyle(sidebar).backgroundColor : null,
         seleccion: seleccion ? getComputedStyle(seleccion).backgroundColor : null,
       };
     });
     expect(colores).toEqual({
       fondo: "#111827",
-      tarjeta: "#1f2937",
+      superficieRaiz: "#1f2937",
+      superficieCuerpo: "#1f2937",
+      navegacionCuerpo: "#2563eb",
+      tarjeta: "rgb(31, 41, 55)",
       menu: "rgb(23, 31, 45)",
       seleccion: "rgb(37, 99, 235)",
     });
