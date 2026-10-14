@@ -1,4 +1,13 @@
 /** Recuperação limitada: texto livre nunca vira envio, e um veto não é contornado. */
+export function criarTravaDeRecuperacao(): () => boolean {
+  let tentou = false;
+  return () => {
+    if (tentou) return false;
+    tentou = true;
+    return true;
+  };
+}
+
 export async function recuperarRespostaAusente(input: {
   deveResponder: boolean;
   temDesfecho: () => boolean;

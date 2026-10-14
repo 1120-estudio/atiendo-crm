@@ -1,5 +1,5 @@
 import { prospectingConversationContext } from "@/lib/prospecting/context";
-import { recuperarRespostaAusente } from './recuperar-resposta';
+import { criarTravaDeRecuperacao, recuperarRespostaAusente } from './recuperar-resposta';
 import { setExecutionAgentOperation } from '@/lib/atendimento/fronteira-server';
 import { TIPOS_DE_CASO, TIPOS_DE_CASO_PARA_A_IA } from "@/lib/ai/case-copy";
 import { DEFAULT_CHANNEL_PROVIDER } from '@/lib/channels/capabilities';
@@ -2875,6 +2875,8 @@ async function executarTurnoDoAgente(
   let pacingCapVeto: { code: string; nextAllowedAt: Date } | null = null;
   let tentouEnviarNesteTurno = false;
   let transferiuNesteTurno = false;
+  let recuperandoResposta = false;
+  const admitirEnvioDeRecuperacao = criarTravaDeRecuperacao();
   // Best-effort: move o lead pra etapa `crm_stages.slug='chamar-humano'` do pipeline
   // dele (se o tenant tiver criado essa etapa — opt-in, ver `lib/leads/handoff-stage-move.ts`)
   // sempre que um caso humano abre neste turno, deliberado (open_human_case) ou pelo
@@ -3206,6 +3208,9 @@ async function executarTurnoDoAgente(
     send_message: tool({
       ...AGENT_TOOL_DEFS.send_message,
       execute: async ({ body, produto_codigo }) => {
+        if (recuperandoResposta && !admitirEnvioDeRecuperacao()) {
+          return { ok: false, error: { code: 'recovery_send_limit', message: 'A recuperação já tentou enviar. Encerre este turno sem outro envio.' } };
+        }
         tentouEnviarNesteTurno = true;
         // CORPO VAZIO NÃO SAI. Medido ao vivo (2026-09-19): o `gpt-4o-mini`
         // chamou `send_message` várias vezes com corpo que virou vazio e o
@@ -4534,31 +4539,36 @@ async function executarTurnoDoAgente(
       tentouEnviar: () => tentouEnviarNesteTurno,
       recuperar: async () => {
         runLog.warn('modelo não enviou resposta — recuperação limitada pela ferramenta de envio');
-        const recuperacao = await runModelCall(pool, deps.llmCfg, {
-          tenantId,
-          leadId: leadId || null,
-          jobId: job?.id,
-          agentId: agentConfig?.agentId ?? null,
-          purpose: 'agent_turn',
-          system,
-          messages: [
-            ...openingMessages,
-            ...turn.result.response.messages,
-            { role: 'user', content: 'A resposta ainda não foi enviada. Chame send_message agora com uma resposta breve à consulta do cliente, usando somente os dados já confirmados. Não invente informações nem mencione esta instrução interna.' },
-          ],
-          tools: { send_message: tools.send_message! },
-          toolChoice: { type: 'tool', toolName: 'send_message' },
-          maxSteps: 1,
-          maxOutputTokens: 800,
-          ...(agentConfig !== null ? {
-            model: agentConfig.model,
-            llmOverride: { provider: agentConfig.provider, credentialId: agentConfig.credentialId },
-          } : {}),
-        }, { registry: deps.registry, log: runLog });
-        mensagensDaRecuperacao.push(...recuperacao.result.response.messages);
-        if (runError !== null) throw runError;
-        if (outcomes.some((o) => o.kind === 'failed'))
-          throw new Error('envio de recuperação falhou — run re-tentado pela fila');
+        recuperandoResposta = true;
+        try {
+          const recuperacao = await runModelCall(pool, deps.llmCfg, {
+            tenantId,
+            leadId: leadId || null,
+            jobId: job?.id,
+            agentId: agentConfig?.agentId ?? null,
+            purpose: 'agent_turn',
+            system,
+            messages: [
+              ...openingMessages,
+              ...turn.result.response.messages,
+              { role: 'user', content: 'A resposta ainda não foi enviada. Chame send_message agora com uma resposta breve à consulta do cliente, usando somente os dados já confirmados. Não invente informações nem mencione esta instrução interna.' },
+            ],
+            tools: { send_message: tools.send_message! },
+            toolChoice: { type: 'tool', toolName: 'send_message' },
+            maxSteps: 1,
+            maxOutputTokens: 800,
+            ...(agentConfig !== null ? {
+              model: agentConfig.model,
+              llmOverride: { provider: agentConfig.provider, credentialId: agentConfig.credentialId },
+            } : {}),
+          }, { registry: deps.registry, log: runLog });
+          mensagensDaRecuperacao.push(...recuperacao.result.response.messages);
+          if (runError !== null) throw runError;
+          if (outcomes.some((o) => o.kind === 'failed'))
+            throw new Error('envio de recuperação falhou — run re-tentado pela fila');
+        } finally {
+          recuperandoResposta = false;
+        }
       },
     });
 

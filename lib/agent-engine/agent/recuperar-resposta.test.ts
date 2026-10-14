@@ -1,7 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import { recuperarRespostaAusente } from "./recuperar-resposta";
+import { criarTravaDeRecuperacao, recuperarRespostaAusente } from "./recuperar-resposta";
 
 describe("resposta ausente não termina em sucesso silencioso", () => {
+  it("só a primeira chamada de envio da recuperação é admitida, mesmo em paralelo", async () => {
+    const admitir = criarTravaDeRecuperacao();
+    expect(
+      await Promise.all([Promise.resolve().then(admitir), Promise.resolve().then(admitir)]),
+    ).toEqual([true, false]);
+    expect(admitir()).toBe(false);
+    expect(criarTravaDeRecuperacao()()).toBe(true);
+  });
   it("recupera uma única vez e exige um desfecho real", async () => {
     let enviado = false;
     const recuperar = vi.fn(async () => {
