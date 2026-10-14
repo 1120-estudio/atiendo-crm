@@ -3048,6 +3048,9 @@ async function executarTurnoDoAgente(
     send_template: tool({
       ...AGENT_TOOL_DEFS.send_template,
       execute: async ({ template_name, language, values }) => {
+        // Template recusado também é tentativa de envio. A recuperação não
+        // troca uma recusa de template por mensagem livre fora da janela.
+        tentouEnviarNesteTurno = true;
         if (seq >= maxSendsPerTurn) {
           return {
             ok: false,

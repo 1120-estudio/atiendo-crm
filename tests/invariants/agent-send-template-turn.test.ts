@@ -75,6 +75,20 @@ let m: Modules;
 /** O que o modelo devolveu ao ver o resultado da tool — é onde o erro instrutivo aparece. */
 let ultimoResultadoDeTool: unknown = null;
 let enviados: EnvioCapturado[] = [];
+let ultimoJobId = '';
+
+async function confirmaAvisoDaFalha(): Promise<void> {
+  const { rows } = await pool.query<{ status: string; last_error: string; avisado: boolean }>(
+    `select j.status, j.last_error, exists (
+       select 1 from agent_inbox_items a where a.organization_id = j.organization_id
+         and a.kind = 'job_dead' and a.ref_kind = 'job_queue' and a.ref_id = j.id
+     ) as avisado from job_queue j where j.id = $1 and j.organization_id = $2`,
+    [ultimoJobId, ORG],
+  );
+  expect(rows[0]?.status).toBe('dead');
+  expect(rows[0]?.last_error).toMatch(/agent_no_reply/);
+  expect(rows[0]?.avisado).toBe(true);
+}
 
 /**
  * O fechamento do turno pede um JSON de checkpoint (`checkpointContentSchema`), e o
@@ -194,6 +208,7 @@ async function rodaTurno(
     maxAttempts: 1,
   });
   const [claimed] = await m.queue.claimJobs(pool, { workerId: "tpl", maxConcurrency: 1 });
+  ultimoJobId = job.id;
   expect(claimed?.id).toBe(job.id);
   // O CONTRATO DO WORKER (`runJob` de main.ts): sucesso → completeJob, falha → failJob.
   // Sem isso o job fica 'running' e, com `maxConcurrency: 1`, o claim do teste SEGUINTE
@@ -352,7 +367,7 @@ describe("turno completo — send_template com a janela de 24h FECHADA", () => {
       ),
       ALVO_META,
     );
-    expect(erro).toBeNull();
+    expect(erro?.message).toMatch(/agent_no_reply/);
 
     // O que mais importa: zero envio. Recusa que ainda envia não é recusa.
     expect(enviados).toHaveLength(0);
@@ -361,6 +376,7 @@ describe("turno completo — send_template com a janela de 24h FECHADA", () => {
     // "ensinou o modelo" de "engoliu em silêncio", e o turno terminaria igual.
     expect(JSON.stringify(ultimoResultadoDeTool)).toMatch(/template_nao_aprovado/);
     expect(JSON.stringify(ultimoResultadoDeTool)).toMatch(/PENDING/);
+    await confirmaAvisoDaFalha();
   });
 
   it("template inexistente também não envia, e diz que é para um humano configurar", async () => {
@@ -370,9 +386,10 @@ describe("turno completo — send_template com a janela de 24h FECHADA", () => {
       ),
       ALVO_META,
     );
-    expect(erro).toBeNull();
+    expect(erro?.message).toMatch(/agent_no_reply/);
     expect(enviados).toHaveLength(0);
     expect(JSON.stringify(ultimoResultadoDeTool)).toMatch(/template_desconhecido/);
+    await confirmaAvisoDaFalha();
   });
 });
 

@@ -138,8 +138,16 @@ function montaHandler() {
       },
     },
     log: m.createLogger(),
-    registry: m.createFakeRegistry((async () => {
+    registry: m.createFakeRegistry((async (opts: { toolChoice?: { type: string; toolName?: string } }) => {
       modeloChamado += 1;
+      if (opts.toolChoice?.type === 'tool' && opts.toolChoice.toolName === 'send_message') {
+        return {
+          content: [{ type: 'tool-call' as const, toolCallId: 'recuperacao-1', toolName: 'send_message', input: JSON.stringify({ body: 'Entendi! Vou te ajudar com essa consulta.' }) }],
+          finishReason: { unified: 'tool-calls' as const, raw: undefined },
+          usage: USO,
+          warnings: [],
+        };
+      }
       return {
         content: [
           {
@@ -368,6 +376,7 @@ describe("a porta: o handler real de inbound_turn", () => {
     const jobId = await rodaHandler(msg365);
 
     expect(modeloChamado).toBeGreaterThan(0);
+    expect(enviados).toBe(1);
     const { rows } = await pool.query<{ ok: boolean }>(
       `select (payload->>'ultima_inbound_vista_em')::timestamptz = $2::timestamptz as ok
          from job_queue where id = $1`,
