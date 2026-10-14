@@ -1957,6 +1957,16 @@ percorridas pelo browser. Spec: `tests/e2e/i18n-espanhol-na-tela.spec.ts`.
 Evidência: `evidence/i18n-es/01-inbox-em-espanhol.png` e
 `evidence/i18n-es/02-inbox-de-volta-em-portugues.png`.
 
+Ampliação da jornada de idioma e tema: a mesma spec agora visita 12 áreas
+(caixa de entrada, funil, contatos, métricas, configurações, equipe, conexões,
+seguimentos, fontes de conhecimento, evolução, configuração da plataforma e
+Google). Ela troca o idioma pelo seletor real, detecta rótulos conhecidos que
+permanecem sem tradução, verifica a data, retorna ao português e mede no CSS
+renderizado o fundo `#111827`, os cartões `#1f2937`, o menu `#171f2d` e a
+seleção azul `#2563eb`. A captura do tema novo fica em
+`evidence/i18n-es/03-settings-dark.png`. A verificação de texto estático cobre
+também as telas que não aparecem nessas 12 rotas.
+
 **Achados, todos consertados neste mesmo passe:**
 
 1. **A troca se desfazia sozinha na primeira navegação.** O `revalidatePath`

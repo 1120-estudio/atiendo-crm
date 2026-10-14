@@ -249,7 +249,7 @@ export function SidebarContent({
                     type="button"
                     onClick={() => toggleGrupo(group.id)}
                     aria-expanded={aberto}
-                    className="flex w-full items-center justify-between rounded-md px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-navigation-hover hover:text-foreground"
+                    className="sidebar-nav-hover flex w-full items-center justify-between rounded-md px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
                   >
                     {t(group.label)}
                     <CaretDown
@@ -283,8 +283,8 @@ export function SidebarContent({
                           className={cn(
                             "relative flex items-center gap-3 rounded-md px-3 py-1 text-sm transition-colors",
                             isActive
-                              ? "bg-navigation-active text-navigation-fg"
-                              : "text-muted-foreground hover:bg-navigation-hover hover:text-foreground",
+                              ? "sidebar-nav-active"
+                              : "sidebar-nav-hover text-muted-foreground hover:text-foreground",
                             collapsed && "justify-center px-2",
                           )}
                         >
@@ -309,8 +309,8 @@ export function SidebarContent({
                         className={cn(
                           "flex items-center gap-3 rounded-md px-3 py-1 text-sm transition-colors",
                           pathname === group.hub.href
-                            ? "bg-navigation-active text-navigation-fg"
-                            : "text-muted-foreground hover:bg-navigation-hover hover:text-foreground",
+                            ? "sidebar-nav-active"
+                            : "sidebar-nav-hover text-muted-foreground hover:text-foreground",
                           collapsed && "justify-center px-2",
                         )}
                       >
@@ -335,8 +335,8 @@ export function SidebarContent({
             className={cn(
               "mb-1 flex items-center gap-3 rounded-md px-3 py-1 text-sm transition-colors",
               pathname.startsWith(rodape.href)
-                ? "bg-navigation-active text-navigation-fg"
-                : "text-muted-foreground hover:bg-navigation-hover hover:text-foreground",
+                ? "sidebar-nav-active"
+                : "sidebar-nav-hover text-muted-foreground hover:text-foreground",
               collapsed && "justify-center px-2",
             )}
           >
@@ -351,7 +351,7 @@ export function SidebarContent({
             onClick={() => startTransition(() => toggleSidebar(collapsed))}
             disabled={isPending}
             className={cn(
-              "flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-navigation-hover hover:text-foreground",
+              "sidebar-nav-hover flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:text-foreground",
               collapsed && "justify-center px-2",
             )}
             aria-label={collapsed ? t("Expandir sidebar") : t("Recolher sidebar")}

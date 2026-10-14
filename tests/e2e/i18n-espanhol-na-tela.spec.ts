@@ -420,7 +420,7 @@ test.describe("o idioma escolhido chega à tela", () => {
     const colores = await page.evaluate(() => {
       const root = getComputedStyle(document.documentElement);
       const sidebar = document.querySelector("aside");
-      const seleccion = document.querySelector("aside .bg-navigation-active");
+      const seleccion = document.querySelector("aside .sidebar-nav-active");
       return {
         fondo: root.getPropertyValue("--color-bg").trim(),
         tarjeta: root.getPropertyValue("--color-surface").trim(),

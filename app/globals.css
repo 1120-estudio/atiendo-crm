@@ -909,6 +909,18 @@
   }
 }
 
+/* Navegação usa o token no momento de pintar. O alias em `@theme inline`
+   pode ser expandido pela marca durante o build e manter o verde claro mesmo
+   no tema escuro; as classes diretas respeitam a variável vigente no DOM. */
+.sidebar-nav-active {
+  background-color: var(--color-navigation-active);
+  color: var(--color-navigation-fg);
+}
+
+.sidebar-nav-hover:hover {
+  background-color: var(--color-navigation-hover);
+}
+
 /* ---- Agenda · a coluna de horários que desliza para dentro ----------------
    O painel de marcação tem três tempos (escolher dia → escolher horário →
    confirmar) e a coluna de horários NÃO existe no primeiro. Quando o dia é
