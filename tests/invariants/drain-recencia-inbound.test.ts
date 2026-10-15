@@ -14,9 +14,9 @@ import { GOV_ORG, GOV_SESSION, GOV_CONV_UNASSIGNED, GOV_CONTACT_1, seedGov, sql 
  * o drain deixava passar um evento que devia ter sido pulado — a IA respondendo
  * mensagem velha.
  *
- * A correção usa `coalesce(sent_at, created_at) desc, created_at desc, id desc`
- * (padrão do repo — migration 0027). `created_at` é a ordem de INGESTÃO (uma
- * mensagem por webhook), então empate de `sent_at` desempata determinístico.
+ * A recência de despacho é a de INGESTÃO: `created_at` primeiro, para
+ * não descartar uma mensagem entregue depois só porque foi enviada antes.
+ * O relógio original do provider é preservado e desempata recepções iguais.
  *
  * Este invariante roda a MESMA cláusula contra Postgres real, com duas linhas de
  * `sent_at` idêntico, e prova que a de `created_at` mais novo vence — para
@@ -32,7 +32,7 @@ const MSG_ANTIGA = "aaaaaaaa-0000-4000-8000-0000000000f9";
 const MSG_NOVA = "aaaaaaaa-0000-4000-8000-0000000000a1";
 
 /** Cláusula EXATA do drain.ts (mantida em sincronia à mão — a cerca é o ponto). */
-const ORDER_BY = "order by coalesce(sent_at, created_at) desc, created_at desc, id desc";
+const ORDER_BY = "order by created_at desc, coalesce(sent_at, created_at) desc, id desc";
 
 function ultimaInbound(): string {
   return sql(`select id from public.messages
