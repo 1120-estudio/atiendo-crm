@@ -34,7 +34,7 @@ it.each([false, true])('entrada entregue fora de ordem não some; resposta anter
   await insertMessage(late, 'inbound', 'Quiero información de consolas', t(0), t(62));
   const event = async (message: string) => {
     const { rows } = await pool.query<{ id: string }>(`insert into event_log(organization_id,event_type,entity_kind,entity_id,payload,status)
-      values($1,'ai_agent.dispatch_requested','message',$2,jsonb_build_object('organization_id',$1::text,'conversation_id',$3::text,
+      values($1::uuid,'ai_agent.dispatch_requested','message',$2::uuid,jsonb_build_object('organization_id',$1::text,'conversation_id',$3::text,
       'contact_id',$4::text,'channel_session_id',$5::text,'inbound_message_id',$2::text),'pending') returning id`,
     [org, message, conv, contact, session]);
     return rows[0]!.id;
