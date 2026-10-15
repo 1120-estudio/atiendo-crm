@@ -167,6 +167,16 @@ export const CONFERENCIAS_DE_SAIDA: readonly ConferenciaDeSaida[] = [
     camada: null,
   },
   {
+    nome: "catalogo",
+    rotulo: "Consultar o catálogo antes de recomendar produtos",
+    oQueProtege:
+      "Quando a busca de produtos está habilitada, detecta respostas comerciais sem consulta e perguntas sobre variantes não confirmadas nos resultados.",
+    escolha: null,
+    porQueNaoSeDesliga:
+      "Evita oferecer opções inventadas. A conferência acompanha a capacidade de catálogo habilitada no agente e não acrescenta chamadas de IA.",
+    camada: null,
+  },
+  {
     nome: "disclosure",
     rotulo: "Dizer que é um assistente quando perguntam",
     oQueProtege: "Se o cliente pergunta se está falando com um robô, a resposta não pode enganar.",

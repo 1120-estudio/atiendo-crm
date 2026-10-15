@@ -12,7 +12,7 @@ describe('catálogo antes da recomendação', () => {
     expect(avaliarConsultaCatalogo(body, { disponivel: true, consultou: false }))
       .toMatchObject({ pass: false, code: 'catalogo_sin_consulta' });
   });
-  it.each(['¡Hola! Soy tu asistente.', 'Gracias por escribirnos.', '¿Qué tipo de herramienta buscas?'])('não força busca para %s', body => {
+  it.each(['¡Hola! Soy tu asistente.', 'Gracias por escribirnos.', '¿Qué tipo de herramienta buscas?', 'Gracias por tu nueva consulta.', '¿Quieres una nueva foto?'])('não força busca para %s', body => {
     expect(avaliarConsultaCatalogo(body, { disponivel: true, consultou: false })).toEqual({ pass: true });
   });
   it('não impõe ferramenta que o agente não tem', () => {

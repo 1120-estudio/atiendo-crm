@@ -11243,6 +11243,15 @@ export const DICIONARIO: Traducoes = {
   },
 
   // ─── lib/ai/guardrails/lista-de-conferencia.ts (Painel de Segurança) ───
+  "Consultar o catálogo antes de recomendar produtos": {
+    es: "Consultar el catálogo antes de recomendar productos",
+  },
+  "Quando a busca de produtos está habilitada, detecta respostas comerciais sem consulta e perguntas sobre variantes não confirmadas nos resultados.": {
+    es: "Cuando la búsqueda de productos está habilitada, detecta respuestas comerciales sin consulta y preguntas sobre variantes no confirmadas en los resultados.",
+  },
+  "Evita oferecer opções inventadas. A conferência acompanha a capacidade de catálogo habilitada no agente e não acrescenta chamadas de IA.": {
+    es: "Evita ofrecer opciones inventadas. La comprobación acompaña la capacidad de catálogo habilitada en el agente y no añade llamadas de IA.",
+  },
   "Não prometer checar a agenda sem checar de verdade": {
     es: "No prometer revisar la agenda sin hacerlo de verdad",
   },

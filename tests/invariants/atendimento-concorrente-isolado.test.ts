@@ -38,14 +38,19 @@ afterAll(() => pool.end());
 describe('atendimentos concorrentes sem destinatários reais', () => {
   it.each([5, 10, 20])('%i conversas: sem omissões, duplicatas ou mistura de contexto', async quantidade => {
     const orgs = [await org(), await org()];
-    const fixtures = new Map<string, { org: string; contact: string; conv: string; session: string; first: string; second: string }>();
-    for (let n = 0; n < quantidade; n++) {
-      const organization = orgs[n % 2]!;
-      const contact = randomUUID(), conv = randomUUID(), session = randomUUID();
-      const first = `Consulta inicial ${contact}`, second = `Complemento ${contact}`;
-      await pool.query(`insert into contacts(id,organization_id,name,phone_number) values($1,$2,'Cliente sintético',$3)`, [contact, organization, `+000${String(n).padStart(8, '0')}`]);
+    const fixtures = new Map<string, { org: string; contact: string; conv: string; session: string; first: string; second: string; terminal: boolean }>();
+    const sessions = new Map<string, string>();
+    for (const organization of orgs) {
+      const session = randomUUID();
+      sessions.set(organization, session);
       await pool.query(`insert into channel_sessions(id,organization_id,provider,waha_session_name,status,webhook_secret_encrypted)
         values($1::uuid,$2,'waha',$1::text,'WORKING','\\x00'::bytea)`, [session, organization]);
+    }
+    for (let n = 0; n < quantidade; n++) {
+      const organization = orgs[n % 2]!;
+      const contact = randomUUID(), conv = randomUUID(), session = sessions.get(organization)!;
+      const first = `Consulta inicial ${contact}`, second = `Complemento ${contact}`;
+      await pool.query(`insert into contacts(id,organization_id,name,phone_number) values($1,$2,'Cliente sintético',$3)`, [contact, organization, `+000${String(n).padStart(8, '0')}`]);
       await pool.query(`insert into conversations(id,organization_id,contact_id,channel_session_id,status,is_group)
         values($1,$2,$3,$4,'open',false)`, [conv, organization, contact, session]);
       const msgs = [randomUUID(), randomUUID()];
@@ -56,7 +61,7 @@ describe('atendimentos concorrentes sem destinatários reais', () => {
       const entrada = { kind: 'inbound_turn' as const, leadId: contact, sourceEventId, payload: { conversation_id: conv, contact_id: contact, channel_session_id: session, inbound_message_id: msgs[1], crm_event_id: sourceEventId } };
       const { job } = await enqueueJob(pool, organization, entrada);
       expect((await enqueueJob(pool, organization, entrada)).job.id).toBe(job.id);
-      fixtures.set(job.id, { org: organization, contact, conv, session, first, second });
+      fixtures.set(job.id, { org: organization, contact, conv, session, first, second, terminal: quantidade === 20 && n === 0 });
     }
     const vistos = new Set<string>(), envios = new Map<string, number>(), ativos = new Set<string>();
     let pico = 0, reparos = 0;
@@ -82,13 +87,13 @@ describe('atendimentos concorrentes sem destinatários reais', () => {
             const prompt = JSON.stringify(opts.prompt);
             if (prompt.includes('Feche o turno AGORA')) {
               fechamento++; reparos += fechamento === 2 ? 1 : 0;
-              return texto(fechamento === 1 ? '{"declaracao":{"chave_extra":true}}' : resumo);
+              return texto(fechamento === 1 || f.terminal ? '{"declaracao":{"chave_extra":true}}' : resumo);
             }
             if (prompt.includes('tool-result')) return texto('');
             expect(prompt).toContain(f.first); expect(prompt).toContain(f.second);
             expect(prompt).toContain('Mensagens pendentes do cliente');
             for (const outra of fixtures.values()) if (outra.contact !== f.contact) expect(prompt).not.toContain(outra.contact);
-            return { content: [{ type: 'tool-call' as const, toolCallId: `send-${job.id}`, toolName: 'send_message', input: JSON.stringify({ body: `Recibí tu consulta y su complemento, cliente ${f.contact.slice(0, 8)}.` }) }], finishReason: { unified: 'tool-calls' as const, raw: undefined }, usage: uso, warnings: [] };
+            return { content: [{ type: 'tool-call' as const, toolCallId: `send-${job.id}`, toolName: 'send_message', input: JSON.stringify({ body: `Recibido ${f.contact.slice(0, 8)} ${f.contact.slice(9, 13)} ${f.contact.slice(14, 18)} ${f.contact.slice(19, 23)}.` }) }], finishReason: { unified: 'tool-calls' as const, raw: undefined }, usage: uso, warnings: [] };
           }) as never),
           channel: () => ({ channel: 'captura', send: async (input: { tenantId: string; leadId: string; conversationId: string }) => {
             expect(input.tenantId).toBe(f.org); expect(input.leadId).toBe(f.contact); expect(input.conversationId).toBe(f.conv);
@@ -97,8 +102,14 @@ describe('atendimentos concorrentes sem destinatários reais', () => {
           }, sessionHealth: async () => ({ healthy: true, status: 'WORKING' }), capabilities: () => ({ freeform: true, media: true, audio: true }), costPerMessage: () => ({ currency: 'BRL', cents: 0 }) }) as never,
           clock: () => new Date('2026-10-14T15:00:00Z'), sleep: async () => {},
         });
-        await executar(job, pool, { workerId: job.locked_by! });
-        await completeJob(pool, job.id, job.locked_by!, undefined, claimOfJob(job)!.acquired_at);
+        if (f.terminal) {
+          await expect(executar(job, pool, { workerId: job.locked_by! })).rejects.toThrow('checkpoint inválido após resposta');
+          const alerta = await pool.query('select count(*)::int as n from agent_inbox_items where organization_id=$1 and ref_id=$2', [f.org, job.id]);
+          expect(alerta.rows[0].n).toBe(1);
+        } else {
+          await executar(job, pool, { workerId: job.locked_by! });
+          await completeJob(pool, job.id, job.locked_by!, undefined, claimOfJob(job)!.acquired_at);
+        }
         expect(fechamento).toBe(2);
         vistos.add(job.id); ativos.delete(f.contact);
       }));
@@ -107,10 +118,11 @@ describe('atendimentos concorrentes sem destinatários reais', () => {
     expect([...envios.values()]).toEqual(Array(quantidade).fill(1));
     expect(reparos).toBe(quantidade);
     expect(pico).toBeLessThanOrEqual(8);
-    const { rows } = await pool.query('select status,count(*)::int as n from job_queue where organization_id=any($1::uuid[]) group by status', [orgs]);
-    expect(rows).toEqual([{ status: 'done', n: quantidade }]);
+    const { rows } = await pool.query('select status,count(*)::int as n from job_queue where organization_id=any($1::uuid[]) group by status order by status', [orgs]);
+    const terminais = quantidade === 20 ? 1 : 0;
+    expect(rows).toEqual(terminais ? [{ status: 'dead', n: 1 }, { status: 'done', n: quantidade - 1 }] : [{ status: 'done', n: quantidade }]);
     const checkpoints = await pool.query('select count(*)::int as n from lead_checkpoints where organization_id=any($1::uuid[])', [orgs]);
-    expect(checkpoints.rows[0].n).toBe(quantidade);
+    expect(checkpoints.rows[0].n).toBe(quantidade - terminais);
     esperas.sort((a,b) => a-b);
     console.info(JSON.stringify({ bancada: 'modelo_e_canal_sinteticos', conversas: quantidade, pico, envios: envios.size, reparos, espera_p95_ms: Math.round(esperas[Math.ceil(esperas.length * .95) - 1]!), duracao_ms: Math.round(performance.now() - inicio) }));
   }, 120_000);

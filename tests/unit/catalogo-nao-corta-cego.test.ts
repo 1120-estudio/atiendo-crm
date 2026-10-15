@@ -215,6 +215,7 @@ describe("o count ausente não pode virar 'varri o catálogo inteiro'", () => {
     const db = fakeDb(12000, 1000, true);
     const r = await buscar(db, "produto que nao existe em lugar nenhum");
     expect(r.produtos).toHaveLength(0);
+    expect(r.motivo).toBe("varredura_parcial");
     expect(
       r.mensagem ?? "",
       "afirmou 'a loja não tem' depois de varrer 10 mil de 12 mil",

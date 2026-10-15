@@ -115,10 +115,9 @@ describe("busca de produtos do agente: 'não achei' não é sucesso (#484)", () 
       { termo: "iphone", somente_disponiveis: true },
     );
 
-    // 1) A conversa NÃO muda: o modelo continua recebendo a resposta honesta.
-    //    O defeito era a auditoria, não a fala do agente.
+    // 1) O modelo recebe o vazio honesto, sem inferir ausência de categoria.
     expect(resposta).toMatchObject({ produtos: [] });
-    expect((resposta as { mensagem: string }).mensagem).toContain("não há nada com esse nome");
+    expect((resposta as { mensagem: string }).mensagem).toContain("No encontré coincidencias");
 
     // 2) A auditoria para de dizer sucesso — é esse `success: false` que
     //    `fn_agent_tool_usage` conta como falha.

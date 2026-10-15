@@ -56,7 +56,9 @@ export function criarConsultaCatalogo(): {
 /** Rede lexical PT/ES, não um classificador semântico nem prova de todas as alegações. */
 export function avaliarConsultaCatalogo(body: string, estado?: ConsultaCatalogo): GateVerdict {
   if (!estado?.disponivel) return { pass: true };
-  const texto = normalizar(body);
+  // ‘Nueva foto/mensaje’ não é condição de produto. Não force catálogo para
+  // uma cortesia ou uma pergunta sobre a conversa.
+  const texto = normalizar(body).replace(/\b(?:nuev[oa]s?|nov[oa]s?)\s+(fotos?|imagenes?|imagens?|mensajes?|mensagens?|consultas?|respuestas?|respostas?|conversaciones?|conversas?)\b/g, '$1');
   // A pergunta oferece uma opção, mesmo sem afirmar estoque. Não derive
   // “com fio” de “cabo de carga”, nem “novo/usado” de uma regra genérica de vendas.
   const pergunta = /[?¿]|\b(?:prefieres|quieres|buscas|necesitas|prefere|quer|procura)\b/.test(texto);
