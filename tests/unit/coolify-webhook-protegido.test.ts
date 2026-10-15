@@ -36,6 +36,9 @@ describe("fronteira do compose 1120", () => {
       );
     }
   });
+  it("permite configurar la espera de mensajes en el worker, con ocho segundos por defecto", () => {
+    expect(service("worker")).toContain("INBOUND_DEBOUNCE_MS: ${INBOUND_DEBOUNCE_MS:-8000}");
+  });
   it("o header secreto não é arquivado e a guarda antecede a consulta", () => {
     const source = readFileSync("app/api/v1/webhooks/waha/route.ts", "utf8");
     expect(source).toContain('if (key.toLowerCase() === "x-waha-webhook-secret") return;');
