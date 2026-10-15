@@ -57,5 +57,14 @@ describe('o pedido completo da rajada, não só a mensagem que dispara o job', (
     const abertura = abrir([['inbound', CONSOLAS], ['inbound', HERRAMIENTAS], ['inbound', correcao]], correcao);
     expect(pendentes(abertura)).toEqual([CONSOLAS, HERRAMIENTAS, correcao]);
     expect(abertura).toContain('respeite a correção mais recente');
+    expect(abertura).toContain('nem em fotos, sugestões ou perguntas finais');
+  });
+
+  it('a correção isolada também retira ofertas descartadas da memória anterior', () => {
+    const correcao = 'No, mejor solo el taladro';
+    const abertura = abrir([['inbound', CONSOLAS], ['outbound', 'Te muestro una consola'], ['inbound', correcao]], correcao);
+    expect(pendentes(abertura)).toBeNull();
+    expect(abertura).toContain('não volte a oferecer o pedido descartado');
+    expect(abertura).toContain('sugestões, fotos e perguntas finais');
   });
 });

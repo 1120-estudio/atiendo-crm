@@ -98,6 +98,8 @@ export const DECLARACAO_INSTRUCTION =
   'com o trecho da conversa que mostra isso. Em "promessas", tudo que você prometeu a ela — ' +
   'inclusive "vou verificar e te aviso" — com o prazo quando houver combinado um. ' +
   'Se o turno não teve nem intenção nem promessa, mande "nada_a_declarar": true e as duas listas vazias. ' +
+  'Use SOMENTE intencoes, promessas e nada_a_declarar dentro de declaracao. ' +
+  'As intenções devem refletir o pedido vigente após as correções do cliente; pedidos cancelados não são intenções ativas. ' +
   'Nunca invente: sem trecho que sustente, não declare.';
 
 /**

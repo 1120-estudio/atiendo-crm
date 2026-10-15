@@ -57,7 +57,7 @@ export function normalizar(texto: string): string {
  * Curta de propósito: lista grande de stopword começa a comer termo que importa
  * ("pro", "air", "max" são modelo, não ruído).
  */
-const RUIDO = new Set(["de", "do", "da", "com", "para", "por", "the", "e", "o", "a", "um", "uma"]);
+const RUIDO = new Set(["de", "do", "da", "com", "para", "por", "the", "e", "o", "a", "um", "uma", "y", "el", "la", "los", "las", "con", "un", "una"]);
 
 export interface TokensDaBusca {
   /** Tokens difusos — casam por prefixo/semelhança. */

@@ -159,7 +159,7 @@ export const crmSearchProducts: McpToolDefinition<typeof produtosInputShape> = {
   name: "crm_search_products",
   description:
     "Busca no catálogo da loja e devolve o PREÇO EXATO, o que está disponível e o código de cada " +
-    "produto. Use SEMPRE que a pessoa perguntar preço, e responda com o valor que voltar aqui — " +
+    "produto. Use ANTES de recomendar, perguntar variantes, informar características, disponibilidade ou preço. Responda com os dados que voltar aqui — " +
     "nunca com um valor que você lembra ou estima: preço errado dito a um cliente é promessa que a " +
     "loja terá de cumprir ou desfazer. " +
     "Passe o que a pessoa escreveu, do jeito que ela escreveu: a busca entende erro de digitação " +
@@ -311,7 +311,7 @@ export const crmSearchProducts: McpToolDefinition<typeof produtosInputShape> = {
               : `o catálogo desta loja tem ${total}. `) +
             "NÃO diga que a loja não tem — diga que vai confirmar com a equipe. Se a pessoa souber " +
             "o código ou o nome exato, peça: com ele a busca acha."
-          : "não há nada com esse nome no catálogo da loja. Não invente preço — diga que vai confirmar com a equipe.",
+          : "No encontré coincidencias para ese término. Esto no demuestra que no exista toda una categoría: puede faltar su clasificación. Prueba un término relacionado sustentado por el contexto o pregunta el tipo, nombre o código. No inventes variantes, precios ni existencias.",
       };
     }
 

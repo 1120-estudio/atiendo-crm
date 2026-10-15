@@ -107,6 +107,7 @@ function fakeDb(total: number, tetoDoServidor = 1000, contaOculta = false) {
 const buscar = (db: ReturnType<typeof fakeDb>, termo: string) =>
   crmSearchProducts.handler({ termo, limite: 5 } as never, db.ctx) as Promise<{
     produtos: unknown[];
+    motivo?: string;
     mensagem?: string;
   }>;
 
@@ -163,7 +164,7 @@ describe("catálogo maior que o teto do servidor", () => {
     expect(msg.length, "não achou e não disse por quê").toBeGreaterThan(20);
   });
 
-  it("catálogo pequeno segue afirmando ausência — e deve", async () => {
+  it("catálogo pequeno declara que não encontrou o termo sem inferir categoria", async () => {
     // Controle na direção oposta. Sem este caso, um "conserto" que nunca mais
     // afirmasse ausência passaria — e o agente deixaria de dizer "não temos"
     // para produto que a loja realmente não tem, que é informação útil.
@@ -171,7 +172,9 @@ describe("catálogo maior que o teto do servidor", () => {
     const r = await buscar(db, "coisa que nao existe em lugar nenhum");
 
     expect(r.produtos).toEqual([]);
-    expect(String(r.mensagem)).toMatch(/não há nada com esse nome no catálogo/i);
+    expect(r.motivo).toBe("nao_encontrado");
+    expect(String(r.mensagem)).toMatch(/No encontré coincidencias/);
+    expect(String(r.mensagem)).toContain("puede faltar su clasificación");
   });
 
   it("a varredura tem teto declarado — não puxa catálogo de 200 mil linhas para a memória", async () => {
@@ -225,7 +228,8 @@ describe("o count ausente não pode virar 'varri o catálogo inteiro'", () => {
     const db = fakeDb(2500, 1000, true);
     const r = await buscar(db, "produto que nao existe em lugar nenhum");
     expect(r.produtos).toHaveLength(0);
-    expect(r.mensagem ?? "").toMatch(/não há nada com esse nome/i);
+    expect(r.motivo).toBe("nao_encontrado");
+    expect(r.mensagem ?? "").toMatch(/No encontré coincidencias/);
   });
 
   it("⭐ sem count, o TAMANHO do catálogo também não é afirmado — nada de 'tem null'", async () => {

@@ -1,6 +1,6 @@
 ---
 impacto: nada_mudou
 secao: corrigido
-titulo: El agente considera juntas las consultas enviadas en mensajes consecutivos
+titulo: Atención completa de mensajes consecutivos con catálogo y recuperación del resumen
 ---
-Cuando el cliente envía varias consultas seguidas antes de recibir respuesta, el turno presenta explícitamente los mensajes pendientes en orden. Un complemento como «Y herramientas» ya no recibe una instrucción que lo prioriza de forma aislada sobre «Consolas de videojuegos». Conserva las correcciones del cliente y la referencia al mensaje del trabajo, sin volver a presentar como pendientes consultas anteriores a la última respuesta. No requiere migraciones ni cambios de configuración.
+El agente recibe juntas las consultas pendientes en orden y una instrucción explícita para respetar las rectificaciones también en sugerencias, fotos y preguntas finales. Cuando dispone de la búsqueda de productos, debe consultar antes de recomendar: el control de envío detecta respuestas comerciales sin consulta y preguntas sobre variantes no confirmadas. Si el resumen final tiene formato inválido, se intenta corregir solo el resumen; si vuelve a fallar después de responder, el trabajo termina con un aviso visible para revisión humana, sin repetir la atención. No requiere migraciones ni cambios de configuración.
