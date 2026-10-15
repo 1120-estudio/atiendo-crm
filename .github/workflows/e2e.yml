@@ -1966,6 +1966,15 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Captura del control de catálogo en Seguridad
+        if: always() && matrix.parte == 1
+        uses: actions/upload-artifact@v7
+        with:
+          name: seguridad-catalogo
+          path: test-results/**/seguridad-catalogo.png
+          if-no-files-found: warn
+          retention-days: 7
+
       # ── ONDE A MEDIÇÃO FICA ───────────────────────────────────────────────
       # A medição que só existe no log se perde: quem decide repartir as listas
       # é quem olha o resumo do job, e o resumo é este. Os três relógios saem

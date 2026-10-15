@@ -139,6 +139,8 @@ test.describe("A aba do papel que organiza o sistema", () => {
     // Número escrito à mão envelhece calado; a expressão acompanha a lista.
     const itens = painel.locator('[data-testid^="item-conferencia-"]');
     await expect(itens).toHaveCount([...CONFERENCIAS_DE_SAIDA, CONFERENCIA_DE_ENTRADA].length);
+    await expect(painel.getByTestId("item-conferencia-catalogo")).toBeVisible();
+    await pagina.screenshot({ path: test.info().outputPath("seguridad-catalogo.png"), fullPage: true });
 
     // EXATAMENTE DOIS interruptores de CONFERÊNCIA — um por camada que custa
     // dinheiro. Este caso já afirmou ZERO, e a mudança é deliberada: enquanto o

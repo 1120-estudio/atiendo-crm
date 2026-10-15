@@ -50,6 +50,10 @@
 #  30. mais de 30 PRs abertos: o gate pede --limit, senão o gh corta calado em 30.
 set -uo pipefail
 
+# Os PRs desta bancada são fictícios. O número do workflow externo não é
+# identidade de nenhum deles (em Actions do PR #7 ele escondia o fixture #7).
+unset GITHUB_REF
+
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GATE_ORIGEM="$RAIZ/scripts/checar-colisao-de-migration.sh"
 
