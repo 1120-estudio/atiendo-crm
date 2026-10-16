@@ -59,6 +59,30 @@ export type FotosPreparadas =
   | { ok: false; code: 'produto_nao_encontrado'; message: string };
 
 /**
+ * Se o modelo omitir produto_codigo, só resolve um SKU escrito no pedido ATUAL
+ * e confirmado como único no catálogo ativo da organização. Não adivinha pelo
+ * nome, não reaproveita pedido antigo e não escolhe entre dois produtos.
+ */
+export async function resolverCodigoFotoNoPedido(
+  db: Queryable,
+  tenantId: string,
+  pedido: string,
+): Promise<string | undefined> {
+  if (!solicitaFoto(pedido)) return undefined;
+  const tokens = [...new Set((pedido.match(/[a-z0-9]+(?:[-_][a-z0-9]+)*/gi) ?? [])
+    .filter(token => /[a-z]/i.test(token) && /[0-9]/.test(token))
+    .map(token => token.toLowerCase()))];
+  if (tokens.length === 0) return undefined;
+  const { rows } = await db.query<{ codigo: string }>(
+    `select codigo from catalog_products
+      where organization_id = $1 and ativo and lower(codigo) = any($2::text[])
+      limit 2`,
+    [tenantId, tokens],
+  );
+  return rows.length === 1 ? rows[0]!.codigo : undefined;
+}
+
+/**
  * Acha o produto pelo código e deixa as fotos dele prontas na pasta da conversa.
  *
  * Produto que não existe (ou está desativado) é erro de ENSINO, antes de enviar

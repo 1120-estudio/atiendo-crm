@@ -78,6 +78,7 @@ import {
   copiarFotoNoStorage,
   enviarComFotos,
   prepararFotosDoProduto,
+  resolverCodigoFotoNoPedido,
   type FotoParaEnvio,
 } from './fotos-do-produto';
 import { prometeFotoSemAnexo } from './pedido-de-foto';
@@ -3308,11 +3309,14 @@ async function executarTurnoDoAgente(
         let fotosDoProduto: FotoParaEnvio[] = [];
         let fotosQueFaltaram = 0;
         let fotosJaEnviadas = 0;
-        if (produto_codigo !== undefined && produto_codigo.trim() !== '' && !preview) {
+        const codigoParaFoto = produto_codigo?.trim() || (!preview
+          ? await resolverCodigoFotoNoPedido(pool, tenantId, mensagemDoJob)
+          : undefined);
+        if (codigoParaFoto && !preview) {
           const preparadas = await prepararFotosDoProduto(pool, copiarFotoNoStorage(runLog), {
             tenantId,
             conversationId: input.conversationId,
-            codigo: produto_codigo,
+            codigo: codigoParaFoto,
             reenviar: reenviar_fotos,
             jobId: liveJob().id,
             pedidoCliente: mensagemDoJob,
@@ -3323,6 +3327,11 @@ async function executarTurnoDoAgente(
           fotosDoProduto = preparadas.fotos;
           fotosQueFaltaram = preparadas.tinha - preparadas.fotos.length;
           fotosJaEnviadas = preparadas.jaEnviadas ?? 0;
+          runLog.info('preparação de foto do produto concluída', {
+            codigo_no_argumento: Boolean(produto_codigo?.trim()),
+            fotos_preparadas: fotosDoProduto.length,
+            fotos_omitidas: fotosJaEnviadas,
+          });
           if (fotosJaEnviadas > 0) {
             runLog.info('fotos já enviadas neste atendimento — mantida resposta sem repetição', {
               fotos_omitidas: fotosJaEnviadas,
@@ -3331,13 +3340,13 @@ async function executarTurnoDoAgente(
         }
         if (!preview && prometeFotoSemAnexo(body, mensagemDoJob, fotosDoProduto.length)) {
           runLog.warn('promessa de foto sem anexo recusada antes do envio', {
-            produto_informado: Boolean(produto_codigo?.trim()),
+            produto_informado: Boolean(codigoParaFoto),
           });
           return {
             ok: false,
             error: {
               code: 'foto_sem_anexo',
-              message: produto_codigo?.trim()
+              message: codigoParaFoto
                 ? 'Nenhuma foto ficou pronta para este envio. Não diga que enviou ou que está anexada. Explique a indisponibilidade da foto ou solicite apoio.'
                 : 'O texto afirma envio de foto, mas não há anexo. Para foto de produto, consulte o catálogo se necessário e chame send_message com produto_codigo e a legenda. Só escrever que enviou não manda imagem. Para outro tipo de imagem, use a ferramenta apropriada; se não puder enviar, explique sem afirmar envio.',
             },
@@ -3638,7 +3647,7 @@ async function executarTurnoDoAgente(
                 ok: true,
                 status: 'enviada',
                 message_id: outcome.messageId,
-                ...(produto_codigo !== undefined ? { fotos_enviadas: fotosDoProduto.length } : {}),
+                ...(codigoParaFoto !== undefined ? { fotos_enviadas: fotosDoProduto.length } : {}),
                 ...(fotosJaEnviadas > 0 ? { fotos_ja_enviadas: fotosJaEnviadas } : {}),
                 ...(fotosQueFaltaram > 0
                   ? {
