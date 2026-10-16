@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, expect, it, vi } from 'vitest';
 import pg from 'pg';
-import { prepararFotosDoProduto } from '@/lib/agent-engine/agent/fotos-do-produto';
+import { prepararFotosDoProduto, resolverCodigoFotoNoPedido } from '@/lib/agent-engine/agent/fotos-do-produto';
 
 if (!process.env.TEST_DB_CONTAINER) throw new Error('Rode por pnpm test:db — banco efêmero, nunca produção.');
 const pool = new pg.Pool({ connectionString: `postgresql://postgres:postgres@127.0.0.1:${process.env.TEST_DB_PORT ?? 54329}/postgres`, max: 2 });
@@ -21,6 +21,20 @@ async function fixture() {
   const path = `${org}/${conv}/catalogo-${photo.split('/').pop()}`;
   return { org, conv, contact, session, path };
 }
+
+it('código escrito no pedido precisa ser único e ativo na própria organização', async () => {
+  const a = await fixture(), b = await fixture();
+  await pool.query("update catalog_products set codigo='TEST1' where organization_id=any($1::uuid[])", [[a.org, b.org]]);
+  expect(await resolverCodigoFotoNoPedido(pool, a.org, 'Envíame la foto del test1')).toBe('TEST1');
+  expect(await resolverCodigoFotoNoPedido(pool, b.org, 'Envíame la foto del TEST1')).toBe('TEST1');
+  await pool.query(`insert into catalog_products(organization_id,codigo,nome,preco_cents)
+    values($1,'TEST2','Outro teste',100)`, [a.org]);
+  expect(await resolverCodigoFotoNoPedido(pool, a.org, 'Envíame fotos TEST1 y TEST2')).toBeUndefined();
+  expect(await resolverCodigoFotoNoPedido(pool, a.org, 'Envíame la foto del TEST999')).toBeUndefined();
+  await pool.query("update catalog_products set ativo=false where organization_id=$1 and codigo='TEST1'", [a.org]);
+  // O TEST1 da outra organização continua ativo; não pode resolver por ele.
+  expect(await resolverCodigoFotoNoPedido(pool, a.org, 'Envíame la foto del TEST1')).toBeUndefined();
+});
 
 it('foto aceita não se repete; falha, novo atendimento e pedido explícito permitem envio', async () => {
   const f = await fixture(), other = await fixture();

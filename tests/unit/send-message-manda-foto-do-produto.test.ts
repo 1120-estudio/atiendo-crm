@@ -32,6 +32,8 @@ describe("send_message leva a foto do produto", () => {
     expect(recusa).toBeLessThan(cadeia);
     expect(corpoDoSend).toContain("code: 'foto_sem_anexo'");
     expect(corpoDoSend).toContain("pedidoCliente: mensagemDoJob");
+    expect(corpoDoSend).toContain("await resolverCodigoFotoNoPedido(pool, tenantId, mensagemDoJob)");
+    expect(corpoDoSend).toContain("codigo: codigoParaFoto");
   });
   it("o modelo enxerga o campo produto_codigo, opcional", () => {
     const schema = AGENT_TOOL_DEFS.send_message.inputSchema;

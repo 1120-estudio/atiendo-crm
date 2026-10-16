@@ -4,6 +4,8 @@ import { prometeFotoSemAnexo, solicitaFoto } from './pedido-de-foto';
 describe('pedido atual de foto', () => {
   it.each([
     'Sí, envíame la foto otra vez',
+    'Envíame otra vez la foto del taladro SF777',
+    'Reenvíame la foto',
     'Mándame las fotos del producto',
     '¿Puedes enviarme una imagen?',
     'Quiero ver la foto del taladro',
@@ -37,6 +39,9 @@ describe('não afirmar envio de foto sem anexo', () => {
   });
   it.each([
     'Te envío la foto del producto.',
+    'Claro 😊 Te la reenvío aquí.',
+    'Voy a reenviar la foto.',
+    'Te reenviei a foto.',
     'Aquí tienes la imagen.',
     'Voy a enviar la foto.',
     'Adjunto la foto.',
@@ -49,6 +54,7 @@ describe('não afirmar envio de foto sem anexo', () => {
     'Si quieres, te paso la foto otra vez.',
     'No puedo enviar la foto en este momento.',
     'No te la envío porque no quedó disponible.',
+    'No te la reenvío porque no quedó disponible.',
     'El envío cuesta ₡3.500.',
     'La foto muestra el producto; el envío se cotiza aparte.',
     'No tengo una foto disponible; voy a consultar al equipo.',
@@ -58,6 +64,9 @@ describe('não afirmar envio de foto sem anexo', () => {
   });
   it('sem pedido de foto não interpreta referência a outra informação como imagem', () => {
     expect(prometeFotoSemAnexo('Te la envío aquí.', 'Necesito la dirección', 0)).toBe(false);
+  });
+  it('reclamação sobre foto ausente também impede nova promessa sem arquivo', () => {
+    expect(prometeFotoSemAnexo('Ahora sí te la reenvío aquí.', 'No me enviaste la foto', 0)).toBe(true);
   });
 });
 

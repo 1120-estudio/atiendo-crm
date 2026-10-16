@@ -82,7 +82,7 @@
       "lane": "agent",
       "col": 3,
       "type": "service",
-      "label": "send_message com produto_codigo (pedido atual permite reenvio; promessa sem anexo é recusada)"
+      "label": "send_message (SKU único no pedido resolve adjunto omitido; promessa sem anexo é recusada)"
     },
     {
       "id": "copia",
