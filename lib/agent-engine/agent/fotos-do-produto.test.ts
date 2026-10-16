@@ -50,12 +50,12 @@ describe("prepararFotosDoProduto — a foto do catálogo vai para a pasta da con
     expect(consulta?.[1]).toEqual([ORG, CONVERSA, enviadas, null]);
   });
 
-  it("pedido explícito permite reenviar as fotos já enviadas", async () => {
+  it.each([{ reenviar: true }, { pedidoCliente: "Sí, envíame la foto otra vez" }])("pedido explícito permite reenviar as fotos já enviadas: %j", async (pedido) => {
     const destino = `${ORG}/${CONVERSA}/catalogo-${CAPA.split('/').pop()}`;
     const { db, query } = banco({ id: PRODUTO, fotos: [CAPA] }, [destino]);
     const copiar = vi.fn(async () => true);
     const resultado = await prepararFotosDoProduto(db, copiar, {
-      tenantId: ORG, conversationId: CONVERSA, codigo: "SF777", reenviar: true,
+      tenantId: ORG, conversationId: CONVERSA, codigo: "SF777", ...pedido,
     });
     expect(resultado.ok && resultado.fotos).toEqual([{ storagePath: destino, mime: "image/jpeg" }]);
     expect(query).toHaveBeenCalledTimes(1);

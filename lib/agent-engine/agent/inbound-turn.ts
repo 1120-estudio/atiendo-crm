@@ -80,6 +80,7 @@ import {
   prepararFotosDoProduto,
   type FotoParaEnvio,
 } from './fotos-do-produto';
+import { prometeFotoSemAnexo } from './pedido-de-foto';
 import { enqueueJob, rescheduleJob, type JobRow, type Queryable } from '../queue/queue';
 import {
   applyLeadStateUpdate,
@@ -221,7 +222,9 @@ export const AGENT_TOOL_DEFS = {
   },
   send_message: {
     description:
-      'Envia UMA mensagem de WhatsApp ao lead desta conversa. É o ÚNICO jeito de falar com o lead; texto fora desta tool nunca é enviado.',
+      'Envia UMA mensagem de WhatsApp ao lead desta conversa. É o ÚNICO jeito de falar com o lead; texto fora desta tool nunca é enviado. ' +
+      'Para enviar a foto de um produto, inclua produto_codigo com o código confirmado no catálogo. ' +
+      'Só escrever que vai enviar a foto NÃO anexa imagem. Se o cliente pedir a foto novamente, informe o produto_codigo também.',
     inputSchema: z.object({
       body: z.string().min(1).describe('corpo da mensagem, em pt-br, pronto para envio'),
       produto_codigo: z
@@ -3312,6 +3315,7 @@ async function executarTurnoDoAgente(
             codigo: produto_codigo,
             reenviar: reenviar_fotos,
             jobId: liveJob().id,
+            pedidoCliente: mensagemDoJob,
           });
           if (!preparadas.ok) {
             return { ok: false, error: { code: preparadas.code, message: preparadas.message } };
@@ -3324,6 +3328,20 @@ async function executarTurnoDoAgente(
               fotos_omitidas: fotosJaEnviadas,
             });
           }
+        }
+        if (!preview && prometeFotoSemAnexo(body, mensagemDoJob, fotosDoProduto.length)) {
+          runLog.warn('promessa de foto sem anexo recusada antes do envio', {
+            produto_informado: Boolean(produto_codigo?.trim()),
+          });
+          return {
+            ok: false,
+            error: {
+              code: 'foto_sem_anexo',
+              message: produto_codigo?.trim()
+                ? 'Nenhuma foto ficou pronta para este envio. Não diga que enviou ou que está anexada. Explique a indisponibilidade da foto ou solicite apoio.'
+                : 'O texto afirma envio de foto, mas não há anexo. Para foto de produto, consulte o catálogo se necessário e chame send_message com produto_codigo e a legenda. Só escrever que enviou não manda imagem. Para outro tipo de imagem, use a ferramenta apropriada; se não puder enviar, explique sem afirmar envio.',
+            },
+          };
         }
         // F4-04: sinaliza (independente do gate F4-01/F4-08) se ESTA candidata é uma
         // promessa fora de tabela — usado só para correlacionar com o jailbreak no fim do
