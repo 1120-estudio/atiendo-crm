@@ -229,8 +229,13 @@ export const AGENT_TOOL_DEFS = {
         .optional()
         .describe(
           'código de um produto do catálogo (o `codigo` de crm_search_products) que tem `fotos`: ' +
-            'as fotos dele vão junto, e o texto vira a legenda da primeira',
+            'as fotos ainda não enviadas neste atendimento vão junto, e o texto vira a legenda da primeira. ' +
+            'Não ofereça enviar depois a foto que está anexando agora. Para complementar preço ou características, ' +
+            'responda ao que falta sem repetir a apresentação do produto.',
         ),
+      reenviar_fotos: z.boolean().optional().describe(
+        'Use true apenas quando o cliente pedir explicitamente as fotos novamente; por padrão fotos já enviadas não se repetem.',
+      ),
     }),
   },
   update_lead_state: {
@@ -3239,7 +3244,7 @@ async function executarTurnoDoAgente(
     }),
     send_message: tool({
       ...AGENT_TOOL_DEFS.send_message,
-      execute: async ({ body, produto_codigo }) => {
+      execute: async ({ body, produto_codigo, reenviar_fotos }) => {
         if (recuperandoResposta && !admitirEnvioDeRecuperacao()) {
           return { ok: false, error: { code: 'recovery_send_limit', message: 'A recuperação já tentou enviar. Encerre este turno sem outro envio.' } };
         }
@@ -3299,17 +3304,26 @@ async function executarTurnoDoAgente(
         // segue (degradar para só texto). Ver `agent/fotos-do-produto.ts`.
         let fotosDoProduto: FotoParaEnvio[] = [];
         let fotosQueFaltaram = 0;
+        let fotosJaEnviadas = 0;
         if (produto_codigo !== undefined && produto_codigo.trim() !== '' && !preview) {
           const preparadas = await prepararFotosDoProduto(pool, copiarFotoNoStorage(runLog), {
             tenantId,
             conversationId: input.conversationId,
             codigo: produto_codigo,
+            reenviar: reenviar_fotos,
+            jobId: liveJob().id,
           });
           if (!preparadas.ok) {
             return { ok: false, error: { code: preparadas.code, message: preparadas.message } };
           }
           fotosDoProduto = preparadas.fotos;
           fotosQueFaltaram = preparadas.tinha - preparadas.fotos.length;
+          fotosJaEnviadas = preparadas.jaEnviadas ?? 0;
+          if (fotosJaEnviadas > 0) {
+            runLog.info('fotos já enviadas neste atendimento — mantida resposta sem repetição', {
+              fotos_omitidas: fotosJaEnviadas,
+            });
+          }
         }
         // F4-04: sinaliza (independente do gate F4-01/F4-08) se ESTA candidata é uma
         // promessa fora de tabela — usado só para correlacionar com o jailbreak no fim do
@@ -3607,6 +3621,7 @@ async function executarTurnoDoAgente(
                 status: 'enviada',
                 message_id: outcome.messageId,
                 ...(produto_codigo !== undefined ? { fotos_enviadas: fotosDoProduto.length } : {}),
+                ...(fotosJaEnviadas > 0 ? { fotos_ja_enviadas: fotosJaEnviadas } : {}),
                 ...(fotosQueFaltaram > 0
                   ? {
                       aviso: `${fotosQueFaltaram} foto(s) do produto não puderam ser enviadas; o texto foi. Não diga ao cliente que mandou essas fotos.`,

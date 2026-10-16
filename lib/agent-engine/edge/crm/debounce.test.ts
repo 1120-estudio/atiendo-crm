@@ -70,3 +70,23 @@ it('janelaDeRajada: sem debounce não há janela; com debounce a janela é agora
   expect(janelaDeRajada(0, AGORA)).toBeUndefined();
   expect(janelaDeRajada(750, AGORA)?.getTime()).toBe(AGORA + 750);
 });
+
+it.each([2_000, 8_000, 15_000])('chegadas separadas por 9730ms com janela %ims', async (janela) => {
+  let agora = AGORA;
+  let pendente = false;
+  const fecha = AGORA + janela;
+  const pool = poolFalso(() => pendente && fecha > agora ? [{ id: 'primeiro' }] : []);
+  const primeira = await decidirRajada(pool, alvo, janela, agora);
+  expect(primeira.tipo).toBe('enfileirar');
+  if (primeira.tipo !== 'enfileirar') throw new Error('primeiro turno ausente');
+  expect(primeira.runAfter?.getTime()).toBe(fecha);
+  pendente = true;
+  agora += 9_730;
+  const segunda = await decidirRajada(pool, alvo, janela, agora);
+  if (janela === 15_000) {
+    expect(segunda).toEqual({ tipo: 'coalescido', jobId: 'primeiro' });
+    expect(fecha).toBe(AGORA + 15_000);
+  } else {
+    expect(segunda.tipo).toBe('enfileirar');
+  }
+});

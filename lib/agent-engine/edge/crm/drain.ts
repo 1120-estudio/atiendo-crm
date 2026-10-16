@@ -310,31 +310,24 @@ async function processEvent(
     return 'processado';
   }
 
-  // ANTI-BACKLOG (toda instalação, sem knob): a mensagem que disparou este
-  // evento ainda é a última inbound da conversa? Se já veio inbound mais nova,
-  // ESTE evento está superado — a mensagem nova tem o próprio evento, e o turno
-  // dela lê o histórico inteiro (esta mensagem inclusa). Sem isto, um worker que
-  // ficou parado (deploy, OOM na VPS) acorda e drena o backlog em ordem de
-  // `created_at`, disparando um turno para CADA mensagem antiga — a IA
-  // respondendo conversa de dias atrás. Vira done, sem job, sem gasto.
-  //
-  // R7: o desempate. `order by sent_at desc, id desc` cai no `id` — uuid
-  // aleatório, não cronológico — sempre que dois inbound compartilham `sent_at`
-  // (relógio do provider repetido, ou duas mensagens na mesma janela sem
-  // timestamp). "A última" saía por sorteio e podia eleger a ANTIGA, disparando
-  // o turno dela. `coalesce(sent_at, created_at)` (defensivo — `sent_at` é
-  // `not null default now()` hoje, mas o padrão do repo, ver migration 0027, não
-  // confia nisso) com desempate por `created_at` (ordem de INGESTÃO, uma
-  // mensagem por webhook) dá recência determinística.
+  // ANTI-BACKLOG: só o evento da última inbound RECEBIDA abre o turno;
+  // os demais viajam no histórico. A ordem de entrega pode ser diferente da
+  // ordem de envio: uma mensagem antiga no relógio do provider pode chegar
+  // DEPOIS de o agente responder à segunda. Ordenar primeiro por sent_at
+  // descartava essa entrada ainda não atendida para sempre, sem job nem erro.
+  // created_at é a ordem de ingestão no CRM. sent_at continua preservado para
+  // a cronologia do diálogo; aqui serve só de desempate, seguido do id.
+  // O corte de backlog continua valendo: não abre um job para cada evento
+  // acumulado, apenas para a entrada recebida por último.
   const { rows: ultimaInbound } = await pool.query<{ id: string }>(
     `select id from messages
      where organization_id = $1 and conversation_id = $2 and direction = 'inbound'
-     order by coalesce(sent_at, created_at) desc, created_at desc, id desc
+     order by created_at desc, coalesce(sent_at, created_at) desc, id desc
      limit 1`,
     [event.organization_id, p.conversation_id],
   );
   if (ultimaInbound[0] !== undefined && ultimaInbound[0].id !== p.inbound_message_id) {
-    log.info('drain: evento superado por inbound mais recente — turno pulado (sem gasto)', {
+    log.info('drain: evento superado por inbound recebida depois — turno pulado (sem gasto)', {
       event_id: event.id,
       inbound_message_id: p.inbound_message_id,
       ultima_inbound_id: ultimaInbound[0].id,

@@ -54,7 +54,7 @@ export function copiarFotoNoStorage(log: Log): CopiarFoto {
 }
 
 export type FotosPreparadas =
-  | { ok: true; fotos: FotoParaEnvio[]; tinha: number }
+  | { ok: true; fotos: FotoParaEnvio[]; tinha: number; jaEnviadas?: number }
   | { ok: false; code: 'produto_nao_encontrado'; message: string };
 
 /**
@@ -68,7 +68,7 @@ export type FotosPreparadas =
 export async function prepararFotosDoProduto(
   db: Queryable,
   copiar: CopiarFoto,
-  input: { tenantId: string; conversationId: string; codigo: string },
+  input: { tenantId: string; conversationId: string; codigo: string; reenviar?: boolean; jobId?: string },
 ): Promise<FotosPreparadas> {
   const { rows } = await db.query<{ id: string; fotos: string[] | null }>(
     'select id, fotos from catalog_products where organization_id = $1 and codigo = $2 and ativo',
@@ -89,12 +89,44 @@ export async function prepararFotosDoProduto(
   const deste = (produto.fotos ?? []).filter((c) =>
     fotoPertenceAoProduto(c, input.tenantId, produto.id),
   );
+  const destinos = deste.map((origem) =>
+    `${input.tenantId}/${input.conversationId}/catalogo-${origem.split('/').pop()}`,
+  );
+  // Reusar o objeto no Storage não impede um novo envio no WhatsApp. Só uma
+  // saída efetivamente enviada/aceita neste atendimento evita a repetição;
+  // tentativas falhas não consomem a foto. O pedido explícito permite reenviar.
+  const enviadas = new Set<string>();
+  if (!input.reenviar && destinos.length > 0) {
+    const { rows: anteriores } = await db.query<{ media_storage_path: string }>(
+      `select distinct m.media_storage_path from messages m
+         join conversations c on c.id = m.conversation_id
+           and c.organization_id = m.organization_id
+        where m.organization_id = $1 and m.conversation_id = $2
+          and m.direction = 'outbound' and m.type = 'image'
+          and m.media_storage_path = any($3::text[])
+          and m.created_at >= coalesce(c.service_started_at, '-infinity'::timestamptz)
+          -- Replay do próprio job preserva a sequência das fotos e as chaves
+          -- idempotentes do send_ledger. A supressão é ENTRE turnos.
+          and ($4::uuid is null or not exists (
+            select 1 from send_ledger replay where replay.organization_id = $1
+              and replay.crm_message_id = m.id and replay.job_id = $4::uuid))
+          and (m.status in ('sent', 'delivered', 'read') or exists (
+            select 1 from send_ledger s where s.organization_id = $1
+              and s.crm_message_id = m.id and s.status in ('accepted', 'queued')))`,
+      [input.tenantId, input.conversationId, destinos, input.jobId ?? null],
+    );
+    for (const anterior of anteriores) enviadas.add(anterior.media_storage_path);
+  }
   const fotos: FotoParaEnvio[] = [];
   for (const origem of deste) {
     const destino = `${input.tenantId}/${input.conversationId}/catalogo-${origem.split('/').pop()}`;
+    if (enviadas.has(destino)) continue;
     if (await copiar(origem, destino)) fotos.push({ storagePath: destino, mime: mimeDaFoto(origem) });
   }
-  return { ok: true, fotos, tinha: deste.length };
+  return {
+    ok: true, fotos, tinha: deste.length - enviadas.size,
+    ...(enviadas.size > 0 ? { jaEnviadas: enviadas.size } : {}),
+  };
 }
 
 /**
