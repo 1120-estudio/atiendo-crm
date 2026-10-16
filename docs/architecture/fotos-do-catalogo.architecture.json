@@ -82,7 +82,7 @@
       "lane": "agent",
       "col": 3,
       "type": "service",
-      "label": "send_message com produto_codigo (fotos novas; reenviar_fotos por pedido explícito)"
+      "label": "send_message com produto_codigo (pedido atual permite reenvio; promessa sem anexo é recusada)"
     },
     {
       "id": "copia",

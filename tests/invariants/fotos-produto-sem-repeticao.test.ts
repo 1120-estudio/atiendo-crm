@@ -40,6 +40,10 @@ it('foto aceita não se repete; falha, novo atendimento e pedido explícito perm
 
   const reenvio = await prepararFotosDoProduto(pool, copiar, { ...input, reenviar: true });
   expect(reenvio.ok && reenvio.fotos).toHaveLength(1);
+  const pedidoDireto = await prepararFotosDoProduto(pool, copiar, {
+    ...input, pedidoCliente: 'Sí, envíame la foto otra vez',
+  });
+  expect(pedidoDireto.ok && pedidoDireto.fotos).toHaveLength(1);
   // Mesmo código noutra organização e outra conversa não herda a supressão.
   const alheio = await prepararFotosDoProduto(pool, copiar, {
     tenantId: other.org, conversationId: other.conv, codigo: 'TEST',

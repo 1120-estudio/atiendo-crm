@@ -25,6 +25,14 @@ const corpoDoSend = (() => {
 })();
 
 describe("send_message leva a foto do produto", () => {
+  it("recusa promessa sem foto antes da cadeia e leva o pedido atual à preparação", () => {
+    const recusa = corpoDoSend.indexOf("prometeFotoSemAnexo(body, mensagemDoJob, fotosDoProduto.length)");
+    const cadeia = corpoDoSend.indexOf("runBeforeSend(beforeSendArgs)");
+    expect(recusa).toBeGreaterThan(-1);
+    expect(recusa).toBeLessThan(cadeia);
+    expect(corpoDoSend).toContain("code: 'foto_sem_anexo'");
+    expect(corpoDoSend).toContain("pedidoCliente: mensagemDoJob");
+  });
   it("o modelo enxerga o campo produto_codigo, opcional", () => {
     const schema = AGENT_TOOL_DEFS.send_message.inputSchema;
     expect(schema.safeParse({ body: "oi" }).success).toBe(true);

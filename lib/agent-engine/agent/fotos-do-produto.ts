@@ -19,6 +19,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 import type { Queryable } from '../queue/queue';
 import { OK_KINDS, type BubbleOutcome } from './split-message';
+import { solicitaFoto } from './pedido-de-foto';
 
 /** Teto de legenda de imagem do WhatsApp. Texto maior sai como texto, antes das fotos. */
 export const LIMITE_DA_LEGENDA = 1024;
@@ -68,7 +69,7 @@ export type FotosPreparadas =
 export async function prepararFotosDoProduto(
   db: Queryable,
   copiar: CopiarFoto,
-  input: { tenantId: string; conversationId: string; codigo: string; reenviar?: boolean; jobId?: string },
+  input: { tenantId: string; conversationId: string; codigo: string; reenviar?: boolean; jobId?: string; pedidoCliente?: string },
 ): Promise<FotosPreparadas> {
   const { rows } = await db.query<{ id: string; fotos: string[] | null }>(
     'select id, fotos from catalog_products where organization_id = $1 and codigo = $2 and ativo',
@@ -96,7 +97,7 @@ export async function prepararFotosDoProduto(
   // saída efetivamente enviada/aceita neste atendimento evita a repetição;
   // tentativas falhas não consomem a foto. O pedido explícito permite reenviar.
   const enviadas = new Set<string>();
-  if (!input.reenviar && destinos.length > 0) {
+  if (!(input.reenviar || solicitaFoto(input.pedidoCliente ?? '')) && destinos.length > 0) {
     const { rows: anteriores } = await db.query<{ media_storage_path: string }>(
       `select distinct m.media_storage_path from messages m
          join conversations c on c.id = m.conversation_id
