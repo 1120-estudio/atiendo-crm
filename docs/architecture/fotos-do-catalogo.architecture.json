@@ -82,7 +82,7 @@
       "lane": "agent",
       "col": 3,
       "type": "service",
-      "label": "send_message com produto_codigo (cadeia before_send)"
+      "label": "send_message com produto_codigo (fotos novas; reenviar_fotos por pedido explícito)"
     },
     {
       "id": "copia",
@@ -153,7 +153,7 @@
       "id": "7",
       "from": "envio",
       "to": "copia",
-      "label": "antes da cadeia; falhou = só texto"
+      "label": "antes da cadeia; omite fotos aceitas no atendimento; falhou = só texto"
     },
     {
       "id": "8",

@@ -15,12 +15,65 @@ const CONVERSA = "cccccccc-0000-4000-8000-000000000001";
 const CAPA = `${ORG}/${PRODUTO}/11111111-2222-4333-8444-555555555555.jpg`;
 const SEGUNDA = `${ORG}/${PRODUTO}/66666666-7777-4888-8999-000000000000.png`;
 
-function banco(linha: { id: string; fotos: string[] | null } | null) {
-  const query = vi.fn(async (_sql: string, _valores: unknown[]) => ({ rows: linha ? [linha] : [] }));
+function banco(linha: { id: string; fotos: string[] | null } | null, enviadas: string[] = []) {
+  const query = vi.fn(async (sql: string, _valores: unknown[]) => ({
+    rows: sql.includes('from catalog_products') ? (linha ? [linha] : []) :
+      enviadas.map((media_storage_path) => ({ media_storage_path })),
+  }));
   return { db: { query } as never, query };
 }
 
 describe("prepararFotosDoProduto — a foto do catálogo vai para a pasta da conversa", () => {
+  it("duas consultas do mesmo produto: segundo envio é texto e não repete as duas fotos", async () => {
+    const enviadas: string[] = [];
+    const { db, query } = banco({ id: PRODUTO, fotos: [CAPA, SEGUNDA] }, enviadas);
+    const copiar = vi.fn(async () => true);
+    const entrada = { tenantId: ORG, conversationId: CONVERSA, codigo: "SF777" };
+    const enviarTexto = vi.fn(async () => ({ kind: "sent" }));
+    const enviarFoto = vi.fn(async (foto: FotoParaEnvio) => {
+      enviadas.push(foto.storagePath);
+      return { kind: "sent" };
+    });
+    const opts = { enviarTexto, enviarFoto, sleep: async () => undefined, jitter: () => 0 };
+    const primeiro = await prepararFotosDoProduto(db, copiar, entrada);
+    if (!primeiro.ok) throw new Error("produto ausente");
+    await enviarComFotos("Sí, lo tenemos disponible", primeiro.fotos, opts);
+    const segundo = await prepararFotosDoProduto(db, copiar, entrada);
+    if (!segundo.ok) throw new Error("produto ausente");
+    await enviarComFotos("Incluye dos baterías y cargador", segundo.fotos, opts);
+
+    expect(enviarFoto).toHaveBeenCalledTimes(2);
+    expect(enviarTexto).toHaveBeenCalledExactlyOnceWith("Incluye dos baterías y cargador");
+    expect(copiar).toHaveBeenCalledTimes(2);
+    expect(segundo).toEqual({ ok: true, fotos: [], tinha: 0, jaEnviadas: 2 });
+    const consulta = query.mock.calls.find(([sql]) => sql.includes("from messages m"));
+    expect(consulta?.[1]).toEqual([ORG, CONVERSA, enviadas, null]);
+  });
+
+  it("pedido explícito permite reenviar as fotos já enviadas", async () => {
+    const destino = `${ORG}/${CONVERSA}/catalogo-${CAPA.split('/').pop()}`;
+    const { db, query } = banco({ id: PRODUTO, fotos: [CAPA] }, [destino]);
+    const copiar = vi.fn(async () => true);
+    const resultado = await prepararFotosDoProduto(db, copiar, {
+      tenantId: ORG, conversationId: CONVERSA, codigo: "SF777", reenviar: true,
+    });
+    expect(resultado.ok && resultado.fotos).toEqual([{ storagePath: destino, mime: "image/jpeg" }]);
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(copiar).toHaveBeenCalledOnce();
+  });
+
+  it("envio parcial anterior só omite a foto aceita; as restantes continuam disponíveis", async () => {
+    const destino = `${ORG}/${CONVERSA}/catalogo-${CAPA.split('/').pop()}`;
+    const { db } = banco({ id: PRODUTO, fotos: [CAPA, SEGUNDA] }, [destino]);
+    const copiar = vi.fn(async () => true);
+    const r = await prepararFotosDoProduto(db, copiar, {
+      tenantId: ORG, conversationId: CONVERSA, codigo: "SF777",
+    });
+    expect(copiar).toHaveBeenCalledExactlyOnceWith(SEGUNDA,
+      `${ORG}/${CONVERSA}/catalogo-${SEGUNDA.split('/').pop()}`);
+    expect(r.ok && { tinha: r.tinha, jaEnviadas: r.jaEnviadas }).toEqual({ tinha: 1, jaEnviadas: 1 });
+  });
+
   it("copia cada foto para whatsapp-media/<org>/<conversa>/, na ordem da tela", async () => {
     const { db, query } = banco({ id: PRODUTO, fotos: [CAPA, SEGUNDA] });
     const copiar = vi.fn(async () => true);
