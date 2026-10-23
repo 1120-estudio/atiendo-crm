@@ -74,6 +74,21 @@ function poolFalso() {
 const LOG = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} } as never;
 
 describe("flywheel vivo", () => {
+  it("exclui turnos já julgados antes de chamar o provedor e antes do limite", async () => {
+    chamadas.length = 0;
+    const { pool } = poolFalso();
+    const { runFlywheelOnce } = await import("../../lib/agent-engine/flywheel/live");
+    await runFlywheelOnce(pool, {} as never, { limit: 10, log: LOG });
+    const query = (pool as unknown as { query: ReturnType<typeof vi.fn> }).query;
+    const [sql, params] = query.mock.calls.find(([sql]) => String(sql).includes('from job_queue'))!;
+    expect(sql).toMatch(/and not exists\s*\(\s*select 1 from flywheel_judge_verdicts/);
+    expect(sql).toContain('v.organization_id = j.organization_id');
+    expect(sql).toContain('v.trace_id = j.id::text');
+    expect(sql).toContain('v.dataset = $2 and v.dimension = $3');
+    expect(sql.indexOf('and not exists')).toBeLessThan(sql.indexOf('limit $1'));
+    expect(params).toEqual([10, 'live', 'memory_hygiene']);
+  });
+
   it("não pede modelo nenhum: deixa a instalação resolver, nos DOIS pontos", async () => {
     chamadas.length = 0;
     const { pool } = poolFalso();

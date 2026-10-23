@@ -12,6 +12,29 @@ owner: Rafael Melgaço
 
 # Spec 10 — AI Agents Module (Runtime, Schema, Endpoints)
 
+## Consumo das tarefas auxiliares
+
+O fechamento (`purpose: checkpoint`) usa `CHECKPOINT_SYSTEM`, uma instrução fixa
+de extração de memória. Recebe o mesmo contexto textual de abertura e os resultados
+do turno (inclusive recuperação), sem reenviar a persona e as regras comerciais do
+`system` conversacional. Mantém a validação estrita e uma tentativa de correção;
+não desliga memória nem muda o modelo configurado no painel de provedores.
+
+O flywheel exclui, antes do limite do lote e de qualquer chamada ao provedor,
+turnos com veredito da mesma organização, trace, dataset e dimensão. O `ON CONFLICT`
+continua protegendo a gravação; não é uma trava de chamadas entre workers simultâneos.
+
+Destino: núcleo (redução de trabalho redundante, sem dependência de extensão).
+Entrada: contexto textual e ferramentas do turno / `job_queue` e vereditos.
+Saída: `lead_checkpoints` / propostas para aprovação. Telemetria: `llm_calls`,
+visível em IA → Execuções; falha de checkpoint usa a recuperação e a Central
+existentes. Memória preserva a continuidade para o próximo turno e o handoff.
+Modelos seguem configuráveis em IA → Provedores; não há novo estado configurável.
+O mapa existente de turno continua com as mesmas arestas e o mesmo fechamento;
+o laço de retorno permanece nos checkpoints e nas propostas aprovadas. Testes
+estruturais medem a composição da chamada e o filtro SQL; a qualidade do resumo
+e a economia efetiva exigem observação após implantação.
+
 ## Recuperação de resposta e latência do inbound
 
 O turno inbound não pode terminar em sucesso sem um envio aceito, transferência
