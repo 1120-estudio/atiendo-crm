@@ -184,7 +184,7 @@ jobs:
       # uma rodada por parte.
       fail-fast: false
       matrix:
-        parte: [1, 2, 3, 4, 5]
+        parte: [1, 2, 3, 4, 5, 6]
     # ─────────────────────────────────────────────────────────────────────────
     # A COBERTURA DEIXA DE SER PROSA DIGITADA À MÃO.
     #
@@ -619,35 +619,55 @@ jobs:
       EXTENSIONS_LOCAL_CATALOG_ORIGIN: "http://127.0.0.1:56331"
       SPECS_PARTE_1: >-
         conversoes-reprocessamento.spec.ts
-        pre-go-live-whatsapp.spec.ts
-        smoke.spec.ts auth.spec.ts error-pages.spec.ts
+        auth.spec.ts
+        error-pages.spec.ts
         icone-da-marca.spec.ts
-        password-recovery.spec.ts signup-journey.spec.ts
-        primeiro-acesso-sem-organizacao.spec.ts
-        rbac-roles.spec.ts inbox-scope.spec.ts reset-password-mfa.spec.ts
-        degradacao-silenciosa.spec.ts vps-webhook-outbound-ssrf.spec.ts
-        kanban-owner-filter.spec.ts queue-assign.spec.ts
-        conversa-vira-lead.spec.ts contato-salva-email.spec.ts
+        inbox-scope.spec.ts
+        degradacao-silenciosa.spec.ts
+        conversa-vira-lead.spec.ts
+        contato-salva-email.spec.ts
         confirmar-dado-do-contato.spec.ts
         credenciais-de-ia.spec.ts
-        risk-radar.spec.ts invite-lifecycle.spec.ts system-update.spec.ts
+        invite-lifecycle.spec.ts
         agente-novo-e-uso.spec.ts
         agente-papeis-operador.spec.ts
-        followup-linguagem.spec.ts followup-ramos.spec.ts
-        wizard-do-funcionario.spec.ts mfa-opcional.spec.ts inbox-responder-citando.spec.ts
+        followup-linguagem.spec.ts
+        followup-ramos.spec.ts
+        inbox-responder-citando.spec.ts
         agenda-tela-do-produto.spec.ts
+        importar-leads-planilha.spec.ts
+        canal-mudo-avisa-na-central.spec.ts
+      # 2026-10-23, run 39962814186: a parte 1 entrou com 929s de preparo
+      # e foi cortada após 751s de suíte, em 107/157 casos, sem caso vermelho.
+      # O prefixo anterior a j20 terminou em ~485s; a cauda passa a outro
+      # runner, com os mesmos seeds. Não aumenta o teto nem remove cobertura.
+      # As durações dos casos restantes só serão conhecidas após a rodada completa.
+      SPECS_PARTE_6: >-
+        pre-go-live-whatsapp.spec.ts
+        smoke.spec.ts
+        password-recovery.spec.ts
+        signup-journey.spec.ts
+        primeiro-acesso-sem-organizacao.spec.ts
+        rbac-roles.spec.ts
+        reset-password-mfa.spec.ts
+        vps-webhook-outbound-ssrf.spec.ts
+        kanban-owner-filter.spec.ts
+        queue-assign.spec.ts
+        risk-radar.spec.ts
+        system-update.spec.ts
+        wizard-do-funcionario.spec.ts
+        mfa-opcional.spec.ts
         notificacoes-diz-o-que-falta.spec.ts
         sons-dos-avisos.spec.ts
         relogio-http-cron-externo.spec.ts
-        j20-elegibilidade-respondi.spec.ts j20-elegibilidade-followup.spec.ts
+        j20-elegibilidade-respondi.spec.ts
+        j20-elegibilidade-followup.spec.ts
         j20-elegibilidade-atendimento-manual.spec.ts
         juntar-contatos-duplicados.spec.ts
         lote-no-quadro-do-funil.spec.ts
         motivos-de-perda-do-funil.spec.ts
-        importar-leads-planilha.spec.ts
         prova-painel-provedores.spec.ts
         relatorio-de-atividades.spec.ts
-        canal-mudo-avisa-na-central.spec.ts
         qa-l12-troca-de-funil.spec.ts
         qa-l12-agente-ia.spec.ts
       # ⚠️ A ORDEM DESTA LISTA NÃO DECIDE A ORDEM DE EXECUÇÃO. O Playwright
@@ -1837,6 +1857,7 @@ jobs:
             3) LISTA="$SPECS_PARTE_3" ;;
             4) LISTA="$SPECS_PARTE_4" ;;
             5) LISTA="$SPECS_PARTE_5" ;;
+            6) LISTA="$SPECS_PARTE_6" ;;
             *) echo "::error::parte ${{ matrix.parte }} sem lista"; exit 1 ;;
           esac
           # Falha alto se a variável vier vazia: sem isto, um typo no nome faria
@@ -2146,7 +2167,7 @@ jobs:
                       dentro { exit }
                     ' .github/workflows/e2e.yml | grep -oE "[a-z0-9-]+\.spec\.ts" | sort -u; }
           NO_DISCO=$(ls tests/e2e/*.spec.ts | wc -l | tr -d " ")
-          RODOU=$( { bloco SPECS_PARTE_1; bloco SPECS_PARTE_2; bloco SPECS_PARTE_3; bloco SPECS_PARTE_4; bloco SPECS_PARTE_5; } | sort -u | wc -l | tr -d " ")
+          RODOU=$( { bloco SPECS_PARTE_1; bloco SPECS_PARTE_2; bloco SPECS_PARTE_3; bloco SPECS_PARTE_4; bloco SPECS_PARTE_5; bloco SPECS_PARTE_6; } | sort -u | wc -l | tr -d " ")
           FORA_LISTA=$(bloco FORA_DO_CI)
           FORA=$(echo "$FORA_LISTA" | grep -c . || true)
           # E o recorte passa a ter CONTROLE, não só um piso.
