@@ -17,6 +17,7 @@ const h = vi.hoisted(() => ({
   create: vi.fn(),
   list: vi.fn(),
   upserts: [] as Record<string, unknown>[],
+  rows: [] as Record<string, unknown>[],
 }));
 vi.mock("@/lib/auth/require-role", () => ({ requireRole: h.role }));
 vi.mock("@/lib/impersonate/support", () => ({ requireSupportWrite: async () => null }));
@@ -42,7 +43,7 @@ vi.mock("@/lib/supabase/admin", () => ({
           h.upserts.push(linha);
           return { error: null };
         },
-        then: (ok: (r: unknown) => unknown) => ok({ data: [], error: null }),
+        then: (ok: (r: unknown) => unknown) => ok({ data: h.rows, error: null }),
       };
       return q;
     },
@@ -62,6 +63,7 @@ const RECUSADO = () => ({ ok: false, response: new Response(null, { status: 403 
 beforeEach(() => {
   vi.clearAllMocks();
   h.upserts = [];
+  h.rows = [];
   h.role.mockResolvedValue(PERMITIDO);
   h.find.mockResolvedValue({ id: "sess-1", archivedAt: null });
   h.list.mockResolvedValue([
@@ -71,6 +73,15 @@ beforeEach(() => {
 });
 
 describe("rota de modelos do canal intermediado", () => {
+  it("expõe os campos exigidos pelo corpo da definição aprovada", async () => {
+    h.rows = [{ name: "pedido", language: "es", status: "APPROVED", parameter_format: "POSITIONAL", components: [{ type: "BODY", text: "Hola {{1}}, falta {{2}}" }] }];
+    const result = await (await GET()).json();
+    expect(result.data.templates[0].slots).toMatchObject([
+      { key: "1", valueKey: "1", expects: "text" },
+      { key: "2", valueKey: "2", expects: "text" },
+    ]);
+  });
+
   it("ler pede agent; sincronizar e criar pedem admin", async () => {
     expect((await GET()).status).toBe(200);
     expect((await post({ acao: "sincronizar" })).status).toBe(200);
