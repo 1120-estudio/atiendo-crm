@@ -35,6 +35,7 @@ function conversa(contactId: string, phoneNumber: string) {
     last_inbound_at: "2026-09-01T10:00:00.000Z",
     // O candidato conserva a origem do inbound no atendimento ainda vigente.
     messages: [{
+      id: `message-${contactId}`,
       organization_id: "org",
       contact_id: contactId,
       conversation_id: conversationId,

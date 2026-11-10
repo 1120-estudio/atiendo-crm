@@ -457,3 +457,4 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20261010195600` | `0446_agendamento_es_con_herramientas` | Nueva versión de plataforma para agendar en español: consulta horarios, reserva, reprograma la misma cita y cancela mediante las herramientas del CRM. Idempotente por hash; preserva versiones anteriores y copias de organizaciones. Apéndice en baseline. |
 
 | `20261010210000` | `0447_documentos_personales_cifrados` | Cifra documentos personales con clave del backend; descifrado exige membresía aceptada, vigente y manager/admin del mismo tenant. |
+| `20261109170000` | `0448_followup_silence_source` | Evita reinscrição repetida do mesmo contato no mesmo fluxo de silêncio para a mesma mensagem recebida, inclusive após cancelamento, com índice único. Registros legados continuam sem origem. |

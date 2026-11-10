@@ -1,5 +1,5 @@
 import { criarConsultaCatalogo, INSTRUCAO_CATALOGO } from './consulta-catalogo';
-import { CheckpointInvalidoError, fecharCheckpoint, registrarFechamentoInvalido } from './fechar-checkpoint';
+import { CheckpointInvalidoError, fecharCheckpoint, registrarFechamentoInvalido, formatarDiagnosticoCheckpoint, orientacaoDeCorrecaoCheckpoint, type DiagnosticoCheckpoint } from './fechar-checkpoint';
 import { prospectingConversationContext } from "@/lib/prospecting/context";
 import { criarTravaDeRecuperacao, recuperarRespostaAusente } from './recuperar-resposta';
 import { setExecutionAgentOperation } from '@/lib/atendimento/fronteira-server';
@@ -614,9 +614,14 @@ export interface LeadCheckpointRow extends Omit<CheckpointContent, 'declaracao'>
  */
 export const CHECKPOINT_INSTRUCTION =
   'Feche o turno AGORA. Responda SOMENTE com um JSON válido no formato ' +
-  '{"commitments": string[], "objections": string[], "next_action": string|null, "rolling_summary": string} ' +
+  'Exemplo JSON válido (substitua os exemplos pelos dados reais): ' +
+  '{"commitments":[],"objections":[],"next_action":null,"rolling_summary":"Resumo factual da conversa"} ' +
   '— compromissos assumidos, objeções do lead, próxima ação e o resumo acumulado ' +
   'da conversa até aqui (inclua o que o resumo anterior já dizia). ' +
+  'Escreva os valores de texto no idioma usado pelo cliente; para uma conversa em espanhol, ' +
+  'use espanhol também no resumo, compromissos, objeções e próxima ação. ' +
+  'Inclua a solicitação mais recente do cliente e o produto mencionado, sem inventar detalhes; ' +
+  'se houver mudança de intenção, priorize a informação mais recente. ' +
   // ⚠️ O REFERENCIAL DE `next_action`, e ele não é zelo de redação.
   //
   // Este JSON é escrito no FECHO do turno: a pergunta já saiu, a resposta ainda
@@ -1405,7 +1410,7 @@ export function parseCheckpointText(text: string): CheckpointContent {
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
   if (start === -1 || end <= start) {
-    throw new CheckpointInvalidoError('fechamento do turno sem JSON de checkpoint');
+    throw new CheckpointInvalidoError('fechamento do turno sem JSON de checkpoint', { tipo: 'sem_json', campo: 'raiz', codigo: 'outro' });
   }
   let raw: unknown;
   try {
@@ -1413,15 +1418,21 @@ export function parseCheckpointText(text: string): CheckpointContent {
   } catch {
     throw new CheckpointInvalidoError(
       'JSON de checkpoint inválido no fechamento do turno',
+      { tipo: 'json_invalido', campo: 'raiz', codigo: 'outro' },
     );
   }
   const parsed = checkpointContentSchema.safeParse(raw);
   if (!parsed.success) {
-    const issues = parsed.error.issues
-      .map((i) => `${i.path.join('.') || '(raiz)'}: ${i.code}`)
-      .join('; ');
+    const issue = parsed.error.issues[0];
+    const campos = ['commitments', 'objections', 'next_action', 'rolling_summary', 'declaracao'] as const;
+    const codigos = ['invalid_type', 'unrecognized_keys', 'too_small', 'invalid_value'] as const;
+    const raiz = issue?.path[0];
+    const campo: DiagnosticoCheckpoint['campo'] = campos.find((c) => c === raiz) ?? 'raiz';
+    const codigo: DiagnosticoCheckpoint['codigo'] = codigos.find((c) => c === issue?.code) ?? 'outro';
+    const diagnostico: DiagnosticoCheckpoint = { tipo: 'estrutura_invalida', campo, codigo };
     throw new CheckpointInvalidoError(
-      `checkpoint do fechamento com shape inválido (${issues})`,
+      `checkpoint do fechamento com shape inválido (${formatarDiagnosticoCheckpoint(diagnostico)})`,
+      diagnostico,
     );
   }
   return parsed.data;
@@ -4695,6 +4706,7 @@ async function executarTurnoDoAgente(
       avisarSemCandidato(preview);
       return;
     }
+    let erroInicialDoCheckpoint: DiagnosticoCheckpoint | undefined;
     const fechar = () => fecharCheckpoint({
       chamar: (correcao) => runModelCall(
         pool,
@@ -4720,7 +4732,7 @@ async function executarTurnoDoAgente(
             ...openingTextOnly,
             ...responseMessages,
             { role: 'user', content: CHECKPOINT_INSTRUCTION + (correcao
-              ? ' O fechamento anterior tinha formato inválido. Gere-o novamente a partir desta conversa. Use somente os campos declarados; não acrescente chaves em declaracao. Não envie outra resposta ao cliente.'
+              ? ` O fechamento anterior tinha formato inválido (${formatarDiagnosticoCheckpoint(erroInicialDoCheckpoint)}). Gere-o novamente a partir desta conversa, corrigindo o campo indicado. ${orientacaoDeCorrecaoCheckpoint(erroInicialDoCheckpoint)} Use somente os campos declarados; não acrescente chaves em declaracao. Não envie outra resposta ao cliente.`
               : '') },
           ],
         },
@@ -4732,7 +4744,10 @@ async function executarTurnoDoAgente(
           '[link da reunião disponível na Agenda]',
         ),
       ),
-      aoCorrigir: () => runLog.warn('checkpoint inválido — recuperação somente do fechamento'),
+      aoCorrigir: (error) => {
+        erroInicialDoCheckpoint = error.diagnostico;
+        runLog.warn('checkpoint inválido — recuperação somente do fechamento', { diagnostico: formatarDiagnosticoCheckpoint(error.diagnostico) });
+      },
     });
     let fechamento: Awaited<ReturnType<typeof fechar>>;
     try {
@@ -4742,11 +4757,13 @@ async function executarTurnoDoAgente(
       // duas gerações falharam, há erro terminal + aviso, nunca sucesso silencioso.
       const respondeu = outcomes.some(o => o.kind === 'sent' || o.kind === 'already_sent') || roteiroRespostaEnviada;
       if (error instanceof CheckpointInvalidoError && !preview && respondeu) {
+        runLog.error('checkpoint inválido após duas tentativas', { primeira: formatarDiagnosticoCheckpoint(erroInicialDoCheckpoint), segunda: formatarDiagnosticoCheckpoint(error.diagnostico) });
         const claim = claimOfJob(liveJob());
         if (claim === undefined) throw error;
         await registrarFechamentoInvalido(pool, {
           organizationId: tenantId, jobId: liveJob().id, workerId: ctx.workerId,
           acquiredAt: claim.acquired_at,
+          diagnostico: error.diagnostico,
         });
         throw new JobSettledError('checkpoint inválido após resposta — falha visível, sem repetir atendimento');
       }
