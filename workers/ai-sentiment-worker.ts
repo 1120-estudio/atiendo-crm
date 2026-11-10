@@ -35,7 +35,7 @@ import { ttlDaAutorizacaoMs } from "@/lib/ai/elegibilidade/gate";
 import { DEFAULT_CLASSIFIER_MODEL } from "@/lib/ai/gateway";
 import { resolverModeloDoPonto } from "@/lib/ai/gateway-binding";
 import { logInvocation, type LogInvocationInput } from "@/lib/ai/log-invocation";
-import { DEFAULT_SENTIMENT_THRESHOLD, SENTIMENT_SYSTEM_PROMPT } from "@/lib/ai/prompts/sentiment";
+import { DEFAULT_SENTIMENT_THRESHOLD, SENTIMENT_SYSTEM_PROMPT, sentimentoExigeAtendimento } from "@/lib/ai/prompts/sentiment";
 import { sentimentPrompt } from "@/lib/ai/prompts/sentiment-context";
 import type { EventRow } from "@/lib/event-log/dispatcher";
 import { normalizarIdioma } from "@/lib/i18n/idiomas";
@@ -467,7 +467,7 @@ export async function processSentiment(event: EventRow): Promise<SentimentResult
     }
 
     // ── Emit alert if below threshold ────────────────────────────────────
-    if (decisao.score < threshold) {
+    if (sentimentoExigeAtendimento(decisao.score, threshold)) {
       const { error: emitErr } = await admin.rpc(
         "emit_event" as never,
         {
