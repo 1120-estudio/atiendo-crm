@@ -413,18 +413,18 @@ describe("GET /api/v1/ai/jev", () => {
     expect(Math.abs(Date.parse(String(par?.[1])) - (Date.now() - 7 * dia))).toBeLessThan(5_000);
   });
 
-  it("clientes irritados: conversas com a nota DO JEV abaixo do mesmo limiar da passagem para humano", async () => {
+  it("clientes irritados: conversas com a nota DO JEV até o mesmo limiar da passagem para humano", async () => {
     const T = DEFAULT_SENTIMENT_THRESHOLD;
     estado.mensagens = [
       { conversa: "c1", nota_do_jev: T - 0.2 },
       { conversa: "c1", nota_do_jev: T - 0.1 }, // o mesmo cliente de novo: conta uma vez
       { conversa: "c2", nota_do_jev: T - 0.01 }, // colado no corte, abaixo
-      { conversa: "c3", nota_do_jev: T }, // no corte não é "abaixo"
+      { conversa: "c3", nota_do_jev: T }, // o valor no corte também chama
       { conversa: "c4", nota_do_jev: T + 0.01 },
       { conversa: "c5", nota_do_jev: null },
     ];
     const { corpo } = await ler();
-    expect(corpo.data.numeros.irritados).toBe(2);
+    expect(corpo.data.numeros.irritados).toBe(3);
   });
 
   it("falha que o Jev já superou (mediu depois dela) não aparece como última falha", async () => {
@@ -474,14 +474,14 @@ describe("GET /api/v1/ai/jev", () => {
       { nota: T - 0.2, nota_do_jev: T - 0.1 }, // os dois chamariam uma pessoa
       { nota: T + 0.5, nota_do_jev: T - 0.2 }, // só o Jev chamaria
       { nota: T - 0.01, nota_do_jev: T + 0.01 }, // um de cada lado do corte
-      { nota: T, nota_do_jev: T + 0.3 }, // no corte não é "abaixo": nenhum chamaria
+      { nota: T, nota_do_jev: T + 0.3 }, // no corte só a IA chamaria
       // Colado nos dois lados do corte: qualquer limiar diferente do real (um
       // 0,5 "neutro" digitado na rota) muda a contagem.
       { nota: T + 0.02, nota_do_jev: T - 0.02 },
       { nota: 0.5, nota_do_jev: null }, // sem par, não entra
     ];
     const { corpo } = await ler();
-    expect(corpo.data.numeros.observacao).toEqual({ dias: 30, comparadas: 5, concordaram: 2 });
+    expect(corpo.data.numeros.observacao).toEqual({ dias: 30, comparadas: 5, concordaram: 1 });
     const consulta = estado.consultas.find((c) => c.tabela === "messages");
     expect(consulta?.eq).toContainEqual(["metadata->>sentiment_engine", "llm"]);
   });
