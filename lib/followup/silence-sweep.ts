@@ -27,8 +27,8 @@ import { StaleServiceBoundaryError, parseServiceBoundary, assertCurrentServiceBo
  * contato já vivo em QUALQUER fluxo da org barra novo enrollment (1 follow-up
  * vivo por lead), 23505 vira skip silencioso (`insertEnrollment` devolve
  * `inserted:false`), nunca erro. Um contato que COMPLETOU ou foi cancelado
- * pode ser re-enrollado na varredura seguinte se continuar silencioso —
- * aceitável no MVP, sem cooldown table.
+ * não pode ser re-enrollado para a mesma mensagem de entrada: o índice de
+ * origem de silêncio mantém essa garantia também após conclusão ou cancelamento.
  *
  * agent_id: `decidirAgenteDoEnrollmentAutomatico` pina o agente publicado que
  * ARMA o pointer (menor uuid se >1). Grafo só de texto fixo nasce com
@@ -207,7 +207,7 @@ type ContactEmbed =
 
 /** Production adapter: `SilenceSweepDb` sobre o client service-role real. */
 export function createSupabaseSilenceSweepDb(admin: SupabaseClient): SilenceSweepDb {
-  const origins = new Map<string, ServiceBoundary>();
+  const origins = new Map<string, { boundary: ServiceBoundary; messageId: string; sentAt: string }>();
   return {
     async loadActiveSilencePointers() {
       const { data, error } = await admin
@@ -256,13 +256,14 @@ export function createSupabaseSilenceSweepDb(admin: SupabaseClient): SilenceSwee
       const { data, error } = await admin
         .from("conversations")
         .select(
-          "id, service_revision, current_demanda_id, demandas!conversations_current_demanda_id_fkey(revision,fechada_em), status, messages!messages_conversation_id_fkey(organization_id,contact_id,conversation_id,service_revision,demanda_id,demanda_revision,sent_at), contact_id, last_inbound_at, contacts:contact_id(tags, is_blocked, ai_authorized_at, phone_number), sessao:channel_session_id(metadata)",
+          "id, service_revision, current_demanda_id, demandas!conversations_current_demanda_id_fkey(revision,fechada_em), status, messages!messages_conversation_id_fkey(id,organization_id,contact_id,conversation_id,service_revision,demanda_id,demanda_revision,sent_at), contact_id, last_inbound_at, contacts:contact_id(tags, is_blocked, ai_authorized_at, phone_number), sessao:channel_session_id(metadata)",
         )
         .eq("organization_id", orgId).eq("demandas.organization_id", orgId)
         .eq("contacts.organization_id", orgId).eq("sessao.organization_id", orgId)
         .eq("messages.organization_id", orgId).eq("messages.direction", "inbound")
         .not("messages.service_revision", "is", null)
         .order("sent_at", { referencedTable: "messages", ascending: false })
+        .order("id", { referencedTable: "messages", ascending: false })
         .limit(1, { referencedTable: "messages" })
         .not("last_inbound_at", "is", null)
         .not("status", "in", `(${CONVERSATION_TERMINAL_STATUSES.join(",")})`);
@@ -270,7 +271,7 @@ export function createSupabaseSilenceSweepDb(admin: SupabaseClient): SilenceSwee
 
       type Row = {
         id: string; service_revision: number; current_demanda_id: string | null; demandas: { revision: number; fechada_em: string | null } | null;
-        status: string; messages: Array<ServiceBoundary & { sent_at: string }>;
+        status: string; messages: Array<ServiceBoundary & { id: string; sent_at: string }>;
         contact_id: string;
         last_inbound_at: string;
         contacts: ContactEmbed;
@@ -281,12 +282,12 @@ export function createSupabaseSilenceSweepDb(admin: SupabaseClient): SilenceSwee
       const ttlMs = ttlDaAutorizacaoMs(process.env);
       const latest = new Map<
         string,
-        { boundary: ServiceBoundary; at: number; tags: string[]; blocked: boolean; permitidoPeloGate: boolean }
+        { boundary: ServiceBoundary; messageId: string; sentAt: string; at: number; tags: string[]; blocked: boolean; permitidoPeloGate: boolean }
       >();
       for (const row of (data ?? []) as unknown as Row[]) {
         const source = row.messages?.[0];
         const boundary = parseServiceBoundary(source);
-        if (!source || !boundary) continue;
+        if (!source?.id || !boundary) continue;
         try {
           assertCurrentServiceBoundary(boundary, { organization_id: orgId, contact_id: row.contact_id,
             conversation_id: row.id, service_revision: row.service_revision, demanda_id: row.current_demanda_id,
@@ -311,7 +312,7 @@ export function createSupabaseSilenceSweepDb(admin: SupabaseClient): SilenceSwee
             }),
           );
           latest.set(row.contact_id, {
-            boundary, at,
+            boundary, messageId: source.id, sentAt: source.sent_at, at,
             tags: row.contacts?.tags ?? [],
             blocked: row.contacts?.is_blocked ?? false,
             permitidoPeloGate: acesso.permite,
@@ -329,7 +330,7 @@ export function createSupabaseSilenceSweepDb(admin: SupabaseClient): SilenceSwee
         if (v.at > cutoff) continue; // conversou depois do corte — não é silêncio
         if (segments.length > 0 && !segments.some((s) => v.tags.includes(s))) continue;
         silentIds.push(contactId);
-        origins.set(`${orgId}:${contactId}`, v.boundary);
+        origins.set(`${orgId}:${contactId}`, { boundary: v.boundary, messageId: v.messageId, sentAt: v.sentAt });
       }
       return silentIds;
     },
@@ -354,15 +355,23 @@ export function createSupabaseSilenceSweepDb(admin: SupabaseClient): SilenceSwee
       // 23505 aqui agora é o índice ORG-WIDE (organization_id, contact_id) —
       // um contato já vivo em QUALQUER fluxo da org barra este insert (Task
       // 8.6: 1 follow-up vivo por lead). Vira skip silencioso, nunca erro.
-      const boundary = origins.get(`${input.organization_id}:${input.contact_id}`);
-      if (!boundary) return { inserted: false };
+      const origin = origins.get(`${input.organization_id}:${input.contact_id}`);
+      if (!origin) return { inserted: false };
+      const { boundary } = origin;
+      // Registros anteriores à migração não têm o id da mensagem de origem.
+      // Se o mesmo fluxo já iniciou após a mensagem atual, não o repita.
+      const previous = await admin.from("followup_enrollments").select("id")
+        .eq("organization_id", input.organization_id).eq("pointer_id", input.pointer_id)
+        .eq("contact_id", input.contact_id).gte("started_at", origin.sentAt).limit(1);
+      if (previous.error) throw new Error(previous.error.message);
+      if (previous.data?.length) return { inserted: false };
       try { await assertServiceBoundarySupabase(admin, boundary); } catch (error) {
         if (error instanceof StaleServiceBoundaryError) return { inserted: false }; throw error;
       }
       const protection=(await protecaoAgendaSupabase(admin,input.organization_id,[input.contact_id])).get(input.contact_id);
       if(protection?.motivo==="leitura_indisponivel") throw new Error("agenda_read_failed");
       if(protection?.adiar) return {inserted:false};
-      const { error } = await admin.from("followup_enrollments").insert({ ...input, conversation_id: boundary.conversation_id, service_boundary: boundary });
+      const { error } = await admin.from("followup_enrollments").insert({ ...input, conversation_id: boundary.conversation_id, service_boundary: boundary, silence_source_message_id: origin.messageId });
       if (error) {
         if (error.code === "23505") return { inserted: false };
         throw new Error(error.message);

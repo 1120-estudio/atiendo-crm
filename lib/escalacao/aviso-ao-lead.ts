@@ -183,9 +183,9 @@ const ABERTURAS_ES: Record<MotivoDoAviso, readonly string[]> = {
     "Estoy transfiriendo esta conversación a una persona del equipo.",
   ],
   outro: [
-    "Esto lo resuelve mejor una persona del equipo. Ya les avisé.",
-    "Prefiero no arriesgarme: pasé tu consulta a una persona del equipo.",
-    "Voy a pedir ayuda a alguien del equipo para que lo vea contigo.",
+    "Te voy a transferir con la persona encargada para que continúe ayudándote 😊.",
+    "Voy a pasar tu conversación al equipo para que alguien continúe ayudándote.",
+    "Tu consulta pasa a la persona encargada, que podrá seguir atendiéndote.",
   ],
 };
 

@@ -35,7 +35,8 @@ import { ttlDaAutorizacaoMs } from "@/lib/ai/elegibilidade/gate";
 import { DEFAULT_CLASSIFIER_MODEL } from "@/lib/ai/gateway";
 import { resolverModeloDoPonto } from "@/lib/ai/gateway-binding";
 import { logInvocation, type LogInvocationInput } from "@/lib/ai/log-invocation";
-import { DEFAULT_SENTIMENT_THRESHOLD, SENTIMENT_SYSTEM_PROMPT } from "@/lib/ai/prompts/sentiment";
+import { DEFAULT_SENTIMENT_THRESHOLD, SENTIMENT_SYSTEM_PROMPT, sentimentoExigeAtendimento } from "@/lib/ai/prompts/sentiment";
+import { sentimentPrompt } from "@/lib/ai/prompts/sentiment-context";
 import type { EventRow } from "@/lib/event-log/dispatcher";
 import { normalizarIdioma } from "@/lib/i18n/idiomas";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -132,7 +133,7 @@ export async function processSentiment(event: EventRow): Promise<SentimentResult
     // ── Load message (programmatic org filter) ────────────────────────────
     const { data: message, error: msgErr } = await admin
       .from("messages")
-      .select("id, body, direction, conversation_id, organization_id, metadata")
+      .select("id, body, direction, conversation_id, organization_id, metadata, sent_at")
       .eq("id", messageId)
       .eq("organization_id", event.organization_id)
       .maybeSingle();
@@ -368,7 +369,19 @@ export async function processSentiment(event: EventRow): Promise<SentimentResult
       let medido: Awaited<ReturnType<typeof classificarComLlm>> | null = null;
       let erroDaIa: unknown = null;
       try {
-        medido = await classificarComLlm(resolvido.model, body);
+        let prompt = body;
+        if (message.conversation_id && message.sent_at) {
+          const { data: historico, error: historicoErro } = await admin.from("messages")
+            .select("id, body, direction")
+            .eq("organization_id", event.organization_id)
+            .eq("conversation_id", message.conversation_id)
+            .lte("sent_at", message.sent_at)
+            .order("sent_at", { ascending: false })
+            .limit(7);
+          if (historicoErro) throw new Error("sentiment_context_unavailable");
+          prompt = sentimentPrompt(body, messageId, historico ?? []);
+        }
+        medido = await classificarComLlm(resolvido.model, prompt);
       } catch (err) {
         erroDaIa = err;
         // A FALHA também vira linha em `llm_calls`. A 0128 fez isso para o seam do
@@ -454,7 +467,7 @@ export async function processSentiment(event: EventRow): Promise<SentimentResult
     }
 
     // ── Emit alert if below threshold ────────────────────────────────────
-    if (decisao.score < threshold) {
+    if (sentimentoExigeAtendimento(decisao.score, threshold)) {
       const { error: emitErr } = await admin.rpc(
         "emit_event" as never,
         {

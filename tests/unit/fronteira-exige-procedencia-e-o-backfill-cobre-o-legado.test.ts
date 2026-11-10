@@ -65,6 +65,7 @@ function conversaLegada(contactId: string, comCarimbo: boolean) {
     messages: comCarimbo
       ? [
           {
+            id: `message-${contactId}`,
             organization_id: "org",
             contact_id: contactId,
             conversation_id: conversationId,

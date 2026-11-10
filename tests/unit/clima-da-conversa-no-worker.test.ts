@@ -88,6 +88,7 @@ interface Consulta {
   in(coluna: string, valores: unknown[]): Consulta;
   not(coluna: string, operador: string, valor: unknown): Consulta;
   gte(coluna: string, valor: unknown): Consulta;
+  lte(coluna: string, valor: unknown): Consulta;
   order(coluna: string, opcoes?: { ascending?: boolean }): Consulta;
   limit(n: number): Consulta;
   maybeSingle(): Promise<{ data: Linha | null; error: null }>;
@@ -150,6 +151,7 @@ function fazerAdmin(banco: Banco, rpcs: Linha[]) {
       in: (col, vals) => (filtros.push((l) => vals.includes(l[col])), c),
       not: (col, _op, val) => (filtros.push((l) => (l[col] ?? null) !== val), c),
       gte: (col, val) => (filtros.push((l) => (l[col] as never) >= (val as never)), c),
+      lte: (col, val) => (filtros.push((l) => (l[col] as never) <= (val as never)), c),
       order: (col, opcoes) => ((ordem = { coluna: col, asc: opcoes?.ascending !== false }), c),
       limit: (n) => ((limite = n), c),
       maybeSingle: () => Promise.resolve({ data: filtradas()[0] ?? null, error: null }),
@@ -246,6 +248,20 @@ beforeEach(() => {
 });
 
 describe("D12 — o clima roda com a chave colada pela tela", () => {
+  it("envia apenas o histórico anterior da mesma conversa e organização ao classificador", async () => {
+    const c = { settings: { llm: { provider: "anthropic" } }, credenciais: [credencial(CRED_ANTHROPIC, "anthropic", "sk-ant-da-tela")] };
+    const banco = montarBanco(c);
+    banco.messages[0]!.sent_at = "2026-11-10T10:03:00Z";
+    banco.messages.push(
+      { id: "anterior", organization_id: ORG, conversation_id: CONV, body: "Hola", direction: "inbound", sent_at: "2026-11-10T10:01:00Z" },
+      { id: "outra", organization_id: randomUUID(), conversation_id: CONV, body: "privado", direction: "inbound", sent_at: "2026-11-10T10:02:00Z" },
+      { id: "futura", organization_id: ORG, conversation_id: CONV, body: "futuro", direction: "inbound", sent_at: "2026-11-10T10:04:00Z" },
+    );
+    const { resultado } = await rodar(c, banco);
+    expect(resultado.skipped).toBe(false);
+    const chamada = vi.mocked(generateObject).mock.calls[0]![0] as { prompt: string };
+    expect(JSON.parse(chamada.prompt)).toEqual({ historial: [{ role: "cliente", text: "Hola" }], mensaje_actual_del_cliente: "já é a terceira vez que eu peço isso" });
+  });
   it("chave da Anthropic cadastrada em Credenciais, .env vazio: o clima é medido", async () => {
     const { resultado, banco } = await rodar({
       settings: { llm: { provider: "anthropic" } },
