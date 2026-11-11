@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { GOV_AGENT_A, GOV_AGENT_B, GOV_MANAGER, GOV_ORG, GOV_PIPELINE, GOV_STAGE, countAs, lastLine, seedGov, sql } from "./gov-helpers";
+import { GOV_ADMIN, GOV_AGENT_A, GOV_AGENT_B, GOV_MANAGER, GOV_VIEWER, GOV_ORG, GOV_PIPELINE, GOV_STAGE, countAs, lastLine, seedGov, sql } from "./gov-helpers";
 
 const A = "b4491111-0000-4000-8000-000000000001";
 const B = "b4491111-0000-4000-8000-000000000002";
@@ -21,7 +21,7 @@ beforeAll(() => {
 });
 
 describe("a otimização preserva a visibilidade original", () => {
-  for (const user of [GOV_AGENT_A, GOV_AGENT_B, GOV_MANAGER, OUTSIDER]) {
+  for (const user of [GOV_AGENT_A, GOV_AGENT_B, GOV_MANAGER, GOV_VIEWER, GOV_ADMIN, OUTSIDER]) {
     it(`conversas seguem fn_can_view_conversation para ${user}`, () => {
       const actual = countAs(user, `select count(*) from conversations where organization_id='${GOV_ORG}'`);
       const expected = Number(lastLine(sql(`select set_config('request.jwt.claims','{"sub":"${user}"}',false); select count(*) from conversations where organization_id='${GOV_ORG}' and fn_can_view_conversation(organization_id,assigned_to_user_id);`)));
