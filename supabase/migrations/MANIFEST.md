@@ -458,3 +458,5 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 
 | `20261010210000` | `0447_documentos_personales_cifrados` | Cifra documentos personales con clave del backend; descifrado exige membresía aceptada, vigente y manager/admin del mismo tenant. |
 | `20261109170000` | `0448_followup_silence_source` | Evita reinscrição repetida do mesmo contato no mesmo fluxo de silêncio para a mesma mensagem recebida, inclusive após cancelamento, com índice único. Registros legados continuam sem origem. |
+
+| `20261111040000` | `0449_visibilidade_consultas` | Calcula el acceso de lectura por organización una vez por consulta y conserva las políticas originales para los demás casos. |
