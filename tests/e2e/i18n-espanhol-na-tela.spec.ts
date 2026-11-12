@@ -446,16 +446,15 @@ test.describe("o idioma escolhido chega à tela", () => {
       .toEqual({
         fondo: "#111827",
         superficieRaiz: "#1f2937",
-        superficieCuerpo: "#1f2937",
-        navegacionCuerpo: "#2563eb",
-        tarjeta: "rgb(31, 41, 55)",
-        menu: "rgb(23, 31, 45)",
-        seleccion: "rgb(37, 99, 235)",
+        superficieCuerpo: "#191919",
+        navegacionCuerpo: "#192846",
+        tarjeta: "rgb(25, 25, 25)",
+        menu: "rgb(21, 21, 21)",
+        seleccion: "rgb(25, 40, 70)",
       });
     await page.screenshot({ path: path.join(EVIDENCIA, "03-settings-dark.png"), fullPage: true });
 
-    // Verifica en el navegador el mismo CSS que emite la opción de marca,
-    // sin persistir preferencias en la cuenta compartida por otras pruebas.
+    // Los colores de Orbit permanecen fijos incluso con una identidad anterior guardada.
     const marca = resolverMarca(
       [camadaDoAmbiente({ APP_ACCENT_HEX: "#7c3aed" })],
       REGUA_DO_PRODUTO,
@@ -471,20 +470,14 @@ test.describe("o idioma escolhido chega à tela", () => {
               page.evaluate(() => {
                 const item = document.querySelector("aside .sidebar-nav-active")!;
                 const tarjeta = document.querySelector("main .bg-surface")!;
-                const muestra = document.createElement("span");
-                item.append(muestra);
-                muestra.style.backgroundColor = "var(--color-accent)";
-                muestra.style.color = "var(--color-accent-fg)";
-                const esperado = getComputedStyle(muestra);
-                const coincide =
-                  getComputedStyle(item).backgroundColor === esperado.backgroundColor &&
-                  getComputedStyle(item).color === esperado.color;
-                muestra.remove();
-                return { coincide, tarjeta: getComputedStyle(tarjeta).backgroundColor };
+                return {
+                  seleccion: getComputedStyle(item).backgroundColor,
+                  tarjeta: getComputedStyle(tarjeta).backgroundColor,
+                };
               }),
             { timeout: PRAZO },
           )
-          .toEqual({ coincide: true, tarjeta: "rgb(31, 41, 55)" });
+          .toEqual({ seleccion: "rgb(25, 40, 70)", tarjeta: "rgb(25, 25, 25)" });
       } finally {
         await estilo.evaluate((nodo) => nodo.parentNode?.removeChild(nodo));
       }
