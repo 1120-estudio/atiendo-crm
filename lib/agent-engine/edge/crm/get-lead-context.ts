@@ -215,7 +215,8 @@ export async function getLeadContext(
   //
   // Filtra por `contact_id` porque deste lado da casa `leadId` é o CONTATO —
   // e é assim que a decisão chega mesmo que o negócio tenha mudado de mãos.
-  const { rows: decisaoRows } = await db.query<DecisionRow>(
+  const [decisaoResult, historyResult, outcomesResult] = await Promise.all([
+    db.query<DecisionRow>(
     `select type, payload, reason, performed_at::text as performed_at
      from crm_lead_activities
      where organization_id = $1
@@ -224,12 +225,9 @@ export async function getLeadContext(
      order by performed_at desc, id desc
      limit 1`,
     [input.tenantId, input.leadId],
-  );
-  const lastHumanDecision = decisaoRows[0] ? paraDecisao(decisaoRows[0]) : null;
-
-  const history: HistoryRow[] = conversationId
-    ? (
-        await db.query<HistoryRow>(
+    ),
+    conversationId
+    ? db.query<HistoryRow>(
           `select direction, type, body, media_url, media_storage_path, media_mime,
                   media_derived_text, sent_at
            from messages
@@ -243,8 +241,14 @@ export async function getLeadContext(
            limit $3`,
           [input.tenantId, conversationId, knobs.historyLimit],
         )
-      ).rows.reverse()
-    : [];
+    : Promise.resolve({ rows: [] as HistoryRow[] }),
+    db.query<{ desfecho: string }>(
+      `select distinct d.desfecho from demandas d join demanda_conversas dc on dc.demanda_id=d.id and dc.organization_id=d.organization_id
+       where d.organization_id=$1 and dc.conversation_id=$2 and d.fechada_em is not null limit 5`,
+      [input.tenantId, conversationId]),
+  ]);
+  const lastHumanDecision = decisaoResult.rows[0] ? paraDecisao(decisaoResult.rows[0]) : null;
+  const history = historyResult.rows.reverse();
 
   // LGPD: base legal derivada DIRETO do contato (fonte da verdade, mesmo banco).
   // isProspecting=false: o MVP é inbound + follow-up — ambos respondem a lead que
@@ -258,10 +262,7 @@ export async function getLeadContext(
     false,
   );
 
-  const { rows: previousOutcomes } = await db.query<{ desfecho: string }>(
-    `select distinct d.desfecho from demandas d join demanda_conversas dc on dc.demanda_id=d.id and dc.organization_id=d.organization_id
-     where d.organization_id=$1 and dc.conversation_id=$2 and d.fechada_em is not null limit 5`,
-    [input.tenantId, conversationId]);
+  const previousOutcomes = outcomesResult.rows;
 
   const context = fitToBudget(
     {

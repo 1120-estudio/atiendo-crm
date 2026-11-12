@@ -460,3 +460,4 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20261109170000` | `0448_followup_silence_source` | Evita reinscrição repetida do mesmo contato no mesmo fluxo de silêncio para a mesma mensagem recebida, inclusive após cancelamento, com índice único. Registros legados continuam sem origem. |
 
 | `20261111040000` | `0449_visibilidade_consultas` | Calcula el acceso de lectura por organización una vez por consulta y conserva las políticas originales para los demás casos. |
+| `20261112190000` | `0450_escopos_inbox` | Calcula el alcance de lectura de cada organización para los agentes, manteniendo las reglas de visibilidad. |

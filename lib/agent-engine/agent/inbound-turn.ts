@@ -1,6 +1,5 @@
 import { criarConsultaCatalogo, INSTRUCAO_CATALOGO } from './consulta-catalogo';
 import { CheckpointInvalidoError, fecharCheckpoint, registrarFechamentoInvalido, formatarDiagnosticoCheckpoint, orientacaoDeCorrecaoCheckpoint, type DiagnosticoCheckpoint } from './fechar-checkpoint';
-import { prospectingConversationContext } from "@/lib/prospecting/context";
 import { criarTravaDeRecuperacao, recuperarRespostaAusente } from './recuperar-resposta';
 import { setExecutionAgentOperation } from '@/lib/atendimento/fronteira-server';
 import { TIPOS_DE_CASO, TIPOS_DE_CASO_PARA_A_IA } from "@/lib/ai/case-copy";
@@ -121,7 +120,7 @@ import {
   renderStageHint,
   type StageClassifierKnobs,
 } from './stage-classifier';
-import { loadPlaybook } from './playbook';
+import { carregarContextoResidente } from './contexto-residente';
 import {
   DECLARACAO_INSTRUCTION,
   declaracaoDoTurnoSchema,
@@ -138,7 +137,7 @@ import {
   capacidadesEntreguesAoOperador,
   catalogoEntregueAoOperador,
 } from './entrega-de-capacidade';
-import { composeSystemPrompt, loadOrgMemory, renderOrgMemory } from './org-memory';
+import { composeSystemPrompt, renderOrgMemory } from './org-memory';
 import { matchesHandoffKeyword, type PublishedAgentConfig } from './agent-config';
 import { garantirPerguntaDoRoteiro, prepararRoteiroDoTurno } from './roteiro-no-turno';
 import { validarRespostaDoFluxo } from './flow-validate';
@@ -162,7 +161,6 @@ import { cancelPendingCronsForLead } from '../cron/scheduler';
 import {
   latestInboundSignal,
   recentInboundSignal,
-  loadSkills,
   matchSkills,
   recordSkillMissCandidates,
   renderMatchedSkillBodies,
@@ -2497,22 +2495,18 @@ async function executarTurnoDoAgente(
   // Ritual de abertura: playbook por ponteiro + checkpoint + contexto curado.
   // Com agente publicado, o system_prompt DELE é a camada tenant (platform de
   // compliance continua à frente, sempre).
-  const prospectingContext = !preview && input.conversationId ? await prospectingConversationContext(pool, tenantId, input.conversationId) : "";
-  const playbook = await loadPlaybook(
-    pool,
-    tenantId,
-    agentConfig !== null ? { agentLayer: agentConfig.systemPrompt + prospectingContext } : undefined,
-  );
+  const { playbook, skills, orgMemory } = await carregarContextoResidente(pool, tenantId, {
+    conversationId: !preview && input.conversationId ? input.conversationId : null,
+    agentPrompt: agentConfig !== null ? agentConfig.systemPrompt : undefined,
+  });
   // Skills situacionais (F3-09): índice (name+description) SEMPRE residente — vai junto do
   // system do playbook, no prefixo estável org-wide (disclosure progressivo; cacheável F2-17).
   // O CORPO só carrega no match, no sufixo por-lead (mais abaixo). loadSkills resolve os
   // ponteiros a cada run: trocar/rollback de skill = mover o ponteiro, sem restart.
-  const skills = await loadSkills(pool, tenantId);
   const skillIndex = renderSkillIndex(skills);
   // Fase 1 (harness): memória geral da org — prefixo estável, resolvida a cada
   // turno como o playbook (publicar ⇒ próximo turno vale). composeSystemPrompt já
   // encaixa playbook + memória + índice de skills no prefixo cacheável.
-  const orgMemory = await loadOrgMemory(pool, tenantId);
   const systemWithMemory = composeSystemPrompt({
     playbookPrompt: playbook.prompt,
     orgMemoryBlock: renderOrgMemory(orgMemory),
