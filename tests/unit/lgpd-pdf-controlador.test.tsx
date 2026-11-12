@@ -48,6 +48,7 @@ function rodape(elemento: ReactElement): string {
 
 function payload(patch: Partial<ExportPayload> = {}): ExportPayload {
   return {
+    locale: "pt-BR",
     request_id: "3f2a9c10-0000-4000-8000-000000000001",
     organization_id: "8c1d4e20-0000-4000-8000-000000000002",
     organization_legal_name: "Bem Viver Serviços Médicos LTDA",
