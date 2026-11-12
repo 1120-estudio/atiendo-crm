@@ -54,6 +54,22 @@ const KNOBS = { historyLimit: 20, maxTokens: 1_000 };
 const ENTRADA = { tenantId: "org-1", leadId: "contato-1", fuso: "America/Sao_Paulo" };
 
 describe("last_human_decision no contexto do turno", () => {
+  it("consulta histórico, decisão e desfechos sem esperar uma leitura terminar", async () => {
+    const iniciadas: string[] = [];
+    const liberar: Array<() => void> = [];
+    const db = { query: async (sql: string) => {
+      if (sql.includes("from contacts")) return { rows: [{ name: "Carlos", display_name: null, email: null, phone_number: null, tags: [], is_blocked: false, source: "whatsapp", consent: null, is_anonymized: false }] };
+      const tipo = sql.includes("from crm_lead_activities") ? "decisão" : sql.includes("from messages") ? "histórico" : "desfechos";
+      iniciadas.push(tipo);
+      await new Promise<void>((resolve) => liberar.push(resolve));
+      return { rows: [] };
+    } };
+    const resultado = getLeadContext(db as never, {} as never, { ...ENTRADA, conversationId: "conversa-1" }, KNOBS);
+    await Promise.resolve();
+    expect(iniciadas).toEqual(["decisão", "histórico", "desfechos"]);
+    liberar.forEach((resolve) => resolve());
+    expect((await resultado).ok).toBe(true);
+  });
   it("a chave existe mesmo sem decisão nenhuma", async () => {
     const { db } = dbFalso([]);
     const r = await getLeadContext(db as never, {} as never, ENTRADA, KNOBS);

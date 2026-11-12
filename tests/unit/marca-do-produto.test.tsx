@@ -40,7 +40,7 @@ const org = {
 let contexto: { user: AuthUser; activeOrg: ActiveOrg | null } = { user: usuario, activeOrg: org };
 vi.mock("@/hooks/auth/AuthProvider", () => ({ useAuth: () => contexto }));
 
-const PADRAO: Branding = { name: DEFAULT_APP_NAME, logoUrl: null, initial: "D" };
+const PADRAO: Branding = { name: DEFAULT_APP_NAME, logoUrl: null, initial: "O" };
 
 function renderSidebar(marca: Branding, collapsed: boolean) {
   return render(
@@ -101,6 +101,11 @@ describe("o desenho na barra lateral", () => {
 });
 
 describe("o componente", () => {
+  it("muestra el robot de Orbit como símbolo predeterminado", () => {
+    render(<SimboloDoProduto nome={DEFAULT_APP_NAME} />);
+    expect(screen.getByRole("img", { name: DEFAULT_APP_NAME }).querySelector("image")?.getAttribute("href"))
+      .toBe("/orbit-icon.png");
+  });
   it("decorativo esconde do leitor de tela; sem isso, nomeia a marca", () => {
     render(<SimboloDoProduto nome="Marca X" decorativo />);
     expect(document.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");

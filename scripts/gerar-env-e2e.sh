@@ -124,6 +124,8 @@ cat > .env.e2e <<EOF
 # ── Ambiente do E2E — LOCAL, nunca a nuvem ──────────────────────────────────
 # GERADO por 'pnpm e2e:env'. Não versionado (.gitignore cobre '.env*').
 # Antes de rodar a suíte: pnpm e2e:build && pnpm test:e2e
+# As specs legadas usam rótulos em português; as specs de i18n exercitam o espanhol explicitamente.
+APP_LOCALE=pt-BR
 NEXT_PUBLIC_SUPABASE_URL=$API_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON
 SUPABASE_SERVICE_ROLE_KEY=$SERVICE

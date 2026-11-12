@@ -574,7 +574,8 @@ describe("os textos do orçamento nomeiam botões que existem", () => {
   it("controle negativo: o detector acusa o rótulo renomeado", () => {
     // Sabota o COMPONENTE, não o texto: é a direção real do apodrecimento (o
     // botão é renomeado por outra frente, e os textos ficam para trás).
-    const renomeado = fonteCabecalho.replace(
+    const inicio = fonteCabecalho.indexOf('data-testid="devolver-ao-automatico"');
+    const renomeado = fonteCabecalho.slice(0, inicio) + fonteCabecalho.slice(inicio).replace(
       `t("${rotuloDoBotaoDeVolta()}")`,
       't("Voltar para a IA")',
     );

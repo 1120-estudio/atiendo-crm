@@ -547,6 +547,11 @@ async function classificarComLlm(
       promptTokens: usage?.inputTokens ?? usage?.promptTokens ?? 0,
       completionTokens: usage?.outputTokens ?? usage?.completionTokens ?? 0,
     };
+  } catch (error) {
+    // Só o abort disparado pelo nosso relógio pode ser chamado de timeout.
+    // Outras interrupções continuam com sua causa original.
+    if (abortController.signal.aborted) throw new Error("sentiment_classifier_timeout");
+    throw error;
   } finally {
     clearTimeout(timeout);
   }

@@ -100,7 +100,7 @@ describe("header do inbox — não trava a largura da tela", () => {
     // passariam por não haver o que verificar.
     expect(header, "o header não renderizou").toBeTruthy();
 
-    const coluna = header.children[1] as HTMLElement;
+    const coluna = barraDeAcoes().parentElement as HTMLElement;
     expect(coluna, "a coluna de ações não renderizou").toBeTruthy();
     for (const el of [coluna, barraDeAcoes()]) {
       expect(

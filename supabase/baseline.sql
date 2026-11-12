@@ -5385,15 +5385,7 @@ revoke execute on function public.fn_can_view_conversation(uuid, uuid) from anon
 grant execute on function public.fn_can_view_conversation(uuid, uuid)
   to authenticated, service_role;
 
-drop policy if exists "conversations_select" on public.conversations;
-create policy "conversations_select" on public.conversations for select using (
-  (select public.fn_is_platform_admin())
-  or organization_id in (
-    select org_id from public.fn_user_org_ids() org_id
-    where public.fn_user_role_in_org(org_id) in ('viewer', 'manager', 'admin')
-  )
-  or public.fn_can_view_conversation(organization_id, assigned_to_user_id)
-);
+-- A policy final conversations_select é instalada no bloco 0450.
 
 drop policy if exists "conversations_agent_write" on public.conversations;
 drop policy if exists "conversations_agent_insert" on public.conversations;
@@ -39417,6 +39409,21 @@ grant execute on function public.encrypt_cpf(text, text) to authenticated, servi
 grant execute on function public.decrypt_cpf(uuid, text) to authenticated;
 notify pgrst, 'reload schema';
 
+-- 0450: resolve o alcance da organização uma vez por consulta do inbox.
+create or replace function public.fn_escopos_leitura_inbox()
+returns table (org_id uuid, acesso_total boolean, fila boolean)
+language sql stable security definer set search_path = public as $f$
+  select o.id,
+    r.papel in ('viewer','manager','admin') or coalesce(o.settings->>'visibility_mode','own_and_unassigned')='all',
+    coalesce(o.settings->>'visibility_mode','own_and_unassigned')='own_and_unassigned'
+  from public.organizations o
+  join (select id as org_id, public.fn_user_role_in_org(id) as papel from public.fn_user_org_ids() as id) r on r.org_id=o.id
+  where r.papel is not null;
+$f$;
+revoke all on function public.fn_escopos_leitura_inbox() from public, anon;
+grant execute on function public.fn_escopos_leitura_inbox() to authenticated, service_role;
+
+
 -- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
 --
 -- ⚠️ DE PROPÓSITO, NENHUMA FUNÇÃO É CRIADA DEPOIS DESTE BLOCO. Apêndice que cria
@@ -40901,3 +40908,11 @@ alter table public.followup_enrollments
 create unique index if not exists idx_followup_silence_source_once
   on public.followup_enrollments (organization_id, pointer_id, silence_source_message_id)
   where silence_source_message_id is not null;
+
+drop policy if exists "conversations_select" on public.conversations;
+create policy "conversations_select" on public.conversations for select using (
+  (select public.fn_is_platform_admin())
+  or organization_id in (select org_id from public.fn_escopos_leitura_inbox() where acesso_total)
+  or (assigned_to_user_id = (select auth.uid()) and organization_id in (select org_id from public.fn_escopos_leitura_inbox()))
+  or (assigned_to_user_id is null and organization_id in (select org_id from public.fn_escopos_leitura_inbox() where fila))
+);

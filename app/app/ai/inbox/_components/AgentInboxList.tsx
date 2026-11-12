@@ -18,6 +18,8 @@ import {
 import { kindLabel, SEVERITY_LABEL, type AgentInboxSeverity } from "@/lib/ai/agent-inbox-copy";
 import { Bell, Check } from "@/lib/ui/icons";
 import { useT } from "@/hooks/i18n/useT";
+import { useIdioma } from "@/lib/i18n/IdiomaProvider";
+import { traduzirAvisoDoSistema } from "@/lib/i18n/avisos-sistema";
 import { ApiError } from "@/lib/api/types";
 
 const SEVERITY_VARIANT: Record<AgentInboxSeverity, "info" | "warning" | "error"> = {
@@ -147,7 +149,8 @@ function InboxRow({
 }) {
   const localeDaData = useLocaleDeData();
   const t = useT();
-  const avisoDoSistema = ["event_dead", "job_dead", "message_send_stuck"].includes(item.kind);
+  const idioma = useIdioma();
+  const textoDoAviso = (texto: string) => traduzirAvisoDoSistema(item.kind, item.title, texto, idioma);
   const when = formatDistanceToNowStrict(new Date(item.created_at), {
     addSuffix: true,
     locale: localeDaData,
@@ -159,13 +162,13 @@ function InboxRow({
       </Badge>
       <div className="min-w-0 flex-1 basis-48 break-words">
         {/* Solo los avisos técnicos del sistema se localizan aquí; los textos libres se conservan. */}
-        <p className="text-sm font-medium">{avisoDoSistema ? t(item.title) : item.title}</p>
+        <p className="text-sm font-medium">{textoDoAviso(item.title)}</p>
         <p className="text-xs text-muted-foreground">
           {kindLabel(item.kind, t)} · {when}
         </p>
         {item.body ? (
           <p className="mt-1 text-xs text-muted-foreground">
-            {avisoDoSistema ? t(item.body) : item.body}
+            {textoDoAviso(item.body)}
           </p>
         ) : null}
         {item.destination.orientacao ? (

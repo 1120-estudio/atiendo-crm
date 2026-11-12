@@ -248,6 +248,25 @@ beforeEach(() => {
 });
 
 describe("D12 — o clima roda com a chave colada pela tela", () => {
+  it("identifica o prazo do próprio classificador sem confundir outras interrupções", async () => {
+    vi.useFakeTimers();
+    try {
+      const c = { settings: { llm: { provider: "anthropic" } }, credenciais: [credencial(CRED_ANTHROPIC, "anthropic", "sk-ant-da-tela")] };
+      const banco = montarBanco(c);
+      vi.mocked(createAdminClient).mockReturnValue(fazerAdmin(banco, []) as unknown as ReturnType<typeof createAdminClient>);
+      vi.mocked(generateObject).mockImplementation(({ abortSignal }) => new Promise((_resolve, reject) => {
+        abortSignal?.addEventListener("abort", () => reject(new Error("This operation was aborted")));
+      }) as never);
+      const resultado = processSentiment(evento());
+      await vi.advanceTimersByTimeAsync(5_001);
+      expect(await resultado).toMatchObject({ skipped: true, reason: "classify_failed" });
+      await vi.runAllTimersAsync();
+      expect(banco.llm_calls[0]).toMatchObject({ error_code: "provedor_indisponivel" });
+      expect(String(banco.llm_calls[0]?.error_message)).toContain("sentiment_classifier_timeout");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it("envia apenas o histórico anterior da mesma conversa e organização ao classificador", async () => {
     const c = { settings: { llm: { provider: "anthropic" } }, credenciais: [credencial(CRED_ANTHROPIC, "anthropic", "sk-ant-da-tela")] };
     const banco = montarBanco(c);

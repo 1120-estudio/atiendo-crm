@@ -16,7 +16,7 @@
  * runtime em vez de lida do bundle.
  */
 
-export const DEFAULT_APP_NAME = "DeskcommCRM";
+export const DEFAULT_APP_NAME = "Orbit";
 
 export type Branding = {
   /** Nome exibido na interface e nos títulos de página. */
@@ -41,7 +41,10 @@ export function resolveBranding(
   name: string | undefined | null,
   logoUrl: string | undefined | null,
 ): Branding {
-  const resolvedName = (name ?? "").trim() || DEFAULT_APP_NAME;
+  const requestedName = (name ?? "").trim();
+  const resolvedName = !requestedName || ["atiendo", "atiendo crm", "atiendo crm (pruebas)", "deskcommcrm"].includes(requestedName.toLowerCase())
+    ? DEFAULT_APP_NAME
+    : requestedName;
   const resolvedLogo = (logoUrl ?? "").trim();
   return {
     name: resolvedName,

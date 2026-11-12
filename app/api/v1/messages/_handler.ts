@@ -38,6 +38,7 @@ import { ARCHIVED_AT, queryTolerantToMissingArchived } from "@/lib/channels/arch
 import { conferirDefinicao } from "@/lib/channels/conferir-definicao";
 import { estadoDaJanela } from "@/lib/channels/janela";
 import { isMediaPathOwnedBy } from "@/lib/messaging/media/upload-validation";
+import { registrarFalhaLeituraInbox } from "@/lib/inbox/registro-falha-leitura";
 import {
   buildVcard,
   normalizePhoneForDisplay,
@@ -307,6 +308,7 @@ export async function listMessagesHandler(
 
   const { data, error } = await query;
   if (error) {
+    registrarFalhaLeituraInbox("mensagens", ctx.requestId, error);
     throw new ApiError(500, "internal_error", undefined, ctx.requestId, error.message);
   }
 

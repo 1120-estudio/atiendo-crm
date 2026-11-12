@@ -919,6 +919,74 @@
   background-color: var(--color-navigation-hover);
 }
 
+/* Identidade fixa do Atiendo. A regra no body também alcança portais e vence
+   cores antigas salvas pela instalação ou por uma organização. */
+html:root:root body {
+  --color-brand: #034cf1;
+  --color-accent-50: #eff5ff;
+  --color-accent-100: #dce8ff;
+  --color-accent-200: #b9d0ff;
+  --color-accent-300: #87adff;
+  --color-accent-400: #6998ff;
+  --color-accent-500: #3977ff;
+  --color-accent-600: #034cf1;
+  --color-accent-700: #0342ce;
+  --color-accent-800: #0639aa;
+  --color-accent-900: #082f87;
+  --color-accent-950: #061d54;
+  --color-accent: #034cf1;
+  --color-accent-fg: #ffffff;
+  --color-accent-hover: #0342ce;
+  --color-accent-soft: #dce8ff;
+  --color-navigation-active: #034cf1;
+  --color-navigation-fg: #ffffff;
+  --color-navigation-hover: #dce8ff;
+  --primary: #034cf1;
+  --primary-foreground: #ffffff;
+  --accent-foreground: #ffffff;
+  --ring: #3977ff;
+}
+
+html:root:root[data-theme="dark"] body {
+  --color-shell: #151515;
+  --color-bg: #121212;
+  --color-surface: #191919;
+  --color-surface-elevated: #252525;
+  --color-text: #f4f4f5;
+  --color-text-muted: #b8b8bc;
+  --color-text-subtle: #a1a1a7;
+  --color-border: #303033;
+  --color-border-strong: #49494e;
+  --color-accent-soft: rgba(3, 76, 241, 0.18);
+  --color-accent-hover: #3977ff;
+  --color-navigation-active: #192846;
+  --color-navigation-fg: #ffffff;
+  --color-navigation-hover: rgba(3, 76, 241, 0.13);
+  --background: var(--color-bg);
+  --foreground: var(--color-text);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-text);
+  --popover: var(--color-surface);
+  --popover-foreground: var(--color-text);
+  --secondary: var(--color-surface-elevated);
+  --secondary-foreground: var(--color-text);
+  --muted: var(--color-surface-elevated);
+  --muted-foreground: var(--color-text-muted);
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: #6998ff;
+}
+
+html[data-theme="dark"] .sidebar-nav-active {
+  box-shadow: inset 3px 0 #034cf1, -5px 0 18px -7px rgba(3, 76, 241, 0.9);
+}
+
+/* O azul luminoso precisa de uma versão mais clara quando é texto pequeno. */
+html[data-theme="dark"] .text-accent,
+html[data-theme="dark"] .text-primary {
+  color: #8dadff;
+}
+
 /* ---- Agenda · a coluna de horários que desliza para dentro ----------------
    O painel de marcação tem três tempos (escolher dia → escolher horário →
    confirmar) e a coluna de horários NÃO existe no primeiro. Quando o dia é
