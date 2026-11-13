@@ -5530,11 +5530,12 @@ grant execute on function public.fn_conversation_assign(uuid, uuid, uuid, text, 
 -- mesmo organizations.settings.visibility_mode ('all'|'own_and_unassigned'|'own',
 -- default 'own_and_unassigned' — G1-06a; a matriz diz "mesmo escopo"). Só o role
 -- agent é restrito; viewer/manager/admin org-wide read; platform_admin tudo.
--- fn_can_view_lead recebe os campos da ROW (sem lookup/recursão); DEFINER +
--- search_path blindado + revoke anon/public (lição G4-00). A FOR ALL org-flat
+-- fn_can_view_lead permanece a referência de equivalência. A policy SELECT usa o
+-- alcance precomputado por organização em fn_escopos_leitura_inbox (0450/0451),
+-- mantendo a mesma regra owner/visibility_mode. A FOR ALL org-flat
 -- `tenant_isolation_crm_leads_all` governava SELECT junto (USING OR-ado) — dropada e
 -- re-expressa por-comando: SELECT visibility-aware + escrita por-role (agent=own-scope
--- via a mesma fn, manager+=org-wide, viewer=none via piso 'agent'). Drag-and-drop de
+-- via a mesma regra, manager+=org-wide, viewer=none via piso 'agent'). Drag-and-drop de
 -- lead próprio (UPDATE de stage/position sem mudar owner) passa; lead de outro agent
 -- bloqueado; bulk assign (G3-04, ≥manager) intacto. Idempotente, auto-curativo.
 
@@ -5565,6 +5566,20 @@ revoke execute on function public.fn_can_view_lead(uuid, uuid) from anon;
 grant execute on function public.fn_can_view_lead(uuid, uuid)
   to authenticated, service_role;
 
+-- 0450: precompute el alcance de cada organización antes de crear sus policies.
+create or replace function public.fn_escopos_leitura_inbox()
+returns table (org_id uuid, acesso_total boolean, fila boolean)
+language sql stable security definer set search_path = public as $f$
+  select o.id,
+    r.papel in ('viewer','manager','admin') or coalesce(o.settings->>'visibility_mode','own_and_unassigned')='all',
+    coalesce(o.settings->>'visibility_mode','own_and_unassigned')='own_and_unassigned'
+  from public.organizations o
+  join (select id as org_id, public.fn_user_role_in_org(id) as papel from public.fn_user_org_ids() as id) r on r.org_id=o.id
+  where r.papel is not null;
+$f$;
+revoke all on function public.fn_escopos_leitura_inbox() from public, anon;
+grant execute on function public.fn_escopos_leitura_inbox() to authenticated, service_role;
+
 drop policy if exists "tenant_isolation_crm_leads_all" on public.crm_leads;
 drop policy if exists "crm_leads_select" on public.crm_leads;
 drop policy if exists "crm_leads_insert" on public.crm_leads;
@@ -5574,10 +5589,18 @@ drop policy if exists "crm_leads_delete" on public.crm_leads;
 create policy "crm_leads_select" on public.crm_leads for select using (
   (select public.fn_is_platform_admin())
   or organization_id in (
-    select org_id from public.fn_user_org_ids() org_id
-    where public.fn_user_role_in_org(org_id) in ('viewer', 'manager', 'admin')
+    select org_id from public.fn_escopos_leitura_inbox() where acesso_total
   )
-  or public.fn_can_view_lead(organization_id, owner_user_id)
+  or (
+    owner_user_id = (select auth.uid())
+    and organization_id in (select org_id from public.fn_escopos_leitura_inbox())
+  )
+  or (
+    owner_user_id is null
+    and organization_id in (
+      select org_id from public.fn_escopos_leitura_inbox() where fila
+    )
+  )
 );
 
 create policy "crm_leads_insert" on public.crm_leads
@@ -6189,8 +6212,8 @@ update public.event_log
 -- ---- RLS por role em crm_lead_activities/crm_lead_links (migration 0042) ----
 -- G6-00 (INB-10): timeline/vínculos de lead seguiam org-flat no SELECT — agent em
 -- modo 'own' não via o lead (0036) mas lia as activities/links dele por query direta.
--- FIX: SELECT das tabelas-filhas HERDA a visibilidade do lead-pai via a MESMA
--- fn_can_view_lead (0036), por EXISTS no lead_id (NÃO scalar de owner — lição G4-01:
+-- FIX: SELECT das tabelas-filhas HERDA a visibilidade do lead-pai via RLS de
+-- crm_leads, por EXISTS no lead_id e organização (NÃO scalar de owner — lição G4-01:
 -- scalar devolveria NULL pro lead oculto e own_and_unassigned trataria como fila ⇒
 -- vazamento; o EXISTS fecha). WRITE fica org-scope IDÊNTICO ao de hoje (defesa em
 -- profundidade, não o vetor: todo escritor real usa service role e bypassa RLS;
@@ -6206,17 +6229,9 @@ create policy "crm_lead_activities_select" on public.crm_lead_activities for sel
   exists (
     select 1 from public.crm_leads l
     where l.id = crm_lead_activities.lead_id
-      and (
-        (select public.fn_is_platform_admin())
-        or l.organization_id in (
-          select org_id from public.fn_user_org_ids() org_id
-          where public.fn_user_role_in_org(org_id) in ('viewer', 'manager', 'admin')
-        )
-        or public.fn_can_view_lead(l.organization_id, l.owner_user_id)
-      )
+      and l.organization_id = crm_lead_activities.organization_id
   )
 );
-
 create policy "crm_lead_activities_insert" on public.crm_lead_activities
   for insert with check (
     (organization_id in (select public.fn_user_org_ids()))
@@ -39408,21 +39423,6 @@ grant execute on function public.encrypt_cpf(text, text) to authenticated, servi
 -- O cliente de sessão preserva auth.uid(); service_role não ganha uma porta de leitura.
 grant execute on function public.decrypt_cpf(uuid, text) to authenticated;
 notify pgrst, 'reload schema';
-
--- 0450: resolve o alcance da organização uma vez por consulta do inbox.
-create or replace function public.fn_escopos_leitura_inbox()
-returns table (org_id uuid, acesso_total boolean, fila boolean)
-language sql stable security definer set search_path = public as $f$
-  select o.id,
-    r.papel in ('viewer','manager','admin') or coalesce(o.settings->>'visibility_mode','own_and_unassigned')='all',
-    coalesce(o.settings->>'visibility_mode','own_and_unassigned')='own_and_unassigned'
-  from public.organizations o
-  join (select id as org_id, public.fn_user_role_in_org(id) as papel from public.fn_user_org_ids() as id) r on r.org_id=o.id
-  where r.papel is not null;
-$f$;
-revoke all on function public.fn_escopos_leitura_inbox() from public, anon;
-grant execute on function public.fn_escopos_leitura_inbox() to authenticated, service_role;
-
 
 -- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
 --

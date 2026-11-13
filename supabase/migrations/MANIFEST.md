@@ -461,3 +461,4 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 
 | `20261111040000` | `0449_visibilidade_consultas` | Calcula el acceso de lectura por organización una vez por consulta y conserva las políticas originales para los demás casos. |
 | `20261112190000` | `0450_escopos_inbox` | Calcula el alcance de lectura de cada organización para los agentes, manteniendo las reglas de visibilidad. |
+| `20261112200000` | `0451_escopos_leads_actividades` | Reutiliza el alcance calculado por organización para las lecturas de asesores en leads y actividades, conservando la visibilidad del lead padre. |

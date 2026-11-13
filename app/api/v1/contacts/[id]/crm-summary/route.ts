@@ -22,9 +22,8 @@
  * leitura para o servidor, onde a sessão existe — mesma decisão que o repo já
  * tomou para o fetch do board e para o token de realtime.
  *
- * **Um pedido, um veredito.** As três consultas falham juntas de propósito: a
- * alternativa (status por seção) triplicaria os estados no componente, e a
- * doença que esta rota cura é exatamente estados distintos colapsados num só.
+ * Cada leitura tem o seu próprio estado. Uma falha numa tabela não pode apagar
+ * do painel os dados válidos das restantes secções.
  */
 import { createAdminClient } from "@/lib/supabase/admin";
 import { prospectEnrichmentSchema } from "@/lib/prospecting/schema";
@@ -154,11 +153,24 @@ export async function GET(
     supabase.from("demandas").select("id, desfecho, fechada_em").eq("contact_id", contactId).eq("organization_id", contactScope.organization_id).not("fechada_em", "is", null).order("fechada_em", { ascending: false }).limit(5),
   ]);
 
-  // A falha SOBE. Engolir aqui devolveria lista vazia ao cliente e recriaria,
-  // do lado do servidor, exatamente a mentira que esta rota veio desfazer.
-  const falha = leads.error ?? orders.error ?? activities.error ?? demandas.error ?? fatos.error ?? historico.error;
-  if (falha) {
-    return fail("internal_error", falha.message, 500, { requestId });
+  // Preserva as consultas que deram certo; uma leitura lenta ou negada não
+  // esconde os dados das outras seções. `null` representa falha; `[]` representa
+  // uma consulta concluída sem resultados.
+  const errors = {
+    leads: Boolean(leads.error),
+    orders: Boolean(orders.error),
+    activities: Boolean(activities.error),
+    demandas: Boolean(demandas.error),
+    memoria: Boolean(fatos.error || historico.error),
+  };
+  for (const [section, error] of [
+    ["leads", leads.error],
+    ["orders", orders.error],
+    ["activities", activities.error],
+    ["demandas", demandas.error],
+    ["memoria", fatos.error ?? historico.error],
+  ] as const) {
+    if (error) console.error("[crm-summary] leitura indisponível", { requestId, section, code: error.code });
   }
 
   // QUEM agiu, e não só "uma pessoa". O lookup roda sobre os autores DISTINTOS
@@ -168,21 +180,25 @@ export async function GET(
     performed_by_user_id?: string | null;
     [k: string]: unknown;
   }>;
-  const nomes = await nomesDosAtendentes(linhas.map((a) => a.performed_by_user_id ?? null));
+  const nomes = activities.error
+    ? new Map<string, string>()
+    : await nomesDosAtendentes(linhas.map((a) => a.performed_by_user_id ?? null));
 
   return ok(
     {
       ...enrichment,
-      leads: (leads.data ?? []).map((row) => comCamposDoFunil(row as Record<string, unknown>)),
-      orders: orders.data ?? [],
-      activities: linhas.map((a) => ({
+      errors,
+      leads: leads.error ? null : (leads.data ?? []).map((row) => comCamposDoFunil(row as Record<string, unknown>)),
+      orders: orders.error ? null : (orders.data ?? []),
+      activities: activities.error ? null : linhas.map((a) => ({
         ...a,
         performed_by_name: a.performed_by_user_id
           ? (nomes.get(a.performed_by_user_id) ?? null)
           : null,
       })),
-      demandas: demandas.data ?? [],
-      fatos: fatos.data ?? [], historico: historico.data ?? [],
+      demandas: demandas.error ? null : (demandas.data ?? []),
+      fatos: fatos.error ? null : (fatos.data ?? []),
+      historico: historico.error ? null : (historico.data ?? []),
     },
     { requestId },
   );

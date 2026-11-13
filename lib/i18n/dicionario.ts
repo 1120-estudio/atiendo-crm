@@ -1590,6 +1590,7 @@ export const DICIONARIO: Traducoes = {
   "Confirmar desfecho": { es: "Confirmar resultado" },
   "Demanda vigente neste canal": { es: "Caso vigente en este canal" },
   "Memória do contato": { es: "Memoria del contacto" },
+  "Memoria disponível.": { es: "Memoria disponible." },
   "Fatos duráveis registrados nas notas. Pendências pertencem à demanda vigente.": { es: "Hechos duraderos registrados en las notas. Los pendientes corresponden al caso vigente." },
   "Nenhum fato durável registrado.": { es: "No hay hechos duraderos registrados." },
   "Histórico encerrado — sem tarefas pendentes": { es: "Historial cerrado — sin tareas pendientes" },
