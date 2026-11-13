@@ -10,6 +10,8 @@ La migración 0449 acelera el acceso de perfiles con visibilidad general, pero c
 
 La migración local 0450 prepara el alcance por organización también para agentes. En una segunda transacción revertida con los mismos datos, contar conversaciones pasó de aproximadamente 2,3 segundos a 10 milisegundos. Se compararon los identificadores visibles contra la función original en los modos `own`, `own_and_unassigned` y `all`, y se comprobaron mensajes propios y ajenos, usuario externo, viewer y revocación. Se ejecutó dos veces la migración dentro de la transacción. El 12 de noviembre de 2026 también pasaron 28 pruebas de visibilidad y aislamiento en un contenedor PostgreSQL 15 temporal, con instalación y actualización del baseline. La suite completa de invariantes y la validación con carga real siguen pendientes; el cambio no se aplicó de forma permanente a ninguna base.
 
+La migración local 0451 extiende el alcance calculado a `crm_leads` y hace que las actividades hereden la visibilidad del lead mediante RLS. Se preparó por la diferencia observada entre administradores y asesores en el informe y el panel. Aún no se ejecutaron pruebas de equivalencia ni mediciones para estos objetos; no se ha aplicado en producción.
+
 ## Flujos examinados
 
 | Área | Observación | Estado |

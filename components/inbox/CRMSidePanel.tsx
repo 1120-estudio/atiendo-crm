@@ -612,6 +612,13 @@ export function CRMSidePanel({ conversation }: Props) {
    * de "não consegui ler" é a diferença entre informar e mentir.
    */
   const [erro, setErro] = useState(false);
+  const [errosDasSecoes, setErrosDasSecoes] = useState({
+    leads: false,
+    orders: false,
+    activities: false,
+    demandas: false,
+    memoria: false,
+  });
   const [tentativa, setTentativa] = useState(0);
 
   const [tagEditorOpen, setTagEditorOpen] = useState(false);
@@ -634,6 +641,13 @@ export function CRMSidePanel({ conversation }: Props) {
       setDemandas(null);
       setFatos([]);
       setHistorico([]);
+      setErrosDasSecoes({
+        leads: false,
+        orders: false,
+        activities: false,
+        demandas: false,
+        memoria: false,
+      });
       setLeadAtivoId(null);
       return;
     }
@@ -650,26 +664,40 @@ export function CRMSidePanel({ conversation }: Props) {
           data: {
             enrichment?: (ProspectEnrichment & { collected_at: string }) | null;
             enrichment_error?: boolean;
-            leads: LeadRow[];
-            orders: OrderRow[];
-            activities: ActivityRow[];
-            demandas: DemandaRow[];
-            fatos?: Array<{ id: string; headline: string; body: string }>;
-            historico?: Array<{ id: string; desfecho: string; fechada_em: string }>;
+            leads: LeadRow[] | null;
+            orders: OrderRow[] | null;
+            activities: ActivityRow[] | null;
+            demandas: DemandaRow[] | null;
+            fatos?: Array<{ id: string; headline: string; body: string }> | null;
+            historico?: Array<{ id: string; desfecho: string; fechada_em: string }> | null;
+            errors?: {
+              leads?: boolean;
+              orders?: boolean;
+              activities?: boolean;
+              demandas?: boolean;
+              memoria?: boolean;
+            };
           };
         }>(`/api/v1/contacts/${contactId}/crm-summary`);
         if (cancelled) return;
         setSummaryContactId(contactId);
+        setErrosDasSecoes({
+          leads: r.data.errors?.leads ?? false,
+          orders: r.data.errors?.orders ?? false,
+          activities: r.data.errors?.activities ?? false,
+          demandas: r.data.errors?.demandas ?? false,
+          memoria: r.data.errors?.memoria ?? false,
+        });
         setEnrichment(r.data.enrichment ?? null);
         setEnrichmentError(r.data.enrichment_error ?? false);
-        setLeads(r.data.leads);
-        setOrders(r.data.orders);
-        setActivities(r.data.activities);
+        setLeads(r.data.leads ?? null);
+        setOrders(r.data.orders ?? null);
+        setActivities(r.data.activities ?? null);
         // `?? []` e não `?? null`: aqui a leitura DEU CERTO. Cair em `null`
         // faria a lista vazia se disfarçar do terceiro estado e o painel
         // mostraria esqueleto para sempre num contato sem demanda aberta —
         // que é o caso saudável.
-        setDemandas(r.data.demandas ?? []);
+        setDemandas(r.data.demandas ?? null);
         setFatos(r.data.fatos ?? []);
         setHistorico(r.data.historico ?? []);
       } catch {
@@ -677,6 +705,7 @@ export function CRMSidePanel({ conversation }: Props) {
         // Falha NÃO vira lista vazia. Os dados ficam `null` e o painel diz que
         // não conseguiu ler — nunca que não há.
         setErro(true);
+        setErrosDasSecoes({ leads: true, orders: true, activities: true, demandas: true, memoria: true });
         setLeads(null);
         setOrders(null);
         setActivities(null);
@@ -731,8 +760,9 @@ export function CRMSidePanel({ conversation }: Props) {
     () =>
       !erro &&
       (summaryContactId !== contactId ||
-        (leads === null && orders === null && activities === null && demandas === null)),
-    [erro, summaryContactId, contactId, leads, orders, activities, demandas],
+        (leads === null && orders === null && activities === null && demandas === null &&
+          !Object.values(errosDasSecoes).some(Boolean))),
+    [erro, summaryContactId, contactId, leads, orders, activities, demandas, errosDasSecoes],
   );
 
   if (!conversation) {
@@ -938,7 +968,7 @@ export function CRMSidePanel({ conversation }: Props) {
         ) : (
           <SemLista
             vazio={t("Nenhuma demanda aberta.")}
-            erro={erro}
+            erro={erro || errosDasSecoes.demandas}
             onTentarDeNovo={() => setTentativa((n) => n + 1)}
           />
         )}
@@ -958,10 +988,13 @@ export function CRMSidePanel({ conversation }: Props) {
               <p className="mt-1 whitespace-pre-wrap">{f.body}</p>
             </details>
           ))}
-        {!sectionsLoading && fatos.length === 0 && (
+        {!sectionsLoading && fatos.length === 0 && !errosDasSecoes.memoria && (
           <p className="mt-2 text-xs text-muted-foreground">
             {t("Nenhum fato durável registrado.")}
           </p>
+        )}
+        {!sectionsLoading && errosDasSecoes.memoria && (
+          <SemLista vazio={t("Memoria disponível.")} erro onTentarDeNovo={recarregar} />
         )}
         {!sectionsLoading && historico.length > 0 && (
           <div className="mt-3 text-xs">
@@ -999,7 +1032,7 @@ export function CRMSidePanel({ conversation }: Props) {
         ) : (
           <SemLista
             vazio={t("Sem leads.")}
-            erro={erro}
+            erro={erro || errosDasSecoes.leads}
             onTentarDeNovo={() => setTentativa((n) => n + 1)}
           />
         )}
@@ -1033,7 +1066,7 @@ export function CRMSidePanel({ conversation }: Props) {
         ) : (
           <SemLista
             vazio={t("Sem pedidos.")}
-            erro={erro}
+            erro={erro || errosDasSecoes.orders}
             onTentarDeNovo={() => setTentativa((n) => n + 1)}
           />
         )}
@@ -1079,7 +1112,7 @@ export function CRMSidePanel({ conversation }: Props) {
         ) : (
           <SemLista
             vazio={t("Sem atividade.")}
-            erro={erro}
+            erro={erro || errosDasSecoes.activities}
             onTentarDeNovo={() => setTentativa((n) => n + 1)}
           />
         )}

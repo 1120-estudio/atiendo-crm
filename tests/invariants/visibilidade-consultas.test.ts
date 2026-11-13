@@ -3,8 +3,10 @@ import { GOV_ADMIN, GOV_AGENT_A, GOV_AGENT_B, GOV_MANAGER, GOV_VIEWER, GOV_ORG, 
 
 const A = "b4491111-0000-4000-8000-000000000001";
 const B = "b4491111-0000-4000-8000-000000000002";
+const C = "b4491111-0000-4000-8000-000000000003";
 const ACT_A = "b4492222-0000-4000-8000-000000000001";
 const ACT_B = "b4492222-0000-4000-8000-000000000002";
+const ACT_C = "b4492222-0000-4000-8000-000000000003";
 const OUTSIDER = "b4493333-0000-4000-8000-000000000001";
 
 beforeAll(() => {
@@ -13,10 +15,12 @@ beforeAll(() => {
     insert into auth.users (id,email) values ('${OUTSIDER}', 'b449-outsider@invariant.test') on conflict do nothing;
     insert into public.crm_leads (id, organization_id, pipeline_id, stage_id, title, owner_user_id) values
       ('${A}', '${GOV_ORG}', '${GOV_PIPELINE}', '${GOV_STAGE}', 'Synthetic A', '${GOV_AGENT_A}'),
-      ('${B}', '${GOV_ORG}', '${GOV_PIPELINE}', '${GOV_STAGE}', 'Synthetic B', '${GOV_AGENT_B}') on conflict do nothing;
+      ('${B}', '${GOV_ORG}', '${GOV_PIPELINE}', '${GOV_STAGE}', 'Synthetic B', '${GOV_AGENT_B}'),
+      ('${C}', '${GOV_ORG}', '${GOV_PIPELINE}', '${GOV_STAGE}', 'Synthetic unassigned', null) on conflict do nothing;
     insert into public.crm_lead_activities (id,organization_id,lead_id,source_module,type) values
       ('${ACT_A}','${GOV_ORG}','${A}','invariant','note'),
-      ('${ACT_B}','${GOV_ORG}','${B}','invariant','note') on conflict do nothing;
+      ('${ACT_B}','${GOV_ORG}','${B}','invariant','note'),
+      ('${ACT_C}','${GOV_ORG}','${C}','invariant','note') on conflict do nothing;
   `);
 });
 
@@ -38,4 +42,20 @@ describe("a otimização preserva a visibilidade original", () => {
     expect(countAs(GOV_MANAGER, `select count(*) from crm_lead_activities where id in ('${ACT_A}','${ACT_B}')`)).toBe(2);
     expect(countAs(OUTSIDER, `select count(*) from crm_lead_activities where id in ('${ACT_A}','${ACT_B}')`)).toBe(0);
   });
+
+  for (const mode of ["own", "own_and_unassigned", "all", "valor_desconocido"]) {
+    it(`leads y actividades conservan el mismo alcance original en ${mode}`, () => {
+      sql(`update public.organizations set settings = jsonb_set(coalesce(settings,'{}'::jsonb),'{visibility_mode}',to_jsonb('${mode}'::text)) where id='${GOV_ORG}';`);
+      for (const user of [GOV_AGENT_A, GOV_AGENT_B, GOV_MANAGER, GOV_VIEWER, GOV_ADMIN, OUTSIDER]) {
+        const expected = Number(lastLine(sql(`
+          select set_config('request.jwt.claims','{"sub":"${user}"}',false);
+          select count(*) from crm_leads
+          where id in ('${A}','${B}','${C}')
+            and fn_can_view_lead(organization_id,owner_user_id);
+        `)));
+        expect(countAs(user, `select count(*) from crm_leads where id in ('${A}','${B}','${C}')`), `${mode}: leads ${user}`).toBe(expected);
+        expect(countAs(user, `select count(*) from crm_lead_activities where id in ('${ACT_A}','${ACT_B}','${ACT_C}')`), `${mode}: activities ${user}`).toBe(expected);
+      }
+    });
+  }
 });

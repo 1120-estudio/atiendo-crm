@@ -40916,3 +40916,34 @@ create policy "conversations_select" on public.conversations for select using (
   or (assigned_to_user_id = (select auth.uid()) and organization_id in (select org_id from public.fn_escopos_leitura_inbox()))
   or (assigned_to_user_id is null and organization_id in (select org_id from public.fn_escopos_leitura_inbox() where fila))
 );
+
+-- 0451: calcula o alcance de leads e atividades para assessores uma vez por
+-- consulta, conservando a visibilidade do negócio-pai e o isolamento tenant.
+drop policy if exists "crm_leads_select" on public.crm_leads;
+create policy "crm_leads_select" on public.crm_leads for select using (
+  (select public.fn_is_platform_admin())
+  or organization_id in (
+    select org_id from public.fn_escopos_leitura_inbox() where acesso_total
+  )
+  or (
+    owner_user_id = (select auth.uid())
+    and organization_id in (select org_id from public.fn_escopos_leitura_inbox())
+  )
+  or (
+    owner_user_id is null
+    and organization_id in (
+      select org_id from public.fn_escopos_leitura_inbox() where fila
+    )
+  )
+);
+
+drop policy if exists "crm_lead_activities_select" on public.crm_lead_activities;
+create policy "crm_lead_activities_select" on public.crm_lead_activities
+  for select using (
+    exists (
+      select 1
+      from public.crm_leads l
+      where l.id = crm_lead_activities.lead_id
+        and l.organization_id = crm_lead_activities.organization_id
+    )
+  );
