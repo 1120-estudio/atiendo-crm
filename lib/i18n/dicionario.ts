@@ -37,6 +37,15 @@ import type { Idioma } from "./idiomas";
 type Traducoes = Record<string, Partial<Record<Exclude<Idioma, "pt-BR">, string>>>;
 
 export const DICIONARIO: Traducoes = {
+  "A foto precisa ser JPG, PNG ou WebP estático.": { es: "La foto debe ser JPG, PNG o WebP estático." },
+  "Esta empresa ya tiene otra tienda vinculada. Debes revisar los productos antes de cambiarla.": { es: "Esta empresa ya tiene otra tienda vinculada. Debes revisar los productos antes de cambiarla." },
+  "Estado inválido.": { es: "Estado inválido." },
+  "La instalación necesita habilitar el cifrado de credenciales.": { es: "La instalación necesita habilitar el cifrado de credenciales." },
+  "No se pudo cambiar la conexión.": { es: "No se pudo cambiar la conexión." },
+  "No se pudo conectar. Comprueba HTTPS y las claves de lectura.": { es: "No se pudo conectar. Comprueba HTTPS y las claves de lectura." },
+  "No se pudo leer la conexión.": { es: "No se pudo leer la conexión." },
+  "Paginación inválida.": { es: "Paginación inválida." },
+  "Revisa la URL y las claves de WooCommerce.": { es: "Revisa la URL y las claves de WooCommerce." },
   " Conservar las descripciones y fotos existentes de Orbit": { es: " Conservar las descripciones y fotos existentes de Orbit" },
   "Conectar WooCommerce": { es: "Conectar WooCommerce" },
   "Configura los webhooks de producto creado, actualizado y eliminado con esta URL:": { es: "Configura los webhooks de producto creado, actualizado y eliminado con esta URL:" },
