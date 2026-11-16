@@ -40962,3 +40962,11 @@ create policy "conversations_select" on public.conversations for select using (
   or (assigned_to_user_id = (select auth.uid()) and organization_id in (select org_id from public.fn_escopos_leitura_inbox()))
   or (assigned_to_user_id is null and organization_id in (select org_id from public.fn_escopos_leitura_inbox() where fila))
 );
+
+-- ---- Galerias WooCommerce: estado final após o bloco legado 0390 (0452) ----
+-- O bucket e o CHECK são recriados acima pela instalação legada. Este bloco
+-- aditivo é o estado final tanto na instalação nova quanto na atualização.
+alter table public.catalog_products drop constraint if exists catalog_products_fotos_no_maximo_5;
+update storage.buckets
+  set allowed_mime_types = array['image/jpeg','image/png','image/webp']
+  where id = 'catalog-photos';

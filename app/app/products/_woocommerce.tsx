@@ -50,9 +50,9 @@ export function ConexaoWooCommerce() {
       <Button type="button" disabled={busy} onClick={() => void cambiarEstado()}>{estado.enabled ? t("Pausar") : t("Reanudar y sincronizar")}</Button>
     </div>}
     <form onSubmit={guardar} className="grid gap-3">
-      <label>{t("URL de la tienda")}<input name="url" type="url" required defaultValue={estado?.url} placeholder="https://mitienda.com" className="block w-full rounded border p-2" /></label>
-      <label>{t("Consumer key")}<input name="key" type="password" required autoComplete="off" className="block w-full rounded border p-2" /></label>
-      <label>{t("Consumer secret")}<input name="secret" type="password" required autoComplete="off" className="block w-full rounded border p-2" /></label>
+      <label>{t("URL de la tienda")}<input name="url" type="url" required defaultValue={estado?.url} placeholder="https://example.com" className="block w-full rounded-md border p-2" /></label>
+      <label>{t("Consumer key")}<input name="key" type="password" required autoComplete="off" className="block w-full rounded-md border p-2" /></label>
+      <label>{t("Consumer secret")}<input name="secret" type="password" required autoComplete="off" className="block w-full rounded-md border p-2" /></label>
       <label><input name="preservar" type="checkbox" defaultChecked />{t(" Conservar las descripciones y fotos existentes de Orbit")}</label>
       <p className="text-sm">{t("Crea las claves con permiso de lectura en WooCommerce → Ajustes → Avanzado → API REST. Reconectar genera un nuevo secreto de webhook.")}</p>
       <Button disabled={busy} type="submit">{busy ? t("Guardando…") : t("Conectar WooCommerce")}</Button>
