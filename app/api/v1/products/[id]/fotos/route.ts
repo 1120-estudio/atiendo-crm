@@ -23,7 +23,6 @@ import {
   conferirNovaOrdem,
   extensaoDe,
   farejarTipo,
-  MAXIMO_DE_FOTOS,
   TAMANHO_MAXIMO_DA_FOTO,
 } from "@/lib/catalogo/fotos";
 import { apagarDoBucket } from "@/lib/catalogo/fotos-no-bucket";
@@ -34,7 +33,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const ordemSchema = z.object({ fotos: z.array(z.string().min(1).max(300)).max(MAXIMO_DE_FOTOS) });
+const ordemSchema = z.object({ fotos: z.array(z.string().min(1).max(300)) });
 
 /** As fotos gravadas HOJE, lidas pela sessão do usuário (RLS + org do cookie). */
 async function fotosAtuais(orgId: string, id: string): Promise<string[] | null> {
@@ -76,9 +75,7 @@ export async function POST(
 
   const atuais = await fotosAtuais(orgId, id);
   if (atuais === null) return fail("not_found", t("Produto não encontrado."), 404, { requestId });
-  if (atuais.length >= MAXIMO_DE_FOTOS) {
-    return fail("validation_failed", t("Cada produto tem no máximo 5 fotos."), 422, { requestId });
-  }
+
 
   // Recusa pelo Content-Length declarado ANTES de bufferizar o corpo (como a rota de
   // mídia da conversa); o file.size abaixo continua sendo o check autoritativo.
@@ -98,7 +95,7 @@ export async function POST(
   const bytes = new Uint8Array(await file.arrayBuffer());
   const tipo = farejarTipo(bytes);
   if (!tipo) {
-    return fail("unsupported_media_type", t("A foto precisa ser JPG ou PNG."), 415, {
+    return fail("unsupported_media_type", t("A foto precisa ser JPG, PNG ou WebP estático."), 415, {
       requestId,
       details: { content_type_declarado: file.type || null },
     });

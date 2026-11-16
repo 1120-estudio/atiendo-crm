@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MAXIMO_DE_FOTOS, TAMANHO_MAXIMO_DA_FOTO } from "@/lib/catalogo/fotos";
+import { TAMANHO_MAXIMO_DA_FOTO } from "@/lib/catalogo/fotos";
 
 import { lastLine, sql } from "./gov-helpers";
 
@@ -22,7 +22,7 @@ describe("catalog-photos — o bucket que o produto supõe", () => {
                   coalesce(array_to_string(allowed_mime_types, ','), 'NULO')
              from storage.buckets where id = 'catalog-photos';`),
     );
-    expect(linha).toBe(`false|${TAMANHO_MAXIMO_DA_FOTO}|image/jpeg,image/png`);
+    expect(linha).toBe(`false|${TAMANHO_MAXIMO_DA_FOTO}|image/jpeg,image/png,image/webp`);
   });
 
   it("NENHUMA policy de storage.objects nomeia o bucket — só o service_role lê e grava", () => {
@@ -37,25 +37,15 @@ describe("catalog-photos — o bucket que o produto supõe", () => {
 });
 
 describe("catalog_products.fotos — no máximo o que a tela deixa pôr", () => {
-  it(`aceita ${MAXIMO_DE_FOTOS} e recusa ${MAXIMO_DE_FOTOS + 1}`, () => {
-    const caminhos = (n: number) =>
-      `array[${Array.from({ length: n }, (_, i) => `'${ORG}/x/${i}.jpg'`).join(",")}]::text[]`;
-    const resultado = lastLine(
-      sql(`
-        insert into public.organizations (id, slug, legal_name, display_name)
-          values ('${ORG}', 'fotos-0390', 'Fotos 0390', 'Fotos 0390') on conflict (id) do nothing;
-        delete from public.catalog_products where organization_id = '${ORG}';
-        insert into public.catalog_products (organization_id, codigo, nome, preco_cents, fotos)
-          values ('${ORG}', 'CINCO', 'Cinco fotos', 100, ${caminhos(MAXIMO_DE_FOTOS)});
-        do $$ begin
-          insert into public.catalog_products (organization_id, codigo, nome, preco_cents, fotos)
-            values ('${ORG}', 'SEIS', 'Seis fotos', 100, ${caminhos(MAXIMO_DE_FOTOS + 1)});
-        exception when check_violation then null;
-        end $$;
-        select string_agg(codigo, ',' order by codigo) from public.catalog_products
-         where organization_id = '${ORG}';`),
-    );
-    expect(resultado).toBe("CINCO");
+  it("preserva galerias com mais de cinco fotos", () => {
+    expect(lastLine(sql(`
+      insert into public.organizations (id, slug, legal_name, display_name)
+      values ('${ORG}', 'fotos-0390', 'Fotos', 'Fotos') on conflict (id) do nothing;
+      insert into public.catalog_products (organization_id, codigo, nome, preco_cents, fotos)
+      values ('${ORG}', 'GALERIA', 'Galeria', 100, array_fill('foto.webp'::text, array[12]))
+      on conflict (organization_id,codigo) do update set fotos=excluded.fotos;
+      select cardinality(fotos) from public.catalog_products where organization_id='${ORG}' and codigo='GALERIA';
+    `))).toBe("12");
   });
 
   it("produto que já existia nasce com a lista vazia, não nula", () => {

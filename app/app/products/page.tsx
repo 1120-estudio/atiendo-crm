@@ -32,7 +32,9 @@ export const metadata = { title: tituloNoIdiomaDaInstalacao("Produtos") };
  * atende precisa dela. Cadastrar e alterar preço é `manager`, e a rota cobra de
  * novo — a tela esconder o botão é cortesia, não autorização.
  */
-export default async function ProdutosPage() {
+export default async function ProdutosPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const query = await searchParams;
+  const pagina = Math.max(1, Math.min(100000, Number(query.page) || 1));
   const user = await requireAuth();
   const t = (texto: string) => traduzir(texto, user.idioma);
   const activeOrg = await resolveActiveOrg(user);
@@ -43,13 +45,13 @@ export default async function ProdutosPage() {
 
   const supabase = await createClient();
   const moeda = await moedaDaOrganizacao(supabase, activeOrg.orgId);
-  const { data } = await supabase
+  const { data, count } = await supabase
     .from("catalog_products")
-    .select(COLUNAS_DO_PRODUTO)
+    .select(COLUNAS_DO_PRODUTO, { count: "exact" })
     .eq("organization_id", activeOrg.orgId)
     .order("ativo", { ascending: false })
-    .order("nome")
-    .limit(500);
+    .order("nome").order("id")
+    .range((pagina - 1) * 100, pagina * 100 - 1);
   const produtos = (data ?? []) as unknown as Produto[];
 
   // O bucket é privado: a tela recebe URL assinada de 1 h, montada aqui. Só
@@ -69,6 +71,12 @@ export default async function ProdutosPage() {
   }
 
   return (
+    <>
+    <nav aria-label={t("Páginas del catálogo")} className="mx-auto flex max-w-5xl gap-4 px-6 pt-4">
+      {pagina > 1 && <a href={`?page=${pagina - 1}`}>Anterior</a>}
+      <span>{t("Página")} {pagina} · {count ?? 0} productos</span>
+      {pagina * 100 < (count ?? 0) && <a href={`?page=${pagina + 1}`}>Siguiente</a>}
+    </nav>
     <ProdutosClient
       inicial={produtos}
       moeda={moeda}
@@ -85,5 +93,6 @@ export default async function ProdutosPage() {
         ),
       }}
     />
+    </>
   );
 }

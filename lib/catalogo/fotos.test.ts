@@ -60,3 +60,18 @@ it("o mime acompanha a extensão gravada", () => {
   expect(mimeDaFoto("x/y/z.png")).toBe("image/png");
   expect(mimeDaFoto("x/y/z.jpg")).toBe("image/jpeg");
 });
+
+it("accepts static WebP while rejecting truncated and animated headers", async () => {
+  const { farejarTipo, extensaoDe } = await import("./fotos");
+  const bytes = new Uint8Array(30);
+  bytes.set(new TextEncoder().encode("RIFF"), 0);
+  new DataView(bytes.buffer).setUint32(4, 22, true);
+  bytes.set(new TextEncoder().encode("WEBPVP8X"), 8);
+  expect(farejarTipo(bytes)).toBe("image/webp");
+  bytes[20] = 2;
+  expect(farejarTipo(bytes)).toBeNull();
+  expect(farejarTipo(bytes.slice(0, 15))).toBeNull();
+  expect(extensaoDe("image/webp")).toBe("webp");
+  expect(mimeDaFoto("x.webp")).toBe("image/webp");
+  expect(fotoPertenceAoProduto(`${ORG}/${PRODUTO}/${ARQUIVO.replace("jpg", "webp")}`, ORG, PRODUTO)).toBe(true);
+});

@@ -663,6 +663,9 @@ export const AUDIT_ACTIONS = [
 
   // O catálogo da loja (migration 0204). Preço de venda é dado que a equipe
   // disputa — quem mudou e quando precisa ficar registrado.
+  "woocommerce.connected",
+  "woocommerce.state_changed",
+  "woocommerce.synced",
   "catalog_product.created",
   "catalog_product.updated",
   "catalog_product.deleted",

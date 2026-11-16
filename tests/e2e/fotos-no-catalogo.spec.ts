@@ -58,6 +58,8 @@ function chunk(tipo: string, dados: Buffer): Buffer {
 }
 
 const LADO = 48;
+// Bitmap WebP estático de 48×48: prova upload, MIME e renderização reais.
+const WEBP_AZUL = Buffer.from("UklGRkwAAABXRUJQVlA4IEAAAACwAwCdASowADAAPm02mEkkIyKhI4gAgA2JZwB2APwAADmo9UoIAAD+8FMf//2Dv5wH5wH9MH//4VbhiGToAAAA", "base64");
 
 function pngSolido(cor: [number, number, number]): Buffer {
   const ihdr = Buffer.alloc(13);
@@ -134,7 +136,7 @@ async function subir(page: Page, nome: string, bytes: Buffer): Promise<number> {
   const resposta = page.waitForResponse(
     (r) => r.request().method() === "POST" && /\/api\/v1\/products\/[^/]+\/fotos$/.test(r.url()),
   );
-  await painel(page).getByTestId("arquivo-foto").setInputFiles({ name: nome, mimeType: "image/png", buffer: bytes });
+  await painel(page).getByTestId("arquivo-foto").setInputFiles({ name: nome, mimeType: nome.endsWith(".webp") ? "image/webp" : "image/png", buffer: bytes });
   const r = await resposta;
   produtoId ??= r.url().match(/\/products\/([^/]+)\/fotos$/)?.[1] ?? null;
   return r.status();
@@ -167,7 +169,7 @@ test("gerente sobe, recusa não-imagem, reordena e remove fotos pela tela", asyn
 
   // (2) texto com nome de foto: recusado pelos BYTES, com a mensagem de tipo.
   expect(await subir(page, "nao-sou-foto.png", Buffer.from("isto é texto, não imagem\n", "utf8"))).toBe(415);
-  await expect(page.getByText("A foto precisa ser JPG ou PNG.")).toBeVisible();
+  await expect(page.getByText("A foto precisa ser JPG, PNG ou WebP estático.")).toBeVisible();
   await expect(painel(page).getByTestId("foto-do-produto")).toHaveCount(0);
   await expect(botao).toHaveText("Fotos (0)");
   await evidencia(page, info, "01-texto-recusado");
@@ -180,12 +182,12 @@ test("gerente sobe, recusa não-imagem, reordena e remove fotos pela tela", asyn
   expect(Math.round(capa1.w)).toBe(40); // h-10 w-10
   expect(Math.round(capa1.h)).toBe(40);
 
-  expect(await subir(page, "azul.png", pngSolido([0x1d, 0x4e, 0xd8]))).toBe(200);
+  expect(await subir(page, "azul.webp", WEBP_AZUL)).toBe(200);
   await expect(botao).toHaveText("Fotos (2)", { timeout: 15_000 });
   await expect(painel(page).getByTestId("foto-do-produto")).toHaveCount(2);
   const [a, b] = await ordemNaTela(page);
   expect(a).toBe(capa1.nome);
-  expect(b).toMatch(/^[0-9a-f-]{36}\.png$/);
+  expect(b).toMatch(/^[0-9a-f-]{36}\.webp$/);
   expect(b).not.toBe(a);
   for (const img of await painel(page).getByTestId("foto-do-produto").locator("img").all()) {
     expect((await medirImagem(img)).natural).toBe(LADO);

@@ -111,6 +111,7 @@ CRONS="
 50 5 * * *|60|api/v1/cron/canal-mudo-watcher
 0 12 * * *|60|api/v1/cron/lgpd-sla-watcher
 30 3 * * *|120|api/v1/cron/kb-conversations-batch
+* * * * *|600|api/v1/cron/woocommerce-sync
 15 4 * * *|60|api/v1/cron/sync-model-catalog
 40 4 * * *|120|api/v1/cron/data-retention
 20 5 * * *|120|api/v1/cron/media-retention

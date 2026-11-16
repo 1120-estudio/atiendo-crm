@@ -9,21 +9,33 @@
 
 export const BUCKET_DAS_FOTOS = "catalog-photos";
 
-/** O mesmo `cardinality(fotos) <= 5` do CHECK da 0390. */
-export const MAXIMO_DE_FOTOS = 5;
-
 /** 5 MB: o `file_size_limit` do bucket, e o teto de imagem do WhatsApp oficial. */
 export const TAMANHO_MAXIMO_DA_FOTO = 5 * 1024 * 1024;
 
 /**
  * O formato é decidido pela ASSINATURA dos bytes — `farejarTipo`, o mesmo
  * farejador do logo (`lib/branding/logo-arquivo.ts`), que aceita exatamente
- * JPEG e PNG. Não pelo `content-type` que o navegador declarou: esse é do
+ * JPEG, PNG e WebP estático. Não pelo `content-type` que o navegador declarou: esse é do
  * cliente, e o arquivo vai ser servido ao WhatsApp de outra pessoa.
  */
-export { extensaoDe, farejarTipo } from "@/lib/branding/logo-arquivo";
+import { farejarTipo as farejarLogo } from "@/lib/branding/logo-arquivo";
+export type TipoDeFoto = "image/jpeg" | "image/png" | "image/webp";
+export function farejarTipo(bytes: Uint8Array): TipoDeFoto | null {
+  if (bytes.length >= 30 && String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" &&
+      String.fromCharCode(...bytes.slice(8, 12)) === "WEBP" &&
+      ["VP8 ", "VP8L", "VP8X"].includes(String.fromCharCode(...bytes.slice(12, 16)))) {
+    const size = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(4, true);
+    if (size + 8 !== bytes.length) return null;
+    if (String.fromCharCode(...bytes.slice(12, 16)) === "VP8X" && (bytes[20]! & 2)) return null;
+    return "image/webp";
+  }
+  return farejarLogo(bytes);
+}
+export function extensaoDe(tipo: TipoDeFoto): "png" | "jpg" | "webp" {
+  return tipo === "image/webp" ? "webp" : tipo === "image/png" ? "png" : "jpg";
+}
 
-const FORMA_DO_ARQUIVO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png)$/;
+const FORMA_DO_ARQUIVO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$/;
 
 /**
  * O caminho É desta organização e deste produto, na forma exata que a rota gera?
@@ -40,7 +52,8 @@ export function fotoPertenceAoProduto(caminho: string, orgId: string, produtoId:
   return caminho.startsWith(prefixo) && FORMA_DO_ARQUIVO.test(caminho.slice(prefixo.length));
 }
 
-export function mimeDaFoto(caminho: string): "image/png" | "image/jpeg" {
+export function mimeDaFoto(caminho: string): TipoDeFoto {
+  if (caminho.endsWith(".webp")) return "image/webp";
   return caminho.endsWith(".png") ? "image/png" : "image/jpeg";
 }
 

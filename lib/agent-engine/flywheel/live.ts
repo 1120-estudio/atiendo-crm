@@ -41,9 +41,15 @@ async function collectRecentTurns(pool: pg.Pool, limit: number): Promise<TurnRow
      from job_queue j
      where j.kind = 'inbound_turn' and j.status = 'done' and j.contact_id is not null
        and exists (select 1 from llm_calls c where c.job_id = j.id and c.purpose = 'agent_turn')
+       and not exists (
+         select 1 from flywheel_judge_verdicts v
+         where v.organization_id = j.organization_id
+           and v.trace_id = j.id::text
+           and v.dataset = $2 and v.dimension = $3
+       )
      order by j.created_at desc
      limit $1`,
-    [limit],
+    [limit, DATASET, DIMENSION],
   );
   return rows;
 }
