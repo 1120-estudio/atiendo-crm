@@ -219,7 +219,7 @@ export const crmSearchProducts: McpToolDefinition<typeof produtosInputShape> = {
       const { data: lote, error, count } = await ctx.supabase
         .from("catalog_products")
         .select(
-          "id, codigo, nome, descricao, marca, categoria, preco_cents, moeda, controla_estoque, quantidade, ativo, fotos",
+          "id, codigo, nome, descricao, marca, categoria, preco_cents, moeda, controla_estoque, quantidade, ativo, fotos, woo_disponivel, ficha_woocommerce",
           { count: "exact" },
         )
         .eq("organization_id", ctx.organizationId)
@@ -262,6 +262,8 @@ export const crmSearchProducts: McpToolDefinition<typeof produtosInputShape> = {
       moeda: string;
       controla_estoque: boolean;
       quantidade: number;
+      woo_disponivel?: boolean | null;
+      ficha_woocommerce?: Record<string, unknown> | null;
       fotos: string[] | null;
     };
 
@@ -271,7 +273,7 @@ export const crmSearchProducts: McpToolDefinition<typeof produtosInputShape> = {
     // filtrava por quantidade sempre: numa loja que não conta estoque (decant de
     // perfume, item sob encomenda) o catálogo INTEIRO ficava invisível.
     const disponiveis = input.somente_disponiveis
-      ? achados.filter((a) => !a.produto.controla_estoque || a.produto.quantidade > 0)
+      ? achados.filter((a) => a.produto.woo_disponivel ?? (!a.produto.controla_estoque || a.produto.quantidade > 0))
       : achados;
 
     const topo = disponiveis.slice(0, input.limite);
@@ -329,7 +331,14 @@ export const crmSearchProducts: McpToolDefinition<typeof produtosInputShape> = {
         preco_cents: produto.preco_cents,
         ...(produto.marca ? { marca: produto.marca } : {}),
         ...(produto.descricao ? { descricao: produto.descricao } : {}),
-        disponivel: !produto.controla_estoque || produto.quantidade > 0,
+        disponivel: produto.woo_disponivel ?? (!produto.controla_estoque || produto.quantidade > 0),
+        ...(produto.ficha_woocommerce ? { ficha_tienda: {
+          descripcion: produto.ficha_woocommerce.description, descripcion_corta: produto.ficha_woocommerce.short_description,
+          atributos: produto.ficha_woocommerce.attributes, peso: produto.ficha_woocommerce.weight, medidas: produto.ficha_woocommerce.dimensions,
+          precio_normal: produto.ficha_woocommerce.regular_price, precio_oferta: produto.ficha_woocommerce.sale_price,
+          enlace: produto.ficha_woocommerce.permalink, estado_stock: produto.ficha_woocommerce.stock_status,
+          producto_principal: produto.ficha_woocommerce.parent,
+        } } : {}),
         // Quantas fotos, e não quais: o caminho é vocabulário interno e a URL
         // assinada expira. Quem manda a foto é o `send_message` do agente, com
         // `produto_codigo` — ele acha as fotos pelo código (migration 0390).

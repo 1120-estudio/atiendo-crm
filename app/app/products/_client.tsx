@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ConexaoWooCommerce } from "./_woocommerce";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -17,7 +18,6 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { apiClient } from "@/lib/api/client";
-import { MAXIMO_DE_FOTOS } from "@/lib/catalogo/fotos";
 import { MOEDA_PADRAO } from "@/lib/money";
 import { formatPrecoDoCatalogo, precoParaEdicao } from "@/lib/catalogo/preco";
 import { precoParaCentavos, type Produto } from "@/lib/schemas/produtos";
@@ -206,7 +206,7 @@ function FotosDoProduto({ produto, urls }: { produto: Produto; urls: Record<stri
       <input
         ref={entradaRef}
         type="file"
-        accept="image/jpeg,image/png"
+        accept="image/jpeg,image/png,image/webp"
         className="hidden"
         data-testid="arquivo-foto"
         onChange={(e) => {
@@ -218,14 +218,14 @@ function FotosDoProduto({ produto, urls }: { produto: Produto; urls: Record<stri
         <Button
           variant="outline"
           size="sm"
-          disabled={ocupado || fotos.length >= MAXIMO_DE_FOTOS}
+          disabled={ocupado}
           onClick={() => entradaRef.current?.click()}
           data-testid="adicionar-foto"
         >
           {t(ocupado ? "Salvando…" : "Adicionar foto")}
         </Button>
         <span className="text-xs text-muted-foreground">
-          {t("JPG ou PNG, até 5 MB. No máximo 5 fotos.")}
+          {t("JPG, PNG ou WebP estático, até 5 MB por foto.")}
         </span>
       </div>
     </div>
@@ -367,6 +367,7 @@ export function ProdutosClient({
 
   return (
     <div className="mx-auto w-full max-w-5xl p-6" data-testid="tela-produtos">
+      {podeEditar && <ConexaoWooCommerce />}
       <header className="mb-6">
         <h1 className="text-2xl font-semibold">{textos.titulo}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{textos.subtitulo}</p>

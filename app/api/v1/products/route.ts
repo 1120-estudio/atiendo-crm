@@ -7,6 +7,7 @@ import { requireSupportWrite } from "@/lib/impersonate/support";
  * é o motivo de este catálogo não morar na tabela da Nuvemshop, cuja policy é
  * org-flat sem checagem de papel.
  */
+import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { type NextRequest } from "next/server";
 
@@ -25,12 +26,15 @@ export async function GET(req: NextRequest): Promise<Response> {
   const authz = await requireRole("viewer", { requestId, resource: "catalog_products" });
   if (!authz.ok) return authz.response;
 
-  const busca = req.nextUrl.searchParams.get("busca")?.trim() ?? "";
+  const pagination = z.object({ page: z.coerce.number().int().min(1).max(100000).default(1), limit: z.coerce.number().int().min(1).max(500).default(100) }).safeParse(Object.fromEntries(req.nextUrl.searchParams));
+  if (!pagination.success) return fail("validation_failed", "Paginación inválida.", 422, { requestId });
+  const { page, limit } = pagination.data;
+  const busca = (req.nextUrl.searchParams.get("busca")?.trim() ?? "").replace(/[(),%]/g, "").slice(0, 200);
   const supabase = await createClient();
 
   let q = supabase
     .from("catalog_products")
-    .select(COLUNAS_DO_PRODUTO)
+    .select(COLUNAS_DO_PRODUTO, { count: "exact" })
     .eq("organization_id", authz.org.orgId);
 
   // A busca da TELA é substring simples, de propósito: quem opera a loja digita
@@ -38,13 +42,13 @@ export async function GET(req: NextRequest): Promise<Response> {
   // AGENTE, em `lib/catalogo/busca.ts`, e ela responde a outra pergunta.
   if (busca !== "") q = q.or(`nome.ilike.%${busca}%,codigo.ilike.%${busca}%,marca.ilike.%${busca}%`);
 
-  const { data, error } = await q
+  const { data, error, count } = await q
     .order("ativo", { ascending: false })
-    .order("nome")
-    .limit(500);
+    .order("nome").order("id")
+    .range((page - 1) * limit, page * limit - 1);
 
   if (error) return fail("internal_error", "Erro ao listar os produtos.", 500, { requestId });
-  return ok(data ?? [], { requestId });
+  return ok(data ?? [], { requestId, meta: { total: count, has_more: page * limit < (count ?? 0), page, limit } });
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
