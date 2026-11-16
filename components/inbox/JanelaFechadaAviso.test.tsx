@@ -27,6 +27,16 @@ vi.mock("@tanstack/react-query", () => ({
       data: {
         templates: [
           {
+            name: "pedido_datos_entrega",
+            language: "es",
+            status: "APPROVED",
+            slots: [
+              { key: "1", expects: "text", onde: "corpo", valueKey: "1" },
+              { key: "2", expects: "text", onde: "corpo", valueKey: "2" },
+            ],
+            components: [{ type: "BODY", text: "Hola {{1}}, falta {{2}}." }],
+          },
+          {
             name: "aviso_debriefing_adv",
             language: "pt_BR",
             status: "APPROVED",
@@ -73,6 +83,18 @@ describe("JanelaFechadaAviso", () => {
   beforeEach(() => {
     mutate.mockClear();
     salvos.valores = {};
+  });
+
+  it("mostra o texto e atualiza a prévia e o corpo enviado com os valores", async () => {
+    const user = userEvent.setup();
+    montar();
+    await user.selectOptions(screen.getByRole("combobox"), "pedido_datos_entrega|es");
+    expect(screen.getByLabelText("Prévia da mensagem")).toHaveTextContent("Hola {{1}}, falta {{2}}.");
+    await user.type(screen.getByRole("textbox", { name: /corpo — \{\{1\}\}/ }), "Santiago");
+    await user.type(screen.getByRole("textbox", { name: /corpo — \{\{2\}\}/ }), "dirección");
+    expect(screen.getByLabelText("Prévia da mensagem")).toHaveTextContent("Hola Santiago, falta dirección.");
+    await user.click(screen.getByRole("button", { name: /Enviar modelo/ }));
+    expect(mutate.mock.calls[0]![0]).toMatchObject({ body: "Hola Santiago, falta dirección.", template_values: { "1": "Santiago", "2": "dirección" } });
   });
 
   it("não deixa enviar enquanto o modelo tem valor em branco", async () => {

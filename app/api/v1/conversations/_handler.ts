@@ -19,6 +19,7 @@ import type { Conversation } from "@/lib/types/messaging";
 import { normalizarTermoDeBusca } from "@/lib/inbox/termo-de-busca";
 import { ORDEM_DA_ESPERA, ehAFila } from "@/lib/inbox/comando-da-conversa";
 import { aplicarMarcador } from "@/lib/inbox/marcador-da-conversa";
+import { registrarFalhaLeituraInbox } from "@/lib/inbox/registro-falha-leitura";
 
 /**
  * Prepara o termo digitado para viajar dentro de um `or=` do PostgREST.
@@ -382,6 +383,7 @@ export async function listConversationsHandler(
 
   const { data, error } = await query;
   if (error) {
+    registrarFalhaLeituraInbox("conversas", ctx.requestId, error);
     throw new ApiError(500, "internal_error", undefined, ctx.requestId, error.message);
   }
 

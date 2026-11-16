@@ -78,7 +78,7 @@ function rotuloDoSlot(slot: Slot, t: (s: string) => string): string {
             : slot.expects === "coupon_code"
               ? t("código do cupom")
               : `{{${slot.key}}}`;
-  return `${slot.onde} — ${oQue}`;
+  return `${t(slot.onde)} — ${oQue}`;
 }
 
 /** Mídia entra por URL pública: a Meta baixa o arquivo do link que mandamos. */
@@ -105,8 +105,15 @@ interface ModeloAprovado {
  * a conversa mostraria uma bolha em branco. O nome é pior que o texto e melhor
  * que nada — e só acontece em definição sem BODY, que a plataforma não aprova.
  */
-function textoDoModelo(modelo: ModeloAprovado): string {
-  return lerConteudo(modelo.components ?? []).body?.trim() || modelo.name;
+function preencherTexto(texto: string, valores: Record<string, string>, prefixo = ""): string {
+  return texto.replace(/\{\{(\w+)\}\}/g, (original, chave: string) =>
+    valores[`${prefixo}${chave}`]?.trim() ? valores[`${prefixo}${chave}`]! : original,
+  );
+}
+
+function textoDoModelo(modelo: ModeloAprovado, valores: Record<string, string>): string {
+  const corpo = lerConteudo(modelo.components ?? []).body?.trim();
+  return corpo ? preencherTexto(corpo, valores) : modelo.name;
 }
 
 export function JanelaFechadaAviso({
@@ -198,7 +205,7 @@ export function JanelaFechadaAviso({
         //
         // O texto renderizado é também o que a conversa mostra depois: é o
         // mesmo caminho que o agente já usa quando manda modelo.
-        body: textoDoModelo(atual),
+        body: textoDoModelo(atual, valores),
         template_values: valores,
       },
       {
@@ -274,6 +281,21 @@ export function JanelaFechadaAviso({
           </Button>
         </div>
       )}
+
+      {atual && (() => {
+        const conteudo = lerConteudo(atual.components ?? []);
+        const cabecalho = conteudo.header?.texto
+          ? preencherTexto(conteudo.header.texto, valores, "header:")
+          : null;
+        return (
+          <div className="mt-3 rounded-md border border-amber-300 bg-background p-3 text-sm dark:border-amber-800" aria-label={t("Prévia da mensagem")}>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">{t("Prévia da mensagem")}</p>
+            {cabecalho && <p className="mb-2 whitespace-pre-wrap font-medium">{cabecalho}</p>}
+            <p className="whitespace-pre-wrap">{textoDoModelo(atual, valores)}</p>
+            {conteudo.footer && <p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">{conteudo.footer}</p>}
+          </div>
+        );
+      })()}
 
       {slots.length > 0 && (
         <div className="mt-2 flex flex-col gap-2">

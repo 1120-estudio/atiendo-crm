@@ -52,6 +52,8 @@ import { traduzir } from "@/lib/i18n/dicionario";
 import type { Idioma } from "@/lib/i18n/idiomas";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { deriveTemplateContract, describeAddress } from "@/lib/channels/meta/template-contract";
+import { slotKey } from "@/lib/channels/meta/build-components";
 import { acaoApagarSchema, acaoEditarSchema, executarGestao } from "@/lib/channels/gestao-de-modelos";
 
 export const dynamic = "force-dynamic";
@@ -144,7 +146,7 @@ export async function GET(): Promise<Response> {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("meta_templates")
-    .select("name, language, status, category, rejected_reason, components, synced_at")
+    .select("name, language, status, category, rejected_reason, components, parameter_format, synced_at")
     .eq("organization_id", r.ctx.orgId)
     .eq("channel_session_id", r.ctx.sessionId)
     .order("status")
@@ -154,7 +156,14 @@ export async function GET(): Promise<Response> {
 
   return ok(
     {
-      templates: (data ?? []).map((t) => ({
+      templates: (data ?? []).map((t) => {
+        const contrato = deriveTemplateContract({
+          name: t.name as string,
+          language: t.language as string,
+          parameter_format: (t.parameter_format as string | null) ?? undefined,
+          components: t.components as never,
+        });
+        return ({
         name: t.name as string,
         language: t.language as string,
         status: t.status as string,
@@ -165,7 +174,14 @@ export async function GET(): Promise<Response> {
         // o operador a abrir a plataforma para saber o que a definição diz —
         // e é o texto que ele precisa para escolher qual mandar.
         components: (t.components as unknown[]) ?? [],
-      })),
+        slots: contrato.slots.map((s) => ({
+          key: s.key,
+          expects: s.expects,
+          onde: describeAddress(s.address),
+          valueKey: slotKey(s.address, s.key),
+        })),
+      });
+      }),
     },
     { requestId },
   );

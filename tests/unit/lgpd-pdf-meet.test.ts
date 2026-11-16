@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join, sep } from "node:path";
+import { dirname, join } from "node:path";
 import { expect, it } from "vitest";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { renderLgpdPdf } from "@/lib/lgpd/pdf-renderer";
@@ -9,6 +9,7 @@ import type { ExportPayload } from "@/lib/lgpd/export-collector";
 
 function payload(): ExportPayload {
   return {
+    locale: "pt-BR",
     request_id: "3f2a9c10-0000-4000-8000-000000000001",
     organization_id: "8c1d4e20-0000-4000-8000-000000000002",
     organization_legal_name: "Bem Viver Servicos Medicos LTDA",
@@ -87,7 +88,7 @@ async function rendered(data: ExportPayload) {
     join(
       dirname(createRequire(import.meta.url).resolve("pdfjs-dist/package.json")),
       "standard_fonts",
-    ) + sep;
+    ) + "/";
   const task = getDocument({ data: new Uint8Array(bytes), standardFontDataUrl: fonts });
   const document = await task.promise;
   try {

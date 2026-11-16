@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { CheckpointInvalidoError, fecharCheckpoint } from '@/lib/agent-engine/agent/fechar-checkpoint';
+import { CheckpointInvalidoError, fecharCheckpoint, formatarDiagnosticoCheckpoint, registrarFechamentoInvalido } from '@/lib/agent-engine/agent/fechar-checkpoint';
 import { parseCheckpointText } from '@/lib/agent-engine/agent/inbound-turn';
 
 const valido = JSON.stringify({ rolling_summary: 'Pedido confirmado', declaracao: { intencoes: [], promessas: [], nada_a_declarar: true } });
@@ -40,4 +40,32 @@ describe('recuperação só do fechamento', () => {
     try { parseCheckpointText('{"declaracao":{"dado_pessoal":"cliente privado"}}'); }
     catch (error) { expect(String(error)).not.toContain('cliente privado'); }
   });
+  it('entrega ao reparo somente diagnóstico seguro sobre o campo inválido', async () => {
+    const chamar = vi.fn().mockResolvedValueOnce('{"declaracao":{"segredo_do_cliente":"conteúdo privado"}}').mockResolvedValueOnce(valido);
+    const corrigir = vi.fn();
+    await fecharCheckpoint({ chamar, validar: parseCheckpointText, aoCorrigir: corrigir });
+    const error = corrigir.mock.calls[0]![0] as CheckpointInvalidoError;
+    expect(formatarDiagnosticoCheckpoint(error.diagnostico)).toBe('estrutura_invalida:declaracao:unrecognized_keys');
+    expect(JSON.stringify(error.diagnostico)).not.toMatch(/segredo_do_cliente|conteúdo privado/);
+  });
+  it('distingue ausência de JSON e JSON malformado sem guardar a resposta', () => {
+    for (const [text, expected] of [['conteúdo privado', 'sem_json:raiz:outro'], ['{"x":}', 'json_invalido:raiz:outro']]) {
+      try { parseCheckpointText(text!); throw new Error('deveria rejeitar'); }
+      catch (error) {
+        expect(error).toBeInstanceOf(CheckpointInvalidoError);
+        expect(formatarDiagnosticoCheckpoint((error as CheckpointInvalidoError).diagnostico)).toBe(expected);
+        expect(String(error)).not.toContain('conteúdo privado');
+      }
+    }
+  });
+  it('registra somente os códigos seguros e mantém a operação condicionada ao claim', async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [{ id: 'job' }] });
+    const db = { query };
+    await registrarFechamentoInvalido(db as never, { organizationId: 'org', jobId: 'job', workerId: 'worker', acquiredAt: '2026-11-09T00:00:00Z', diagnostico: { tipo: 'estrutura_invalida', campo: 'declaracao', codigo: 'invalid_type' } });
+    expect(query.mock.calls[0]![0]).toContain('locked_by=$3 and locked_at=$4');
+    expect(query.mock.calls[0]![1][4]).toContain('estrutura_invalida:declaracao:invalid_type');
+    const unsafe = { tipo: 'cliente privado', campo: 'nome', codigo: 'conteudo' } as never;
+    expect(formatarDiagnosticoCheckpoint(unsafe)).toBe('desconhecido:raiz:outro');
+  });
+
 });

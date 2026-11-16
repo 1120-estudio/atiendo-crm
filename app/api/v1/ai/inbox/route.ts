@@ -61,19 +61,18 @@ export async function GET(req: NextRequest): Promise<Response> {
   // que não coube nos N: a fila aberta é buscada POR CAMADA de gravidade.
   // ponytail: até 3×limit linhas lidas para devolver `limit`; consulta
   // sequencial que para quando enche, se um dia pesar.
-  const resultados = await Promise.all(
-    status === "open" ? GRAVIDADES.map((g) => buscar(g)) : [buscar()],
-  );
+  const [resultados, { count: openCount }] = await Promise.all([
+    Promise.all(status === "open" ? GRAVIDADES.map((g) => buscar(g)) : [buscar()]),
+    admin
+      .from("agent_inbox_items")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", org.orgId)
+      .eq("status", "open"),
+  ]);
   if (resultados.some((r) => r.error)) {
     return fail("internal_error", t("Falha ao carregar os avisos."), 500, { requestId });
   }
   const data = resultados.flatMap((r) => r.data ?? []).slice(0, limit);
-
-  const { count: openCount } = await admin
-    .from("agent_inbox_items")
-    .select("id", { count: "exact", head: true })
-    .eq("organization_id", org.orgId)
-    .eq("status", "open");
 
   const items = await resolverDestinosDosAvisos(await createClient(), org.orgId, org.role, data);
   return ok({ items, open_count: openCount ?? 0 }, { requestId });

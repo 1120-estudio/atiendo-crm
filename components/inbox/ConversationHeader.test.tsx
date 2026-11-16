@@ -87,6 +87,18 @@ beforeEach(() => {
   startCall.mockReset();
 });
 
+it("mantém as ações móveis acessíveis e pede confirmação antes de fechar", async () => {
+  const user = userEvent.setup();
+  render(<ConversationHeader conversation={conversa("open")} />);
+
+  await user.click(screen.getByRole("button", { name: "Ações" }));
+  const painel = await screen.findByRole("dialog", { name: "Ações" });
+  expect(within(painel).getByRole("button", { name: "Transferir" })).toBeTruthy();
+  await user.click(within(painel).getAllByRole("button", { name: "Fechar" }).at(-1)!);
+  expect(await screen.findByRole("alertdialog")).toBeTruthy();
+  expect(closeMutate).not.toHaveBeenCalled();
+});
+
 describe("ConversationHeader — chamada de voz na Inbox", () => {
   it("mostra Chamar e liga para o contato da conversa", async () => {
     const user = userEvent.setup();

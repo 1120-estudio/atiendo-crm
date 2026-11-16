@@ -291,6 +291,15 @@ beforeEach(() => {
 });
 
 describe("limiar de sentimento — o agente da conversa é quem manda (#486)", () => {
+  it("emite alerta quando a nota é exatamente igual ao limiar do agente", async () => {
+    vi.mocked(generateObject).mockResolvedValue({
+      object: { sentiment_score: LIMIAR_CLINICA, reasoning_short: "reclamação" },
+      usage: { inputTokens: 10, outputTokens: 5 },
+    } as unknown as Awaited<ReturnType<typeof generateObject>>);
+    const r = await rodar({ sessaoDaConversa: SESSAO_CLINICA });
+    expect(r.alertas).toHaveLength(1);
+    expect(r.limiarDoAlerta).toBe(LIMIAR_CLINICA);
+  });
   it("o cenário sabe distinguir os dois limiares (controle positivo)", () => {
     // Sem esta cerca, alguém que iguale os limiares faz TODOS os casos abaixo
     // passarem sem conseguir separar comportamento nenhum.

@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { DEFAULT_APP_NAME } from "@/lib/branding";
 
 /**
  * A marca DINÂMICA — o que a tela mostra quando ninguém configurou logo
@@ -43,6 +44,13 @@ function Isotipo({
   className,
   ...aria
 }: { nome: string; className?: string } & React.AriaAttributes & { role?: string }) {
+  if (nome === DEFAULT_APP_NAME) {
+    return (
+      <svg viewBox="0 0 32 32" className={cn("aspect-square shrink-0", className)} {...aria}>
+        <image href="/orbit-icon.png" width="32" height="32" />
+      </svg>
+    );
+  }
   return (
     <svg viewBox="0 0 32 32" className={cn("shrink-0", className)} {...aria}>
       <rect width="32" height="32" rx="8" fill={COR_DO_ISOTIPO} />

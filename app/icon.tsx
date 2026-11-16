@@ -1,7 +1,9 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 import { COR_DO_ISOTIPO } from "@/components/branding/MarcaDoProduto";
-import { marcaEhADoProduto } from "@/lib/branding";
+import { DEFAULT_APP_NAME, marcaEhADoProduto } from "@/lib/branding";
 import { letraDoIcone } from "@/lib/branding/icone";
 import { marcaDaSaida } from "@/lib/branding/saida";
 
@@ -73,6 +75,11 @@ export const contentType = "image/png";
 
 export default async function Icon() {
   const marca = await marcaDaSaida(null);
+
+  if (marca.nome === DEFAULT_APP_NAME) {
+    const imagem = await readFile(join(process.cwd(), "public", "orbit-favicon.png"));
+    return new Response(new Uint8Array(imagem), { headers: { ...CACHE, "content-type": contentType } });
+  }
 
   if (marcaEhADoProduto({ name: marca.nome, logoUrl: marca.logoUrl })) {
     // Sem logo: o mesmo isotipo da tela — ladrilho esmeralda com a inicial do nome em vigor.

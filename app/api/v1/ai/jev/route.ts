@@ -56,7 +56,7 @@ import { CODIGOS_SEM_REDE } from "@/lib/ai/decisao/textos";
 import { DEFAULT_CLASSIFIER_MODEL } from "@/lib/ai/gateway";
 import { resolverModeloDoPonto } from "@/lib/ai/gateway-binding";
 import { PROVEDORES_DE_DECISAO } from "@/lib/ai/pontos/provedores";
-import { DEFAULT_SENTIMENT_THRESHOLD } from "@/lib/ai/prompts/sentiment";
+import { DEFAULT_SENTIMENT_THRESHOLD, sentimentoExigeAtendimento } from "@/lib/ai/prompts/sentiment";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
@@ -209,12 +209,12 @@ function numerosDaSemana(linhas: readonly LinhaDaSemana[]) {
 /**
  * A nota chamaria uma pessoa? O corte é `DEFAULT_SENTIMENT_THRESHOLD`
  * (`lib/ai/prompts/sentiment.ts:34`), o mesmo que `workers/ai-sentiment-worker.ts`
- * compara (`score < threshold`) para emitir `ai.sentiment_alert`.
+ * compara para emitir `ai.sentiment_alert`.
  * ponytail: o limiar por agente (`config.sentiment_threshold`) não entra — não
  * tem tela que o grave hoje. Se ganhar, o worker passa a gravar o limiar usado
  * em `messages.metadata` e a conta lê de lá.
  */
-const abaixo = (n: number) => n < DEFAULT_SENTIMENT_THRESHOLD;
+const abaixo = (n: number) => sentimentoExigeAtendimento(n, DEFAULT_SENTIMENT_THRESHOLD);
 
 /**
  * Concordância em observação: as duas notas caíram do MESMO LADO do corte que

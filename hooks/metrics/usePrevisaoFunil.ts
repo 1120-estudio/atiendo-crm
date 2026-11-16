@@ -21,7 +21,7 @@ export function usePrevisaoFunil() {
   const funil = useDefaultPipeline(true);
   const pipelineId = funil.data?.pipeline.id;
 
-  return useQuery({
+  const previsao = useQuery({
     queryKey: ["previsao", "funil-padrao", pipelineId],
     enabled: !!pipelineId,
     staleTime: 60_000,
@@ -32,4 +32,11 @@ export function usePrevisaoFunil() {
       return res.data;
     },
   });
+  // Uma consulta desabilitada permanece pendente no React Query. Sem propagar
+  // o erro do funil, a previsão parece carregar para sempre quando ele falha.
+  return {
+    ...previsao,
+    isLoading: funil.isLoading || (!!pipelineId && previsao.isLoading),
+    isError: funil.isError || (!funil.isLoading && !pipelineId) || previsao.isError,
+  };
 }

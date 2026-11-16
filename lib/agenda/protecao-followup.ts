@@ -57,8 +57,11 @@ export function protecaoDaAgenda(
     reavaliar_em: null,
   };
 }
-function indisponivel(agora: Date): ProtecaoAgenda {
-  logger.warn("[agenda] proteção indisponível; cobrança adiada");
+function indisponivel(agora: Date, erro: unknown): ProtecaoAgenda {
+  // Só um código SQLSTATE conhecido, nunca mensagem, dados do contato ou segredo.
+  const codigo = typeof erro === "object" && erro !== null && "code" in erro &&
+    typeof erro.code === "string" && /^[0-9A-Z]{5}$/.test(erro.code) ? erro.code : "indeterminado";
+  logger.warn("[agenda] proteção indisponível; cobrança adiada", { codigo });
   return {
     adiar: true,
     motivo: "leitura_indisponivel",
@@ -108,8 +111,9 @@ export async function protecaoAgendaSupabase(
         ),
       ]),
     );
-  } catch {
-    return new Map(contatos.map((id) => [id, indisponivel(agora)]));
+  } catch (erro) {
+    const protecao = indisponivel(agora, erro);
+    return new Map(contatos.map((id) => [id, protecao]));
   }
 }
 export async function protecaoAgendaPg(
@@ -131,8 +135,8 @@ export async function protecaoAgendaPg(
     ]);
     if (!organization.rows[0]) throw new Error("agenda_org_missing");
     return protecaoDaAgenda(appointments.rows, organization.rows[0].settings?.agenda, agora);
-  } catch {
-    return indisponivel(agora);
+  } catch (erro) {
+    return indisponivel(agora, erro);
   }
 }
 export class AgendaDeferredError extends Error {

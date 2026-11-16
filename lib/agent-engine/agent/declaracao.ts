@@ -92,7 +92,7 @@ export type DeclaracaoDoTurno = z.infer<typeof declaracaoDoTurnoSchema>;
  */
 export const DECLARACAO_INSTRUCTION =
   'Inclua também o campo "declaracao", com o que você entendeu deste turno: ' +
-  '{"intencoes": [{"o_que": "…", "evidencia": "…"}], "promessas": [{"o_que": "…", "prazo": "…"|null}], ' +
+  '{"intencoes": [{"o_que": "…", "evidencia": "…"}], "promessas": [{"o_que": "…", "prazo": null}], ' +
   '"nada_a_declarar": false}. ' +
   'Em "intencoes", o que a pessoa quer, em linguagem simples ("quer remarcar", "desistiu por causa do preço"), ' +
   'com o trecho da conversa que mostra isso. Em "promessas", tudo que você prometeu a ela — ' +

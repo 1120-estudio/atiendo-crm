@@ -1,10 +1,20 @@
 import { describe, it, expect, vi } from "vitest";
 import { withAgendaEffect, guardAgendaEffect } from "@/lib/agenda/efeito";
-import { AgendaDeferredError } from "@/lib/agenda/protecao-followup";
+import { AgendaDeferredError, protecaoAgendaSupabase } from "@/lib/agenda/protecao-followup";
 import { StaleServiceBoundaryError } from "@/lib/atendimento/fronteira";
 import { logger } from "@/lib/logger";
 import { resultadoDoEnvioDoFollowup } from "@/lib/agent-engine/edge/crm/send-ledger";
 describe("última borda de efeito do follow-up", () => {
+  it("falha em lote adia todos e registra um único código sem dados privados", async () => {
+    const warning = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    const chain = { select: () => chain, eq: () => chain, in: () => chain, order: () => chain,
+      limit: async () => ({ error: { code: "42P01", message: "dado privado" }, data: null }) };
+    const result = await protecaoAgendaSupabase({ from: () => chain } as never, "org", ["a", "b"]);
+    expect([...result.values()].every((p) => p.adiar && p.motivo === "leitura_indisponivel")).toBe(true);
+    expect(warning).toHaveBeenCalledTimes(1);
+    expect(warning).toHaveBeenCalledWith("[agenda] proteção indisponível; cobrança adiada", { codigo: "42P01" });
+    warning.mockRestore();
+  });
   it("compromisso criado durante preparo impede o efeito final", async () => {
     let busy = false;
     const transport = vi.fn();
@@ -72,7 +82,7 @@ describe("última borda de efeito do follow-up", () => {
     await expect(
       withAgendaEffect({ query } as never, { organizationId: "org", contactId: "c" }, vi.fn()),
     ).rejects.toMatchObject({ protection: { motivo: "leitura_indisponivel", adiar: true } });
-    expect(warning).toHaveBeenCalledWith("[agenda] proteção indisponível; cobrança adiada");
+    expect(warning).toHaveBeenCalledWith("[agenda] proteção indisponível; cobrança adiada", { codigo: "indeterminado" });
     warning.mockRestore();
   });
   it.each([{ rows: [] }, { rows: [{ status: "vetoed" }] }])(

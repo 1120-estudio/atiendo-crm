@@ -12,7 +12,7 @@ describe("resolveBranding", () => {
     expect(resolveBranding(undefined, undefined)).toEqual({
       name: DEFAULT_APP_NAME,
       logoUrl: null,
-      initial: "D",
+      initial: "O",
     });
   });
 
@@ -30,6 +30,15 @@ describe("resolveBranding", () => {
     expect(b.name).toBe("Vendas Turbo");
     expect(b.logoUrl).toBe("https://cdn.exemplo.com/logo.svg");
     expect(b.initial).toBe("V");
+  });
+
+  it("actualiza los nombres anteriores sin borrar el logo personalizado", () => {
+    expect(resolveBranding("Atiendo CRM", "https://example.test/logo.png")).toMatchObject({
+      name: DEFAULT_APP_NAME,
+      logoUrl: "https://example.test/logo.png",
+    });
+    expect(resolveBranding("DeskcommCRM", null).name).toBe(DEFAULT_APP_NAME);
+    expect(resolveBranding("Atiendo CRM (pruebas)", null).name).toBe(DEFAULT_APP_NAME);
   });
 
   it("mantém o nome mas dispensa o logo quando só o nome é configurado", () => {
@@ -131,7 +140,7 @@ describe("nome do arquivo de códigos de recuperação", () => {
   it("deriva o prefixo da marca, sem acento e sem espaço", () => {
     expect(prefixoDoArquivo("Vendas Turbo")).toBe("vendas-turbo");
     expect(prefixoDoArquivo("Ótima Gestão")).toBe("otima-gestao");
-    expect(prefixoDoArquivo(DEFAULT_APP_NAME)).toBe("deskcommcrm");
+    expect(prefixoDoArquivo(DEFAULT_APP_NAME)).toBe("orbit");
   });
 
   it("não devolve hífen pendurado nem repetido", () => {

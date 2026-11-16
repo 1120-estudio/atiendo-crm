@@ -67,7 +67,8 @@ function superficie(tema: "claro" | "escuro"): string {
 }
 
 const SUPERFICIE_CLARA = superficie("claro");
-const SUPERFICIE_ESCURA = superficie("escuro");
+// A identidade fixa do Atiendo sobrepõe a régua antiga no tema escuro.
+const SUPERFICIE_ESCURA = "#191919";
 
 export type EscopoDoLogo = "instalacao" | "organizacao";
 

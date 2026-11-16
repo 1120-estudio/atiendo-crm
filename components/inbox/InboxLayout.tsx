@@ -176,6 +176,24 @@ export function InboxLayout({ initialSelectedId = null, rascunho = null }: Inbox
    * Guardar o id junto fecha a busca em qualquer troca — clique, atalho j/k,
    * voltar do navegador — sem que cada caminho precise lembrar de limpá-la.
    */
+  // O teclado pode reduzir a visual viewport sem alterar o layout viewport.
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport || !selectedId) return;
+    const atualizar = () => {
+      document.documentElement.style.setProperty("--inbox-viewport-height", `${viewport.height}px`);
+      document.documentElement.style.setProperty("--inbox-viewport-top", `${viewport.offsetTop}px`);
+    };
+    atualizar();
+    viewport.addEventListener("resize", atualizar);
+    viewport.addEventListener("scroll", atualizar);
+    return () => {
+      viewport.removeEventListener("resize", atualizar);
+      viewport.removeEventListener("scroll", atualizar);
+      document.documentElement.style.removeProperty("--inbox-viewport-height");
+      document.documentElement.style.removeProperty("--inbox-viewport-top");
+    };
+  }, [selectedId]);
   const [busca, setBusca] = useState<{ conversaId: string; termo: string } | null>(null);
   const buscaAberta = busca !== null && busca.conversaId === selectedId;
   const botaoBuscaRef = useRef<HTMLButtonElement | null>(null);
@@ -418,7 +436,11 @@ export function InboxLayout({ initialSelectedId = null, rascunho = null }: Inbox
   return (
     <OpenConversationProvider conversationId={selectedId}>
     <div
-      className="grid h-[calc(100dvh-3.5rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))] w-full grid-cols-1 md:grid-cols-[300px_1fr] xl:grid-cols-[272px_1fr_296px] 2xl:grid-cols-[300px_1fr_320px]"
+      className={cn(
+          "grid h-[calc(100dvh-3.5rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))] w-full grid-cols-1 md:grid-cols-[300px_1fr] xl:grid-cols-[272px_1fr_296px] 2xl:grid-cols-[300px_1fr_320px]",
+          selectedId &&
+            "fixed inset-x-0 top-[var(--inbox-viewport-top,0px)] z-40 h-[var(--inbox-viewport-height,100dvh)] bg-background md:static md:z-auto md:h-[calc(100dvh-3.5rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))]",
+        )}
       /*
        * O ESTADO DO TEMPO REAL, LEGÍVEL DE FORA — mesmo par que o dossiê do lead
        * já publica (`LeadDossier`), e pela mesma razão: quando a entrega morre,

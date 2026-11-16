@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { JanelaSelo } from "@/components/inbox/JanelaSelo";
 import { ChannelLogo } from "@/components/inbox/ChannelLogo";
@@ -97,6 +98,7 @@ export function ConversationHeader({
   // atendendo em instalação que nunca configurou agente nenhum.
   const automaticoDaOrg = useAutomaticoAtivo();
   const [reassignOpen, setReassignOpen] = useState(false);
+  const [acoesAbertas, setAcoesAbertas] = useState(false);
   const [confirmFecharOpen, setConfirmFecharOpen] = useState(false);
   const [confirmArquivarOpen, setConfirmArquivarOpen] = useState(false);
 
@@ -177,8 +179,8 @@ export function ConversationHeader({
     // de antes (uma linha), e quando aperta a barra desce para a linha de baixo.
     // Nenhuma ação some — um menu "mais" esconderia o "Lembrar" que a spec
     // `canais-baseline` clica, e, pior, esconderia ação de quem atende.
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background px-4 py-3">
-      <div className="min-w-0">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-background px-3 py-2 md:gap-3 md:px-4 md:py-3">
+      <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-1.5">
           <ChannelLogo channel={conversation.channel_sessions} size={20} />
           <h2 className="min-w-0 truncate text-sm font-semibold" title={displayName}>{displayName}</h2>
@@ -211,7 +213,7 @@ export function ConversationHeader({
           )}
         </div>
         {phone && (
-          <p className="mt-0.5 flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
+          <p className="mt-0.5 hidden min-w-0 items-center gap-1 truncate text-xs text-muted-foreground md:flex">
             <Phone size={11} weight="regular" aria-hidden /> {phone}
           </p>
         )}
@@ -224,7 +226,160 @@ export function ConversationHeader({
           (#1625): na linha do nome ele alargava a identidade e empurrava a
           barra inteira para baixo. Ela também não é `shrink-0`, pelo mesmo
           motivo da barra. */}
-      <div className="flex min-w-0 flex-col items-end gap-1">
+      <Sheet open={acoesAbertas} onOpenChange={setAcoesAbertas}>
+        <SheetTrigger asChild>
+          <Button type="button" size="sm" variant="outline" className="h-10 shrink-0 md:hidden">
+            {t("Ações")}
+          </Button>
+        </SheetTrigger>
+        <SheetContent
+          side="bottom"
+          aria-describedby={undefined}
+          className="max-h-[80dvh] overflow-y-auto rounded-t-2xl px-4 pt-5 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden"
+        >
+          <SheetTitle className="pr-8 text-left">{t("Ações")}</SheetTitle>
+          <div className="mt-4 grid grid-cols-2 gap-2 [&_button]:h-auto [&_button]:min-h-11 [&_button]:w-full [&_button]:whitespace-normal">
+            {onBuscar && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAcoesAbertas(false);
+                  onBuscar();
+                }}
+              >
+                {t("Buscar nesta conversa")}
+              </Button>
+            )}
+            {!conversation.is_group && c?.id && (
+              <DialButton contactId={c.id} hasPhone={!!c.phone_number} />
+            )}
+            {isOpen && (
+              <Button
+                variant="outline"
+                disabled={claim.isPending}
+                onClick={() => {
+                  claim.mutate({
+                    conversation_id: conversation.id,
+                    expected_assignee: conversation.assigned_to_user_id,
+                  });
+                  setAcoesAbertas(false);
+                }}
+              >
+                {t("Assumir")}
+              </Button>
+            )}
+            {isMineAssigned && (
+              <Button
+                variant="outline"
+                disabled={release.isPending}
+                onClick={() => {
+                  release.mutate({ conversation_id: conversation.id });
+                  setAcoesAbertas(false);
+                }}
+              >
+                {t("Liberar")}
+              </Button>
+            )}
+            {podeDevolver && (
+              <Button
+                variant="outline"
+                disabled={retomar.isPending}
+                title={
+                  motivo === "contato_travado"
+                    ? t(
+                        "Religa o atendimento automático para este cliente — vale para todas as conversas dele.",
+                      )
+                    : t("Devolve esta conversa ao atendimento automático.")
+                }
+                onClick={() => {
+                  retomar.mutate({ conversation_id: conversation.id });
+                  setAcoesAbertas(false);
+                }}
+              >
+                {t("Devolver ao automático")}
+              </Button>
+            )}
+            {podePausar && (
+              <Button
+                variant="outline"
+                disabled={pausar.isPending}
+                onClick={() => {
+                  pausar.mutate({ conversation_id: conversation.id });
+                  setAcoesAbertas(false);
+                }}
+              >
+                {t("Pausar o automático")}
+              </Button>
+            )}
+            {!encerrada && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAcoesAbertas(false);
+                  setReassignOpen(true);
+                }}
+              >
+                {t("Transferir")}
+              </Button>
+            )}
+            {!encerrada && (
+              <SnoozeButton
+                conversationId={conversation.id}
+                snoozeUntil={conversation.snooze_until ?? null}
+              />
+            )}
+            {!encerrada && (
+              <Button
+                variant="outline"
+                disabled={close.isPending}
+                onClick={() => {
+                  setAcoesAbertas(false);
+                  setConfirmFecharOpen(true);
+                }}
+              >
+                {t("Fechar")}
+              </Button>
+            )}
+            {encerrada && (
+              <Button
+                variant="outline"
+                disabled={reopen.isPending}
+                onClick={() => {
+                  reopen.mutate({
+                    conversation_id: conversation.id,
+                    expected_revision: conversation.service_revision,
+                  });
+                  setAcoesAbertas(false);
+                }}
+              >
+                {t("Reabrir")}
+              </Button>
+            )}
+            {status !== "archived" && (
+              <Button
+                variant="outline"
+                disabled={arquivar.isPending}
+                onClick={() => {
+                  setAcoesAbertas(false);
+                  setConfirmArquivarOpen(true);
+                }}
+              >
+                {t("Arquivar")}
+              </Button>
+            )}
+            {c?.id && (
+              <Button asChild variant="outline">
+                <Link href={`/app/contacts/${c.id}`}>{t("Ver contato")}</Link>
+              </Button>
+            )}
+          </div>
+          {motivo !== null && (
+            <p className="mt-4 text-xs text-muted-foreground">{t(ROTULO_DO_MOTIVO[motivo])}</p>
+          )}
+          {phone && <p className="mt-2 text-xs text-muted-foreground">{phone}</p>}
+        </SheetContent>
+      </Sheet>
+      <div className="hidden min-w-0 flex-col items-end gap-1 md:flex">
       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         {/* Primeira da barra e sem rótulo escrito: é ferramenta de LEITURA, não
             ação de atendimento, e não muda de lugar com o estado da conversa.
