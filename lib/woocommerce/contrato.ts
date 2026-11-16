@@ -38,8 +38,15 @@ export function mapearProduto(p: ProdutoWoo, moeda: string, pai?: ProdutoWoo) {
   const preco = p.price === "" ? 0 : centavosWoo(p.price);
   if (preco === null) throw new Error("precio_invalido");
   const atributos = p.attributes.map(a => `${a.name}: ${a.option ?? a.options?.join(", ") ?? ""}`).join("; ");
+  const sku = p.sku.trim();
+  // WooCommerce can expose the parent's SKU for variations without their own.
+  // Keep that source SKU in the ficha, but give each sellable variant its own code.
+  const sufixo = `-V${p.id}`;
+  const codigo = pai && sku && sku === pai.sku.trim()
+    ? `${sku.slice(0, 60 - sufixo.length)}${sufixo}`
+    : sku || `WOO-${p.id}`;
   return {
-    codigo: p.sku.trim() || `WOO-${p.id}`,
+    codigo,
     nome: (pai ? `${pai.name} ${atributos}` : p.name).slice(0, 200),
     descricao: [textoWoo(pai?.short_description ?? p.short_description), textoWoo(pai?.description ?? p.description), textoWoo(p.description), atributos].filter(Boolean).join("\n"),
     categoria: (pai?.categories ?? p.categories).map(c => c.name).join(", ").slice(0, 80),
