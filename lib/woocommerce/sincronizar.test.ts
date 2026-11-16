@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   rows: [] as Record<string, unknown>[],
   status: {} as Record<string, unknown>,
-  parentSku: "SF340",
+  parentSku: "SKU-DEMO",
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -48,39 +48,39 @@ vi.mock("./http", () => ({
   buscarSeguro: async (url: string) => {
     if (url.includes("settings/general")) return [{ id: "woocommerce_currency", value: "CRC" }];
     if (url.includes("/variations?")) return new URL(url).searchParams.get("page") === "1"
-      ? [3658, 3657].map(id => ({ id, sku: state.parentSku, price: "100", images: [] })) : [];
-    return [{ id: 3656, type: "variable", name: "Cámara", sku: state.parentSku, price: "100", images: [] }];
+      ? [102, 101].map(id => ({ id, sku: state.parentSku, price: "100", images: [] })) : [];
+    return [{ id: 100, type: "variable", name: "Cámara", sku: state.parentSku, price: "100", images: [] }];
   },
 }));
 
 import { sincronizarWoo } from "./sincronizar";
 
 describe("WooCommerce inherited variation SKUs", () => {
-  beforeEach(() => { state.rows = []; state.status = {}; state.parentSku = "SF340"; });
+  beforeEach(() => { state.rows = []; state.status = {}; state.parentSku = "SKU-DEMO"; });
 
   it("recovers a partial import, keeps another tenant untouched and is idempotent", async () => {
     state.rows.push(
-      { id: "existing-blue", organization_id: "dommus", codigo: "SF340", woo_id: 3658, ativo: false, descricao: "Revisada", fotos: [] },
-      { id: "other-tenant", organization_id: "multitiendas", codigo: "SF340-V3657", woo_id: 3657, ativo: true, descricao: "Otra empresa", fotos: [] },
+      { id: "existing-blue", organization_id: "store-a", codigo: "SKU-DEMO", woo_id: 102, ativo: false, descricao: "Revisada", fotos: [] },
+      { id: "other-tenant", organization_id: "store-b", codigo: "SKU-DEMO-V101", woo_id: 101, ativo: true, descricao: "Otra empresa", fotos: [] },
     );
     const other = { ...state.rows[1] };
-    expect(await sincronizarWoo("dommus")).toBe(true);
-    expect(await sincronizarWoo("dommus")).toBe(true);
-    const imported = state.rows.filter(row => row.organization_id === "dommus");
+    expect(await sincronizarWoo("store-a")).toBe(true);
+    expect(await sincronizarWoo("store-a")).toBe(true);
+    const imported = state.rows.filter(row => row.organization_id === "store-a");
     expect(imported).toHaveLength(2);
-    expect(imported.map(row => row.codigo).sort()).toEqual(["SF340-V3657", "SF340-V3658"]);
-    expect(imported.find(row => row.woo_id === 3658)).toMatchObject({ id: "existing-blue", descricao: "Revisada", ativo: false });
+    expect(imported.map(row => row.codigo).sort()).toEqual(["SKU-DEMO-V101", "SKU-DEMO-V102"]);
+    expect(imported.find(row => row.woo_id === 102)).toMatchObject({ id: "existing-blue", descricao: "Revisada", ativo: false });
     expect(imported.every(row => row.ativo === false)).toBe(true);
     expect(state.rows.find(row => row.id === "other-tenant")).toEqual(other);
     expect(state.status.last_error).toBeNull();
   });
 
   it("does not link sibling variations to an existing manual parent SKU", async () => {
-    const manual = { id: "manual-parent", organization_id: "dommus", codigo: "SF340", woo_id: null, ativo: true, descricao: "Manual", fotos: [] };
+    const manual = { id: "manual-parent", organization_id: "store-a", codigo: "SKU-DEMO", woo_id: null, ativo: true, descricao: "Manual", fotos: [] };
     state.rows.push({ ...manual });
-    expect(await sincronizarWoo("dommus")).toBe(true);
+    expect(await sincronizarWoo("store-a")).toBe(true);
     expect(state.rows).toHaveLength(3);
     expect(state.rows.find(row => row.id === manual.id)).toEqual(manual);
-    expect(state.rows.filter(row => row.woo_id != null).map(row => row.codigo).sort()).toEqual(["SF340-V3657", "SF340-V3658"]);
+    expect(state.rows.filter(row => row.woo_id != null).map(row => row.codigo).sort()).toEqual(["SKU-DEMO-V101", "SKU-DEMO-V102"]);
   });
 });

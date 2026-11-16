@@ -28,14 +28,14 @@ describe("WooCommerce catalogue contract", () => {
     expect(mapearProduto(child, "CRC", parent)).toMatchObject({ codigo: "WOO-13", woo_id: 13, woo_parent_id: 12, nome: "Foco Color: Rojo" });
   });
   it("imports sibling variations that inherit the parent's SKU as distinct products", () => {
-    const parent = produto({ id: 3656, type: "variable", sku: "SF340" });
-    const blue = mapearProduto(produto({ id: 3658, sku: "SF340" }), "CRC", parent);
-    const pink = mapearProduto(produto({ id: 3657, sku: "SF340" }), "CRC", parent);
-    expect(blue.codigo).toBe("SF340-V3658");
-    expect(pink.codigo).toBe("SF340-V3657");
-    expect(blue.ficha_woocommerce.sku).toBe("SF340");
-    expect(mapearProduto(produto({ id: 3658, sku: "SF340" }), "CRC", parent).codigo).toBe(blue.codigo);
-    expect(mapearProduto(produto({ id: 3658, sku: "SF340-AZUL" }), "CRC", parent).codigo).toBe("SF340-AZUL");
+    const parent = produto({ id: 100, type: "variable", sku: "SKU-DEMO" });
+    const blue = mapearProduto(produto({ id: 102, sku: "SKU-DEMO" }), "CRC", parent);
+    const pink = mapearProduto(produto({ id: 101, sku: "SKU-DEMO" }), "CRC", parent);
+    expect(blue.codigo).toBe("SKU-DEMO-V102");
+    expect(pink.codigo).toBe("SKU-DEMO-V101");
+    expect(blue.ficha_woocommerce.sku).toBe("SKU-DEMO");
+    expect(mapearProduto(produto({ id: 102, sku: "SKU-DEMO" }), "CRC", parent).codigo).toBe(blue.codigo);
+    expect(mapearProduto(produto({ id: 102, sku: "SKU-DEMO-AZUL" }), "CRC", parent).codigo).toBe("SKU-DEMO-AZUL");
   });
   it("fits inherited variation codes within the catalogue limit without losing identity", () => {
     const parent = produto({ sku: "S".repeat(60), type: "variable" });
