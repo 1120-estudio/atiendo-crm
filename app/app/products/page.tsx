@@ -72,9 +72,9 @@ export default async function ProdutosPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-    <nav aria-label="Páginas del catálogo" className="mx-auto flex max-w-5xl gap-4 px-6 pt-4">
+    <nav aria-label={t("Páginas del catálogo")} className="mx-auto flex max-w-5xl gap-4 px-6 pt-4">
       {pagina > 1 && <a href={`?page=${pagina - 1}`}>Anterior</a>}
-      <span>Página {pagina} · {count ?? 0} productos</span>
+      <span>{t("Página")} {pagina} · {count ?? 0} productos</span>
       {pagina * 100 < (count ?? 0) && <a href={`?page=${pagina + 1}`}>Siguiente</a>}
     </nav>
     <ProdutosClient

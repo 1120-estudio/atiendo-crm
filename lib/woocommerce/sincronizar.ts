@@ -45,7 +45,7 @@ export async function sincronizarWoo(orgId: string): Promise<boolean> {
       }
       const old = found.data;
       const id = old?.id ?? randomUUID();
-      const variationImage = produtoWooSchema.shape.images.element.safeParse(p.image);
+      const variationImage = produtoWooSchema.shape.images.unwrap().element.safeParse(p.image);
       const images = p.images.length ? p.images : variationImage.success ? [variationImage.data] : pai?.images ?? [];
       mapped.ficha_woocommerce.images = images;
       let fotos: string[] = old?.fotos ?? [];

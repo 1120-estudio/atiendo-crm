@@ -1,9 +1,11 @@
 "use client";
 import * as React from "react";
+import { useT } from "@/hooks/i18n/useT";
 import { Button } from "@/components/ui/button";
 
 type Estado = { url: string; enabled: boolean; processed: number; page: number; last_success_at: string | null; last_error: string | null };
 export function ConexaoWooCommerce() {
+  const t = useT();
   const [estado, setEstado] = React.useState<Estado | null>(null);
   const [mensagem, setMensagem] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -39,23 +41,23 @@ export function ConexaoWooCommerce() {
     finally { setBusy(false); }
   }
   return <details className="mb-6 rounded-lg border p-4">
-    <summary className="cursor-pointer font-medium">WooCommerce · sincronizar catálogo</summary>
-    <p className="my-3 text-sm">Los productos nuevos se importan desactivados. Actívalos en el catálogo cuando autorices su uso por los agentes. WooCommerce controla precio y disponibilidad.</p>
+    <summary className="cursor-pointer font-medium">{t("WooCommerce · sincronizar catálogo")}</summary>
+    <p className="my-3 text-sm">{t("Los productos nuevos se importan desactivados. Actívalos en el catálogo cuando autorices su uso por los agentes. WooCommerce controla precio y disponibilidad.")}</p>
     {estado && <div className="mb-3 text-sm">
-      <p>{estado.url} · {estado.enabled ? "Sincronización activa" : "Pausada"}</p>
-      <p>Última sincronización completa: {estado.last_success_at ? new Date(estado.last_success_at).toLocaleString() : "Pendiente"}. Página: {estado.page}. Productos procesados en este ciclo: {estado.processed}.</p>
-      {estado.last_error && <p role="alert">Error: {estado.last_error}. Revisa la conexión; el sistema volverá a intentarlo.</p>}
-      <Button type="button" disabled={busy} onClick={() => void cambiarEstado()}>{estado.enabled ? "Pausar" : "Reanudar y sincronizar"}</Button>
+      <p>{estado.url} · {estado.enabled ? t("Sincronización activa") : t("Pausada")}</p>
+      <p>{t("Última sincronización completa:")} {estado.last_success_at ? new Date(estado.last_success_at).toLocaleString() : t("Pendiente")}{t("Página:")} {estado.page}{t("Productos procesados en este ciclo:")} {estado.processed}.</p>
+      {estado.last_error && <p role="alert">Error: {estado.last_error}{t("Revisa la conexión; el sistema volverá a intentarlo.")}</p>}
+      <Button type="button" disabled={busy} onClick={() => void cambiarEstado()}>{estado.enabled ? t("Pausar") : t("Reanudar y sincronizar")}</Button>
     </div>}
     <form onSubmit={guardar} className="grid gap-3">
-      <label>URL de la tienda<input name="url" type="url" required defaultValue={estado?.url} placeholder="https://mitienda.com" className="block w-full rounded border p-2" /></label>
-      <label>Consumer key<input name="key" type="password" required autoComplete="off" className="block w-full rounded border p-2" /></label>
-      <label>Consumer secret<input name="secret" type="password" required autoComplete="off" className="block w-full rounded border p-2" /></label>
-      <label><input name="preservar" type="checkbox" defaultChecked /> Conservar las descripciones y fotos existentes de Orbit</label>
-      <p className="text-sm">Crea las claves con permiso de lectura en WooCommerce → Ajustes → Avanzado → API REST. Reconectar genera un nuevo secreto de webhook.</p>
-      <Button disabled={busy} type="submit">{busy ? "Guardando…" : "Conectar WooCommerce"}</Button>
+      <label>{t("URL de la tienda")}<input name="url" type="url" required defaultValue={estado?.url} placeholder="https://mitienda.com" className="block w-full rounded border p-2" /></label>
+      <label>{t("Consumer key")}<input name="key" type="password" required autoComplete="off" className="block w-full rounded border p-2" /></label>
+      <label>{t("Consumer secret")}<input name="secret" type="password" required autoComplete="off" className="block w-full rounded border p-2" /></label>
+      <label><input name="preservar" type="checkbox" defaultChecked />{t(" Conservar las descripciones y fotos existentes de Orbit")}</label>
+      <p className="text-sm">{t("Crea las claves con permiso de lectura en WooCommerce → Ajustes → Avanzado → API REST. Reconectar genera un nuevo secreto de webhook.")}</p>
+      <Button disabled={busy} type="submit">{busy ? t("Guardando…") : t("Conectar WooCommerce")}</Button>
     </form>
     {mensagem && <p role="status" className="mt-3">{mensagem}</p>}
-    {webhook && <div className="mt-3 break-all text-sm"><p>Configura los webhooks de producto creado, actualizado y eliminado con esta URL:</p><code>{window.location.origin}{webhook.webhook_path}</code><p>Secreto, visible solo ahora:</p><code>{webhook.webhook_secret}</code></div>}
+    {webhook && <div className="mt-3 break-all text-sm"><p>{t("Configura los webhooks de producto creado, actualizado y eliminado con esta URL:")}</p><code>{window.location.origin}{webhook.webhook_path}</code><p>{t("Secreto, visible solo ahora:")}</p><code>{webhook.webhook_secret}</code></div>}
   </details>;
 }
