@@ -27,6 +27,22 @@ describe("WooCommerce catalogue contract", () => {
     const child = produto({ id: 13, sku: "", attributes: [{ name: "Color", option: "Rojo" }] });
     expect(mapearProduto(child, "CRC", parent)).toMatchObject({ codigo: "WOO-13", woo_id: 13, woo_parent_id: 12, nome: "Foco Color: Rojo" });
   });
+  it("imports sibling variations that inherit the parent's SKU as distinct products", () => {
+    const parent = produto({ id: 100, type: "variable", sku: "SKU-DEMO" });
+    const blue = mapearProduto(produto({ id: 102, sku: "SKU-DEMO" }), "CRC", parent);
+    const pink = mapearProduto(produto({ id: 101, sku: "SKU-DEMO" }), "CRC", parent);
+    expect(blue.codigo).toBe("SKU-DEMO-V102");
+    expect(pink.codigo).toBe("SKU-DEMO-V101");
+    expect(blue.ficha_woocommerce.sku).toBe("SKU-DEMO");
+    expect(mapearProduto(produto({ id: 102, sku: "SKU-DEMO" }), "CRC", parent).codigo).toBe(blue.codigo);
+    expect(mapearProduto(produto({ id: 102, sku: "SKU-DEMO-AZUL" }), "CRC", parent).codigo).toBe("SKU-DEMO-AZUL");
+  });
+  it("fits inherited variation codes within the catalogue limit without losing identity", () => {
+    const parent = produto({ sku: "S".repeat(60), type: "variable" });
+    const code = mapearProduto(produto({ id: 13, sku: parent.sku }), "CRC", parent).codigo;
+    expect(code).toHaveLength(60);
+    expect(code.endsWith("-V13")).toBe(true);
+  });
   it("rejects credentials in URLs and insecure HTTP", () => {
     const keys = { consumer_key: `ck_${"a".repeat(40)}`, consumer_secret: `cs_${"b".repeat(40)}` };
     for (const url of ["http://tienda.com", "https://user:pass@tienda.com", "https://tienda.com?key=x"]) expect(conexaoSchema.safeParse({ ...keys, url }).success).toBe(false);

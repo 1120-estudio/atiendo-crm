@@ -8,6 +8,8 @@ Los artículos nuevos entran con `ativo=false`. Activarlos autoriza su consulta 
 
 El scheduler procesa lotes de cinco productos cada minuto. Las variaciones mantienen el ID externo y el padre; no se ofrece el padre variable como un artículo con precio ambiguo. Un ciclo completo se repite cada quince minutos. Se conserva el cursor si falla; el reintento ocurre a los cinco minutos. La concesión de trabajo es atómica y expira si el proceso cae. La eliminación lógica solo ocurre al completar un ciclo exitoso y solo afecta productos vinculados a WooCommerce.
 
+Cuando WooCommerce devuelve el mismo SKU del padre en sus variantes, Orbit añade `-V<ID>` al código local (por ejemplo, `SKU-DEMO-V102`). El SKU original permanece en la ficha. Las variantes con SKU propio lo conservan. Las fichas ya importadas se reconocen primero por su ID de WooCommerce para evitar duplicarlas al reintentar.
+
 Los webhooks se configuran manualmente en WooCommerce con la URL y el secreto que muestra Orbit al conectar. Usar producto creado, actualizado y eliminado. Se autentican con HMAC SHA256 sobre los bytes originales y adelantan la conciliación, sin confiar en el contenido para sobrescribir productos. Reconectar rota el secreto.
 
 Las galerías se guardan en el bucket privado catalog-photos. WebP se valida por firma y se rechaza animación VP8X. Se conserva el límite de 5 MB por archivo. El envío WebP debe comprobarse en el canal real antes de activar producción: una prueba de CI no demuestra recepción por WhatsApp.

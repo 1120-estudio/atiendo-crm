@@ -40,7 +40,7 @@ export async function sincronizarWoo(orgId: string): Promise<boolean> {
       let found = await db.from("catalog_products").select("id,woo_id,ativo,descricao,fotos,ficha_woocommerce").eq("organization_id", orgId).eq("woo_id", p.id).maybeSingle();
       if (found.error) throw new Error("leitura_catalogo_falhou");
       if (!found.data && p.sku.trim()) {
-        found = await db.from("catalog_products").select("id,woo_id,ativo,descricao,fotos,ficha_woocommerce").eq("organization_id", orgId).eq("codigo", p.sku.trim()).maybeSingle();
+        found = await db.from("catalog_products").select("id,woo_id,ativo,descricao,fotos,ficha_woocommerce").eq("organization_id", orgId).eq("codigo", mapped.codigo).maybeSingle();
         if (found.error || (found.data?.woo_id && found.data.woo_id !== p.id)) throw new Error("conflito_sku");
       }
       const old = found.data;
