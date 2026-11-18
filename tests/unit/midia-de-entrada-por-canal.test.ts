@@ -43,7 +43,7 @@ describe("elo 1 — a URL é gravada onde o worker a procura", () => {
   it("guarda também o mime como DICA, não como verdade", () => {
     // Quem manda é o `content-type` da resposta ao baixar; esta dica serve para
     // a tela ter o que mostrar antes de os bytes chegarem.
-    expect(INGEST).toMatch(/media_mime: mimeDoAnexo\(primeiro\.type\)/);
+    expect(INGEST).toMatch(/media_mime: mimeDoAnexo\(primeiro\)/);
   });
 });
 

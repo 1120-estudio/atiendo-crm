@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { normalizarReferenciaDeAnuncio } from "./referencia-de-anuncio";
 
 describe("normalizarReferenciaDeAnuncio", () => {
-  it("lee los campos ctwa_* que Zernio entrega con metadata.ad", () => {
+  it("lee los campos ctwa_* que llegan con metadata.ad", () => {
     expect(
       normalizarReferenciaDeAnuncio({
         ctwa_source_type: "ad",
