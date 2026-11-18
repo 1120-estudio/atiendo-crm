@@ -18,7 +18,9 @@ import { CitationButton } from "@/components/ai/CitationButton";
 import { MediaRenderer } from "@/components/inbox/media/MediaRenderer";
 import { ContactCard } from "@/components/inbox/media/ContactCard";
 import { LocationCard } from "@/components/inbox/media/LocationCard";
+import { AdReferralCard } from "@/components/inbox/AdReferralCard";
 import { localizacaoDaMensagem } from "@/lib/messaging/localizacao";
+import { normalizarReferenciaDeAnuncio } from "@/lib/leads/referencia-de-anuncio";
 import {
   extractCitations,
   isAiGeneratedMessage,
@@ -102,6 +104,10 @@ export function MessageBubble({
   const isContact = message.type === "contact";
   // Pino com coordenadas: o cartão substitui o corpo, que é só o mesmo link em texto.
   const localizacao = localizacaoDaMensagem(message);
+  const referenciaDeAnuncio =
+    message.direction === "inbound"
+      ? normalizarReferenciaDeAnuncio(message.metadata?.ad_referral)
+      : null;
   // Figurinha sem caption: sem moldura de bolha (padrão WhatsApp).
   const isBareSticker = hasMedia && message.type === "sticker" && !message.body;
   // Apagada pelo autor ("apagar para todos"). A linha continua no histórico —
@@ -360,6 +366,7 @@ export function MessageBubble({
           </p>
         ) : (
           <>
+            {referenciaDeAnuncio && <AdReferralCard referencia={referenciaDeAnuncio} />}
             {hasMedia && (
               <div className={cn(message.body && "mb-1")}>
                 <MediaRenderer message={message} />

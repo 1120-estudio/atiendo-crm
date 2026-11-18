@@ -33,6 +33,7 @@ import { marcarConversaComMensagem } from "@/lib/channels/marcar-conversa";
 
 import { extrairAtribuicaoMeta } from "@/lib/channels/atribuicao-de-anuncio-oficial";
 import { estamparAtribuicaoDoContato } from "@/lib/leads/atribuicao-de-anuncio";
+import { normalizarReferenciaDeAnuncio } from "@/lib/leads/referencia-de-anuncio";
 import { extrairEEstamparAtribuicaoGoogle } from "@/lib/plataformas-de-anuncio/google/atribuicao";
 import { pausarIaPorAtendimentoManual } from "@/lib/escalacao/atendimento-manual";
 import {
@@ -564,6 +565,8 @@ async function insertMessage(
   const { msg } = input;
   const temAnexo = msg.attachments.length > 0;
   const primeiro = msg.attachments[0];
+  const referenciaDeAnuncio =
+    msg.direction === "inbound" ? normalizarReferenciaDeAnuncio(msg.referral) : null;
 
   const { data, error } = await admin
     .from("messages")
@@ -615,10 +618,18 @@ async function insertMessage(
         ? { media_url: primeiro.url, media_mime: mimeDoAnexo(primeiro.type) }
         : {}),
       metadata: temAnexo
-        ? { provider_attachments: msg.attachments }
+        ? {
+            provider_attachments: msg.attachments,
+            ...(referenciaDeAnuncio ? { ad_referral: referenciaDeAnuncio } : {}),
+          }
         : msg.location
-          ? { location: msg.location }
-          : {},
+          ? {
+              location: msg.location,
+              ...(referenciaDeAnuncio ? { ad_referral: referenciaDeAnuncio } : {}),
+            }
+          : referenciaDeAnuncio
+            ? { ad_referral: referenciaDeAnuncio }
+            : {},
       ...(msg.sentAt ? { sent_at: msg.sentAt } : {}),
     })
     .select("id")

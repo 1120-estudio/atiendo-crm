@@ -29,6 +29,7 @@ import { getWahaClient } from "@/lib/waha/client";
 import { acelerarPipelineDeEventos } from "@/lib/dev/kick-local-pipeline";
 import { canonicalPhoneBR } from "@/lib/channels/phone-variants";
 import { estamparAtribuicaoDoContato } from "@/lib/leads/atribuicao-de-anuncio";
+import { normalizarReferenciaDeAnuncio } from "@/lib/leads/referencia-de-anuncio";
 import { extrairEEstamparAtribuicaoGoogle } from "@/lib/plataformas-de-anuncio/google/atribuicao";
 import { extrairAtribuicaoWaha } from "@/lib/waha/atribuicao-de-anuncio";
 import type { createAdminClient } from "@/lib/supabase/admin";
@@ -658,6 +659,7 @@ async function handleInbound(
   // contato já tem atribuição, o UPDATE casa zero linhas.
   const atribuicao = extrairAtribuicaoWaha(p._data?.message);
   if (atribuicao) await estamparAtribuicaoDoContato(admin, session.organization_id, contactId, atribuicao);
+  const referenciaDeAnuncio = atribuicao ? normalizarReferenciaDeAnuncio(atribuicao.bruto) : null;
 
   // Irmão do bloco acima, para o Google: o token vem no PRÓPRIO texto da
   // mensagem (não há payload de ad-reply equivalente para essa plataforma) —
@@ -686,7 +688,11 @@ async function handleInbound(
       sent_via: "external_device",
       sent_at: dataDoTimestamp(p.timestamp, now),
       delivered_at: now,
-      metadata: { raw_type: p.type, ack_name: p.ackName },
+      metadata: {
+        raw_type: p.type,
+        ack_name: p.ackName,
+        ...(referenciaDeAnuncio ? { ad_referral: referenciaDeAnuncio } : {}),
+      },
     })
     .select("id")
     .maybeSingle();
