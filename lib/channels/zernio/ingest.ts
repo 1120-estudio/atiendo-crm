@@ -45,7 +45,7 @@ import { aplicarEfeitosPosEntrada } from "../pos-entrada";
 
 import { completarLocalizacao } from "./localizacao";
 import { normalizarMensagemNaoSuportada } from "./nao-suportada";
-import { parseZernioInbound, type ZernioIdentity, type ZernioInboundMessage } from "./webhook";
+import { parseZernioInbound, type ZernioAttachment, type ZernioIdentity, type ZernioInboundMessage } from "./webhook";
 
 export interface ZernioIngestResult {
   status: "ingested" | "duplicate" | "ignored" | "unknown_account";
@@ -602,7 +602,7 @@ async function insertMessage(
       // duplicada na tela.
       sent_via: "external_device",
       status: msg.direction === "outbound" ? (msg.status ?? "sent") : "delivered",
-      type: temAnexo ? tipoDoAnexo(primeiro?.type) : msg.location ? "location" : "text",
+      type: temAnexo ? tipoDoAnexo(primeiro) : msg.location ? "location" : "text",
       // O pino vira link do mapa no corpo: é o que o agente lê e o que a
       // prévia da conversa mostra. As coordenadas ficam no metadata para a tela.
       body: msg.location ? corpoDaLocalizacao(msg.location) : msg.text,
@@ -615,7 +615,7 @@ async function insertMessage(
       // mídia do cliente virava linha sem bytes. O atendente via "imagem" sem
       // imagem — e como ele responde à mão, era o pior defeito do canal.
       ...(temAnexo && primeiro?.url
-        ? { media_url: primeiro.url, media_mime: mimeDoAnexo(primeiro.type) }
+        ? { media_url: primeiro.url, media_mime: mimeDoAnexo(primeiro) }
         : {}),
       metadata: temAnexo
         ? {
@@ -652,8 +652,10 @@ async function insertMessage(
  * para a tela ter o que mostrar antes de os bytes chegarem, e para o caso em
  * que o provider não devolve o cabeçalho.
  */
-function mimeDoAnexo(tipo: string | undefined): string | null {
-  switch (tipo) {
+function mimeDoAnexo(anexo: ZernioAttachment | undefined): string | null {
+  const mime = anexo?.mimeType?.trim().toLowerCase();
+  if (mime && /^(image|video|audio)\//.test(mime)) return mime;
+  switch (anexo?.type) {
     case "image":
       return "image/jpeg";
     case "video":
@@ -666,7 +668,21 @@ function mimeDoAnexo(tipo: string | undefined): string | null {
 }
 
 /** Tipo do anexo do provider → vocabulário de `messages.type`. */
-function tipoDoAnexo(tipo: string | undefined): string {
+function tipoDoAnexo(anexo: ZernioAttachment | undefined): string {
+  if (!anexo) return "document";
+  const tipo = anexo.type.toLowerCase();
+  const mime = anexo.mimeType?.trim().toLowerCase() ?? "";
+
+  // Zernio can mark Meta shares as `share` or `unsupported_type`. The content
+  // type is the reliable signal for inline rendering when Meta omits the media
+  // type. Reels also carry an explicit originalType.
+  if (mime.startsWith("image/")) return "image";
+  if (mime.startsWith("video/")) return "video";
+  if (mime.startsWith("audio/")) return "audio";
+  const originalType = anexo.originalType?.toLowerCase();
+  if (originalType === "ig_reel" || originalType === "reel") return "video";
+  if (tipo === "share" && anexo.previewUrl) return "image";
+
   switch (tipo) {
     case "image":
       return "image";

@@ -42,17 +42,18 @@ function urlHttps(value: unknown): string | null {
 export function normalizarReferenciaDeAnuncio(value: unknown): ReferenciaDeAnuncio | null {
   const raw = registro(value);
   if (!raw) return null;
+  const adAttribution = registro(raw.adAttribution);
 
-  const sourceType = texto(raw.source_type, raw.sourceType);
+  const sourceType = texto(raw.source_type, raw.sourceType, raw.ctwa_source_type);
   const tipoNormalizado = sourceType?.toLowerCase();
   if (tipoNormalizado && tipoNormalizado !== "ad") return null;
 
-  const titulo = texto(raw.headline, raw.title);
-  const cuerpo = texto(raw.body, raw.description);
-  const url = urlHttps(raw.source_url ?? raw.sourceUrl ?? raw.url);
-  const adId = texto(raw.source_id, raw.sourceId);
+  const titulo = texto(raw.headline, raw.title, raw.ctwa_headline, adAttribution?.name);
+  const cuerpo = texto(raw.body, raw.description, raw.ctwa_body);
+  const url = urlHttps(raw.source_url ?? raw.sourceUrl ?? raw.ctwa_source_url ?? raw.url);
+  const adId = texto(raw.source_id, raw.sourceId, raw.ctwa_source_id, adAttribution?.adId);
   const imagenUrl = urlHttps(
-    raw.image_url ?? raw.imageUrl ?? raw.thumbnail_url ?? raw.thumbnailUrl ?? raw.thumbnail,
+    raw.image_url ?? raw.imageUrl ?? raw.ctwa_image_url ?? raw.thumbnail_url ?? raw.thumbnailUrl ?? raw.thumbnail,
   );
 
   if (tipoNormalizado !== "ad" && !titulo && !url && !adId) return null;

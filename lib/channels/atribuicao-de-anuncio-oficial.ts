@@ -5,7 +5,7 @@
  * feature perguntando identidade (doutrina de restrição de canal, invariante 1).
  * O formato agnóstico e a gravação estão em `lib/leads/atribuicao-de-anuncio.ts`.
  */
-import type { AtribuicaoDeAnuncio, Bruto } from "@/lib/leads/atribuicao-de-anuncio";
+import type { AtribuicaoDeAnuncio } from "@/lib/leads/atribuicao-de-anuncio";
 import { obj, str } from "@/lib/leads/atribuicao-de-anuncio";
 
 /**
@@ -23,7 +23,7 @@ import { obj, str } from "@/lib/leads/atribuicao-de-anuncio";
 export function extrairAtribuicaoMeta(referral: unknown): AtribuicaoDeAnuncio | null {
   const r = obj(referral);
   if (!r) return null;
-  const tipo = str(r.source_type) ?? str(r.sourceType);
+  const tipo = str(r.source_type) ?? str(r.sourceType) ?? str(r.ctwa_source_type);
   if (tipo && tipo !== "ad") return null;
 
   const sourceId = str(r.ctwa_clid) ?? str(r.ctwaClid);
@@ -31,9 +31,10 @@ export function extrairAtribuicaoMeta(referral: unknown): AtribuicaoDeAnuncio | 
   // apenas o degrau de baixo do `??` acima, o payload que trazia os dois — o
   // caso comum — perdia este aqui, e a pergunta "de qual anúncio veio?" ficava
   // sem resposta mesmo com o dado na mão.
-  const adId = str(r.source_id) ?? str(r.sourceId);
-  const titulo = str(r.headline);
-  const sourceUrl = str(r.source_url) ?? str(r.sourceUrl);
+  const adAttribution = obj(r.adAttribution);
+  const adId = str(r.source_id) ?? str(r.sourceId) ?? str(r.ctwa_source_id) ?? str(adAttribution?.adId);
+  const titulo = str(r.headline) ?? str(r.ctwa_headline) ?? str(adAttribution?.name);
+  const sourceUrl = str(r.source_url) ?? str(r.sourceUrl) ?? str(r.ctwa_source_url);
   // Sem NENHUM campo que identifique o anúncio, não há o que atribuir — um
   // `referral` vazio (ou só com `body`) não distingue "veio de anúncio" de
   // "o provider mandou um objeto vazio por engano".
@@ -44,7 +45,7 @@ export function extrairAtribuicaoMeta(referral: unknown): AtribuicaoDeAnuncio | 
     sourceId,
     adId,
     titulo,
-    corpo: str(r.body),
+    corpo: str(r.body) ?? str(r.ctwa_body),
     sourceUrl,
     bruto: r,
   };

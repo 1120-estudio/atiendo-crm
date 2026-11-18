@@ -48,4 +48,30 @@ describe("native social identity", () => {
     expect(result?.participantId).toBe("customer");
     expect(result?.direction).toBe("outbound");
   });
+
+  it("conserves metadata de shares de Instagram para clasificar la vista previa", () => {
+    const result = parseSocialMessage(
+      {
+        ...event,
+        message: {
+          ...event.message,
+          attachments: [{
+            type: "unsupported_type",
+            originalType: "unsupported_type",
+            mimeType: "image/jpeg",
+            url: "https://cdn.example/shared.jpg",
+            previewUrl: "https://cdn.example/preview.jpg",
+          }],
+        },
+      },
+      "account-a",
+      "instagram",
+    );
+    expect(result?.attachments[0]).toMatchObject({
+      type: "unsupported_type",
+      originalType: "unsupported_type",
+      mimeType: "image/jpeg",
+      previewUrl: "https://cdn.example/preview.jpg",
+    });
+  });
 });
