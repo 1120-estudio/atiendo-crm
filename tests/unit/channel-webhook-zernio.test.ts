@@ -212,6 +212,22 @@ describe("clique em anúncio (Clique para o WhatsApp)", () => {
     });
   });
 
+  it("usa metadata.ad como reserva quando o placement não traz referral", () => {
+    const ad = {
+      ctwa_source_type: "ad",
+      ctwa_source_id: "120200000000000002",
+      ctwa_source_url: "https://fb.me/anuncio-status",
+      ctwa_headline: "Anuncio en estados",
+      ctwa_image_url: "https://cdn.example/anuncio.jpg",
+    };
+    expect(parseZernioInbound(payload({ metadata: { ad } }))?.referral).toEqual(ad);
+    expect(extrairAtribuicaoMeta(ad)).toMatchObject({
+      adId: "120200000000000002",
+      titulo: "Anuncio en estados",
+      sourceUrl: "https://fb.me/anuncio-status",
+    });
+  });
+
   it("segue lendo as posições da Cloud API (mensagem e raiz) quando metadata não traz", () => {
     expect(parseZernioInbound(payload({}, { referral }))?.referral).toEqual(referral);
     expect(parseZernioInbound(payload({ referral }))?.referral).toEqual(referral);

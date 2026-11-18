@@ -221,6 +221,27 @@ describe("o que a ingestão GRAVA", () => {
     expect(ins.metadata).toEqual({ provider_attachments: [{ type: "image", url: "https://z/media/1" }] });
   });
 
+  it("renderiza shares sem tipo reconhecido usando o mimeType do provider", async () => {
+    await ingestZernioInbound(admin, {
+      ...ENTRADA,
+      payload: evento({
+        attachments: [{
+          type: "unsupported_type",
+          originalType: "unsupported_type",
+          mimeType: "image/jpeg",
+          url: "https://z/media/shared-post",
+          previewUrl: "https://z/media/shared-post-preview",
+        }],
+      }),
+    });
+    const ins = ops.find((o) => o.tabela === "messages" && o.op === "insert")?.payload as Record<string, unknown>;
+    expect(ins).toMatchObject({
+      type: "image",
+      media_url: "https://z/media/shared-post",
+      media_mime: "image/jpeg",
+    });
+  });
+
   it("grava o TELEFONE mesmo quando a âncora é o id opaco", async () => {
     // O payload traz os dois. Descartar o telefone deixou o contato sem número:
     // o envio parou em `missing_phone_number` e a tela não tinha o que mostrar

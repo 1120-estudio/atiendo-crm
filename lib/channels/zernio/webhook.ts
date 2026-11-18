@@ -58,6 +58,16 @@ export type ZernioEventKind =
   /** Só mudou o desfecho de uma mensagem que já existe. */
   | "status";
 
+export interface ZernioAttachment {
+  type: string;
+  url: string;
+  originalType?: string;
+  mimeType?: string;
+  previewUrl?: string;
+  refreshUrl?: string;
+  filename?: string;
+}
+
 export interface ZernioInboundMessage {
   /** De quem partiu. `outbound` cobre envio feito FORA do CRM. */
   direction: "inbound" | "outbound";
@@ -80,7 +90,7 @@ export interface ZernioInboundMessage {
   /** Conta conectada que recebeu — casa com `channel_sessions.zernio_account_id`. */
   accountId: string | null;
   text: string | null;
-  attachments: { type: string; url: string }[];
+  attachments: ZernioAttachment[];
   sentAt: string | null;
   identity: ZernioIdentity;
   /**
@@ -224,7 +234,15 @@ export function parseZernioInbound(payload: unknown): ZernioInboundMessage | nul
   const attachments = anexosBrutos
     .map((a) => obj(a))
     .filter((a): a is Bruto => a !== null)
-    .map((a) => ({ type: str(a.type) ?? "file", url: str(a.url) ?? "" }))
+    .map((a) => ({
+      type: str(a.type) ?? "file",
+      url: str(a.url) ?? "",
+      ...(str(a.originalType) ? { originalType: str(a.originalType)! } : {}),
+      ...(str(a.mimeType) ? { mimeType: str(a.mimeType)! } : {}),
+      ...(str(a.previewUrl) ? { previewUrl: str(a.previewUrl)! } : {}),
+      ...(str(a.refreshUrl) ? { refreshUrl: str(a.refreshUrl)! } : {}),
+      ...(str(a.filename) ? { filename: str(a.filename)! } : {}),
+    }))
     .filter((a) => a.url.length > 0);
 
   const saida = str(m.direction) === "outgoing";
@@ -257,7 +275,10 @@ export function parseZernioInbound(payload: unknown): ZernioInboundMessage | nul
     // vindo de anúncio era marcado: o agente não sabia de qual anúncio o cliente
     // veio e nenhuma venda chegava à Meta. As outras duas ficam como fallback
     // (forma documentada da Cloud API).
-    referral: obj(p.metadata)?.referral ?? m.referral ?? p.referral ?? null,
+    // Zernio publica la atribución del clic como `metadata.referral` y los
+    // detalles visuales del anuncio como `metadata.ad`. Algunos placements,
+    // especialmente Estados, pueden omitir referral pero conservar `ad`.
+    referral: obj(p.metadata)?.referral ?? obj(p.metadata)?.ad ?? m.referral ?? p.referral ?? null,
   };
 }
 

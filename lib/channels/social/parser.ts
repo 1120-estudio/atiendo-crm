@@ -23,7 +23,19 @@ const schema = z.object({
     sender: z
       .object({ id: text, name: z.string().nullish(), username: z.string().nullish() })
       .nullish(),
-    attachments: z.array(z.object({ type: text, url: z.url() })).default([]),
+    attachments: z
+      .array(
+        z.object({
+          type: text,
+          url: z.url(),
+          originalType: z.string().nullish().transform((value) => value ?? undefined),
+          mimeType: z.string().nullish().transform((value) => value ?? undefined),
+          previewUrl: z.url().nullish().transform((value) => value ?? undefined),
+          refreshUrl: z.url().nullish().transform((value) => value ?? undefined),
+          filename: z.string().nullish().transform((value) => value ?? undefined),
+        }),
+      )
+      .default([]),
   }),
   conversation: z
     .object({

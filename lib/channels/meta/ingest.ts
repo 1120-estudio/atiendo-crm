@@ -26,6 +26,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { audit } from "@/lib/audit";
 import { pausarIaPorAtendimentoManual } from "@/lib/escalacao/atendimento-manual";
 import { estamparAtribuicaoDoContato } from "@/lib/leads/atribuicao-de-anuncio";
+import { normalizarReferenciaDeAnuncio } from "@/lib/leads/referencia-de-anuncio";
 import {
   ehNumeroInternoDeAviso,
   registrarMensagemIgnorada,
@@ -220,6 +221,7 @@ export async function ingestMetaInbound(
   // guarda de primeiro toque fica no banco, então a re-entrega não reescreve.
   const atribuicao = extrairAtribuicaoMeta(e.referral);
   if (atribuicao) await estamparAtribuicaoDoContato(admin, orgId, contactId as string, atribuicao);
+  const referenciaDeAnuncio = normalizarReferenciaDeAnuncio(e.referral);
 
   const { data: conversationId, error: erroConversa } = await admin.rpc(
     "fn_upsert_wa_conversation" as never,
@@ -253,6 +255,7 @@ export async function ingestMetaInbound(
       metadata: {
         ...(e.media ? { meta_media_id: e.media.id, voice: e.media.voice } : {}),
         ...(e.sharedContact ? { shared_contact: e.sharedContact } : {}),
+        ...(referenciaDeAnuncio ? { ad_referral: referenciaDeAnuncio } : {}),
       },
     })
     .select("id")
