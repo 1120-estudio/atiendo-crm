@@ -20,7 +20,7 @@ describe("normalizarReferenciaDeAnuncio", () => {
     });
   });
 
-  it("lee imageurl y la foto anidada que entrega Zernio", () => {
+  it("lee imageurl y la foto anidada del webhook", () => {
     expect(normalizarReferenciaDeAnuncio({
       source_type: "ad",
       source_url: "https://fb.me/ad",
