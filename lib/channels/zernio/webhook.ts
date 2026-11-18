@@ -278,8 +278,18 @@ export function parseZernioInbound(payload: unknown): ZernioInboundMessage | nul
     // Zernio publica la atribución del clic como `metadata.referral` y los
     // detalles visuales del anuncio como `metadata.ad`. Algunos placements,
     // especialmente Estados, pueden omitir referral pero conservar `ad`.
-    referral: obj(p.metadata)?.referral ?? obj(p.metadata)?.ad ?? m.referral ?? p.referral ?? null,
+    referral: combinarReferral(obj(p.metadata)?.referral, obj(p.metadata)?.ad)
+      ?? m.referral ?? p.referral ?? null,
   };
+}
+
+/** Zernio separa atribución (referral) y datos visuales (ad) en algunas respuestas. */
+function combinarReferral(referral: unknown, ad: unknown): unknown {
+  const atribucion = obj(referral);
+  const creativo = obj(ad);
+  if (!atribucion) return creativo;
+  if (!creativo) return atribucion;
+  return { ...creativo, ...atribucion };
 }
 
 /** O outro lado da conversa, na forma que `resolveZernioIdentity` entende. */

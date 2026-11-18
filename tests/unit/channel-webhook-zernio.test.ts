@@ -228,6 +228,13 @@ describe("clique em anúncio (Clique para o WhatsApp)", () => {
     });
   });
 
+  it("combina enlace de referral y creativo visual de metadata.ad", () => {
+    const referralLink = { source_type: "ad", source_url: "https://fb.me/campana" };
+    const adCreative = { imageurl: "https://cdn.example/creativo.jpg", headline: "Oferta" };
+    expect(parseZernioInbound(payload({ metadata: { referral: referralLink, ad: adCreative } }))?.referral)
+      .toEqual({ ...adCreative, ...referralLink });
+  });
+
   it("segue lendo as posições da Cloud API (mensagem e raiz) quando metadata não traz", () => {
     expect(parseZernioInbound(payload({}, { referral }))?.referral).toEqual(referral);
     expect(parseZernioInbound(payload({ referral }))?.referral).toEqual(referral);

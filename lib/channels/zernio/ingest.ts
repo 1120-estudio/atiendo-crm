@@ -23,6 +23,7 @@ import { ehCanalDeConversa } from "@/lib/channels/canais-de-conversa";
  * duplica a mensagem no inbox do cliente.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveZernioCreds } from "./credentials";
 
 import { logger } from "@/lib/logger";
 import { idiomaDaInstalacao } from "@/lib/i18n/idiomaDaInstalacao";
@@ -201,7 +202,7 @@ export async function ingestZernioInbound(
     }
     if (inseridaNaExistente !== "duplicate") {
       await marcarConversa(admin, input.organizationId, existente.id, msg);
-      if (msg.attachments[0]?.url) {
+      if (devePersistirMidia(msg)) {
         await pedirPersistenciaDaMidia(
           admin,
           input.organizationId,
@@ -281,7 +282,7 @@ export async function ingestZernioInbound(
   if (inserted === "duplicate") return { status: "duplicate", conversationId };
 
   await marcarConversa(admin, input.organizationId, conversationId, msg);
-  if (msg.attachments[0]?.url) {
+  if (devePersistirMidia(msg)) {
     await pedirPersistenciaDaMidia(admin, input.organizationId, conversationId, inserted);
   }
   await efeitosDaEntrada(admin, input, msg, contactId, conversationId, inserted);
@@ -567,6 +568,19 @@ async function insertMessage(
   const primeiro = msg.attachments[0];
   const referenciaDeAnuncio =
     msg.direction === "inbound" ? normalizarReferenciaDeAnuncio(msg.referral) : null;
+  if (referenciaDeAnuncio && !referenciaDeAnuncio.imagenUrl && msg.accountId) {
+    const adId = idDoAnuncio(msg.referral);
+    if (adId) {
+      const imagem = await buscarImagemDoAnuncio(admin, input.organizationId, msg.accountId, adId);
+      if (imagem) {
+        referenciaDeAnuncio.imagenUrl = imagem;
+        const rawReferral = msg.referral && typeof msg.referral === "object" && !Array.isArray(msg.referral)
+          ? msg.referral as Record<string, unknown> : {};
+        msg.referral = { ...rawReferral, image_url: imagem };
+      }
+    }
+  }
+  const urlDaImagemDoAnuncio = !temAnexo && !msg.location ? referenciaDeAnuncio?.imagenUrl : null;
 
   const { data, error } = await admin
     .from("messages")
@@ -602,7 +616,7 @@ async function insertMessage(
       // duplicada na tela.
       sent_via: "external_device",
       status: msg.direction === "outbound" ? (msg.status ?? "sent") : "delivered",
-      type: temAnexo ? tipoDoAnexo(primeiro) : msg.location ? "location" : "text",
+      type: temAnexo ? tipoDoAnexo(primeiro) : urlDaImagemDoAnuncio ? "image" : msg.location ? "location" : "text",
       // O pino vira link do mapa no corpo: é o que o agente lê e o que a
       // prévia da conversa mostra. As coordenadas ficam no metadata para a tela.
       body: msg.location ? corpoDaLocalizacao(msg.location) : msg.text,
@@ -616,10 +630,11 @@ async function insertMessage(
       // imagem — e como ele responde à mão, era o pior defeito do canal.
       ...(temAnexo && primeiro?.url
         ? { media_url: primeiro.url, media_mime: mimeDoAnexo(primeiro) }
-        : {}),
+        : urlDaImagemDoAnuncio ? { media_url: urlDaImagemDoAnuncio, media_mime: "image/jpeg" } : {}),
       metadata: temAnexo
         ? {
             provider_attachments: msg.attachments,
+            ...(urlDaImagemDoAnuncio ? { ad_referral_media: true } : {}),
             ...(referenciaDeAnuncio ? { ad_referral: referenciaDeAnuncio } : {}),
           }
         : msg.location
@@ -628,7 +643,7 @@ async function insertMessage(
               ...(referenciaDeAnuncio ? { ad_referral: referenciaDeAnuncio } : {}),
             }
           : referenciaDeAnuncio
-            ? { ad_referral: referenciaDeAnuncio }
+            ? { ad_referral: referenciaDeAnuncio, ...(urlDaImagemDoAnuncio ? { ad_referral_media: true } : {}) }
             : {},
       ...(msg.sentAt ? { sent_at: msg.sentAt } : {}),
     })
@@ -643,6 +658,55 @@ async function insertMessage(
   if (error || !data) throw new Error(`zernio_ingest_insert_failed: ${error?.message ?? "sem id"}`);
 
   return (data as { id: string }).id;
+}
+
+function devePersistirMidia(msg: ZernioInboundMessage): boolean {
+  if (msg.attachments[0]?.url) return true;
+  return msg.direction === "inbound"
+    && Boolean(normalizarReferenciaDeAnuncio(msg.referral)?.imagenUrl);
+}
+
+function idDoAnuncio(value: unknown): string | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const attribution = raw.adAttribution && typeof raw.adAttribution === "object"
+    ? raw.adAttribution as Record<string, unknown> : {};
+  const id = raw.source_id ?? raw.sourceId ?? raw.ad_id ?? raw.adId ?? attribution.adId;
+  return typeof id === "string" && /^[a-zA-Z0-9_-]{1,128}$/.test(id) ? id : null;
+}
+
+/** Busca o criativo no endpoint de Zernio quando o webhook/inbox não o incluiu. */
+async function buscarImagemDoAnuncio(
+  admin: SupabaseClient,
+  organizationId: string,
+  accountId: string,
+  adId: string,
+): Promise<string | null> {
+  try {
+    const creds = await resolveZernioCreds(admin, { organizationId, accountId });
+    if (!creds) return null;
+    const endpoint = new URL(`${creds.baseUrl}/v1/ads/${encodeURIComponent(adId)}/media`);
+    const response = await fetch(endpoint, {
+      headers: { Authorization: `Bearer ${creds.apiKey}` },
+      redirect: "error",
+      signal: AbortSignal.timeout(4_000),
+    });
+    if (!response.ok) return null;
+    const json = await response.json() as {
+      data?: { media?: Array<{ type?: string; url?: string; thumbnailUrl?: string }> };
+      media?: Array<{ type?: string; url?: string; thumbnailUrl?: string }>;
+    };
+    const media = json.data?.media ?? json.media ?? [];
+    const image = media.find((item) => item.type === "image" && item.url)?.url
+      ?? media.find((item) => item.thumbnailUrl)?.thumbnailUrl;
+    return typeof image === "string" && /^https:\/\//i.test(image) ? image : null;
+  } catch (error) {
+    logger.info("[zernio] criativo do anúncio indisponível", {
+      adId,
+      detail: error instanceof Error ? error.message : "erro desconhecido",
+    });
+    return null;
+  }
 }
 
 /**

@@ -173,6 +173,7 @@ interface HistoryRow {
   media_storage_path: string | null;
   media_mime: string | null;
   media_derived_text: string | null;
+  metadata?: Record<string, unknown> | null;
   sent_at: Date;
 }
 
@@ -229,7 +230,7 @@ export async function getLeadContext(
     conversationId
     ? db.query<HistoryRow>(
           `select direction, type, body, media_url, media_storage_path, media_mime,
-                  media_derived_text, sent_at
+                  media_derived_text, metadata, sent_at
            from messages
            where organization_id = $1 and conversation_id = $2
              and direction in ('inbound', 'outbound')
@@ -302,6 +303,7 @@ export interface CorpoDaMensagemRow {
   media_url: string | null;
   media_storage_path: string | null;
   media_derived_text: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 /**
@@ -326,6 +328,17 @@ export interface CorpoDaMensagemRow {
 export function corpoDaMensagem(m: CorpoDaMensagemRow): string {
   const hasMedia = Boolean(m.media_storage_path || m.media_url);
   const derived = m.media_derived_text;
+  const esCreativoDeAnuncio = m.metadata?.ad_referral_media === true;
+  if (esCreativoDeAnuncio && derived) {
+    return [
+      "El cliente llegó desde un anuncio de Meta. La siguiente imagen es el creativo del anuncio, no una foto enviada por el cliente.",
+      m.body ? `Mensaje del cliente: ${m.body}` : "",
+      `Descripción de la imagen del anuncio: ${derived}`,
+    ].filter(Boolean).join("\n");
+  }
+  if (esCreativoDeAnuncio && hasMedia) {
+    return `El cliente llegó desde un anuncio de Meta. La imagen adjunta es el creativo del anuncio, no una foto enviada por el cliente.${m.body ? `\nMensaje del cliente: ${m.body}` : ""}`;
+  }
   // Onda 3: legenda e derivado (transcrição/visão/pdf) COEXISTEM, e o derivado
   // vem ENQUADRADO (frameMediaBody) — sem isso o agente caía no reflexo
   // "não consigo ver mídia" mesmo tendo o conteúdo. Sem derivado, marcador [tipo].

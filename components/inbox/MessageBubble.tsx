@@ -19,6 +19,7 @@ import { MediaRenderer } from "@/components/inbox/media/MediaRenderer";
 import { ContactCard } from "@/components/inbox/media/ContactCard";
 import { LocationCard } from "@/components/inbox/media/LocationCard";
 import { AdReferralCard } from "@/components/inbox/AdReferralCard";
+import { mediaSrc } from "@/components/inbox/media/media-utils";
 import { localizacaoDaMensagem } from "@/lib/messaging/localizacao";
 import { normalizarReferenciaDeAnuncio } from "@/lib/leads/referencia-de-anuncio";
 import {
@@ -108,6 +109,7 @@ export function MessageBubble({
     message.direction === "inbound"
       ? normalizarReferenciaDeAnuncio(message.metadata?.ad_referral)
       : null;
+  const imagenDeAnuncioPersistida = message.metadata?.ad_referral_media === true;
   // Figurinha sem caption: sem moldura de bolha (padrão WhatsApp).
   const isBareSticker = hasMedia && message.type === "sticker" && !message.body;
   // Apagada pelo autor ("apagar para todos"). A linha continua no histórico —
@@ -366,8 +368,9 @@ export function MessageBubble({
           </p>
         ) : (
           <>
-            {referenciaDeAnuncio && <AdReferralCard referencia={referenciaDeAnuncio} />}
-            {hasMedia && (
+            {referenciaDeAnuncio && <AdReferralCard referencia={referenciaDeAnuncio}
+              imagenPersistida={imagenDeAnuncioPersistida && message.media_storage_path ? mediaSrc(message.id) : undefined} />}
+            {hasMedia && !imagenDeAnuncioPersistida && (
               <div className={cn(message.body && "mb-1")}>
                 <MediaRenderer message={message} />
               </div>
