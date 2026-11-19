@@ -32,6 +32,12 @@ describe("normalizarReferenciaDeAnuncio", () => {
     })?.imagenUrl).toBe("https://cdn.example/nested.jpg");
   });
 
+  it("conserva los campos al volver a leer una referencia guardada", () => {
+    const original = { source_type: "ad", headline: "Plancha 3 en 1", body: "Oferta", source_url: "https://fb.me/ad", image_url: "https://cdn.example/ad.jpg" };
+    const guardada = normalizarReferenciaDeAnuncio(original);
+    expect(normalizarReferenciaDeAnuncio(guardada)).toEqual(guardada);
+  });
+
   it("no convierte publicaciones orgánicas en tarjetas de anuncio", () => {
     expect(
       normalizarReferenciaDeAnuncio({
