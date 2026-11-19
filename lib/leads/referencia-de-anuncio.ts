@@ -49,11 +49,11 @@ export function normalizarReferenciaDeAnuncio(value: unknown): ReferenciaDeAnunc
   const tipoNormalizado = sourceType?.toLowerCase();
   if (tipoNormalizado && tipoNormalizado !== "ad") return null;
 
-  const titulo = texto(raw.headline, raw.title, raw.ctwa_headline, raw.adtitle, adsContext?.adtitle, adAttribution?.name);
-  const cuerpo = texto(raw.body, raw.description, raw.ctwa_body);
+  const titulo = texto(raw.titulo, raw.headline, raw.title, raw.ctwa_headline, raw.adtitle, adsContext?.adtitle, adAttribution?.name);
+  const cuerpo = texto(raw.texto, raw.body, raw.description, raw.ctwa_body);
   const url = urlHttps(raw.source_url ?? raw.sourceUrl ?? raw.ctwa_source_url ?? raw.url);
   const adId = texto(raw.source_id, raw.sourceId, raw.ctwa_source_id, adAttribution?.adId);
-  const imagenUrl = urlHttps(raw.image_url ?? raw.imageUrl ?? raw.imageurl ?? raw.ctwa_image_url
+  const imagenUrl = urlHttps(raw.imagenUrl ?? raw.image_url ?? raw.imageUrl ?? raw.imageurl ?? raw.ctwa_image_url
     ?? raw.thumbnail_url ?? raw.thumbnailUrl ?? raw.thumbnail ?? adsContext?.photo_url ?? adsContext?.photoUrl);
 
   if (tipoNormalizado !== "ad" && !titulo && !url && !adId) return null;
