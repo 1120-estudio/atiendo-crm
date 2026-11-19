@@ -20,6 +20,18 @@ describe("normalizarReferenciaDeAnuncio", () => {
     });
   });
 
+  it("lee imageurl y la foto anidada del webhook", () => {
+    expect(normalizarReferenciaDeAnuncio({
+      source_type: "ad",
+      source_url: "https://fb.me/ad",
+      imageurl: "https://cdn.example/ad.jpg",
+      adscontextdata: { photo_url: "https://cdn.example/nested.jpg", adtitle: "Anuncio" },
+    })).toEqual({ titulo: "Anuncio", texto: null, url: "https://fb.me/ad", imagenUrl: "https://cdn.example/ad.jpg" });
+    expect(normalizarReferenciaDeAnuncio({
+      source_type: "ad", source_url: "https://fb.me/ad", ads_context_data: { photo_url: "https://cdn.example/nested.jpg" },
+    })?.imagenUrl).toBe("https://cdn.example/nested.jpg");
+  });
+
   it("no convierte publicaciones orgánicas en tarjetas de anuncio", () => {
     expect(
       normalizarReferenciaDeAnuncio({

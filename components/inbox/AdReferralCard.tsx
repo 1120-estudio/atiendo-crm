@@ -3,13 +3,13 @@
 import { useT } from "@/hooks/i18n/useT";
 import type { ReferenciaDeAnuncio } from "@/lib/leads/referencia-de-anuncio";
 
-export function AdReferralCard({ referencia }: { referencia: ReferenciaDeAnuncio }) {
+export function AdReferralCard({ referencia, imagenPersistida }: { referencia: ReferenciaDeAnuncio; imagenPersistida?: string }) {
   const t = useT();
   const contenido = (
     <div className="overflow-hidden rounded-lg border border-border bg-background/70">
-      {referencia.imagenUrl && (
+      {(imagenPersistida || referencia.imagenUrl) && (
         <img
-          src={referencia.imagenUrl}
+          src={imagenPersistida || referencia.imagenUrl!}
           alt={referencia.titulo ?? t("Imagem")}
           loading="lazy"
           className="max-h-56 w-full object-cover"

@@ -36,11 +36,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FetchedMedia } from "@/lib/messaging/media/types";
 
-import { resolveZernioCreds } from "../zernio/credentials";
+import { resolveZernioCreds, zernioBaseUrl } from "../zernio/credentials";
 import { zernioTemplateOps } from "../zernio/templates";
 import { assertDestinoResolvidoSeguro } from "@/lib/automation/outbound-ip";
 import { assertSafeOutboundUrl } from "@/lib/automation/outbound-url";
-import { zernioMediaFetchInit } from "../zernio/webhook";
+import { MAX_MEDIA_BYTES, MediaTooLargeError } from "@/lib/messaging/media/types";
 import type {
   ChannelAdapter,
   ChannelHealth,
@@ -340,7 +340,13 @@ export const zernioAdapter: ChannelAdapter = {
     assertSafeOutboundUrl(input.url);
     await assertDestinoResolvidoSeguro(new URL(input.url).hostname);
 
-    const res = await fetch(input.url, zernioMediaFetchInit(creds.apiKey));
+    const url = new URL(input.url);
+    const providerMedia = url.origin === new URL(zernioBaseUrl()).origin && url.pathname.startsWith("/api/v1/");
+    const res = await fetch(url, {
+      redirect: "error",
+      signal: AbortSignal.timeout(15_000),
+      headers: providerMedia ? { Authorization: `Bearer ${creds.apiKey}` } : {},
+    });
     if (!res.ok) {
       // 400 costuma ser mídia já descartada pela plataforma, e 401 credencial —
       // desfechos diferentes, e o status no erro é o que distingue os dois para
@@ -348,7 +354,29 @@ export const zernioAdapter: ChannelAdapter = {
       throw new Error(`zernio_media_failed: ${res.status} ${res.statusText}`.trim());
     }
 
-    const buffer = Buffer.from(await res.arrayBuffer());
+    if (Number(res.headers.get("content-length") ?? 0) > MAX_MEDIA_BYTES) {
+      await res.body?.cancel();
+      throw new MediaTooLargeError();
+    }
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error("zernio_media_empty_body");
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > MAX_MEDIA_BYTES) {
+          await reader.cancel();
+          throw new MediaTooLargeError();
+        }
+        chunks.push(value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    const buffer = Buffer.concat(chunks);
     // O `content-type` da resposta manda sobre a dica do webhook: é o que o
     // arquivo REALMENTE é, e é ele que vai no `contentType` do upload.
     const mime = res.headers.get("content-type")?.split(";")[0]?.trim() || input.hintMime || "application/octet-stream";

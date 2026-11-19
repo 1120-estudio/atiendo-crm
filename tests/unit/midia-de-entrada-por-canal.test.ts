@@ -121,12 +121,10 @@ describe("elo 3 — quem baixa é o CANAL, não uma função fixa", () => {
 });
 
 describe("o que cada canal faz com a URL", () => {
-  it("o intermediado assina com Bearer — a URL dele é autenticada", () => {
-    // Buscá-la sem o Bearer devolve 401. `zernioMediaFetchInit` existia desde
-    // que o canal entrou e ficou sem um único chamador de produção — que é
-    // exatamente por que a mídia nunca virou bytes.
+  it("só envia Bearer para o endpoint do provedor, nunca para CDN externa", () => {
     const z = readFileSync("lib/channels/adapters/zernio.ts", "utf8");
-    expect(z).toMatch(/zernioMediaFetchInit\(creds\.apiKey\)/);
+    expect(z).toMatch(/providerMedia\s*\?\s*\{\s*Authorization:\s*`Bearer \$\{creds\.apiKey\}`\s*\}\s*:\s*\{\}/);
+    expect(z).toMatch(/url\.origin === new URL\(zernioBaseUrl\(\)\)\.origin/);
   });
 
   it("e o `content-type` da resposta manda sobre a dica do webhook", () => {
