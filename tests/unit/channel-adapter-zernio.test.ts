@@ -26,6 +26,7 @@ const credsRef: { current: unknown } = { current: null };
 vi.mock("@/lib/channels/zernio/credentials", () => ({
   resolveZernioCreds: async () => credsRef.current,
   zernioCredsFromEnv: () => credsRef.current,
+  zernioBaseUrl: () => "https://8.8.8.8/api",
 }));
 
 import { zernioAdapter } from "@/lib/channels/adapters/zernio";
@@ -368,16 +369,14 @@ describe("fetchInboundMedia não busca onde o payload mandar", () => {
     // quebraria a feature em silêncio.
     credsRef.current = CREDS;
     fetchMock.mockClear();
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
+    fetchMock.mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3, 4]), {
       status: 200,
-      arrayBuffer: async () => new ArrayBuffer(4),
-      headers: new Headers({ "content-type": "image/png" }),
-    });
+      headers: { "content-type": "image/png" },
+    }));
     const r = await zernioAdapter.fetchInboundMedia!({
       organizationId: ORG,
       sessionRef: CREDS.accountId,
-      url: "https://zernio.com/api/v1/media/abc123",
+      url: "https://8.8.8.8/api/v1/media/abc123",
     });
     expect(r.mime).toBe("image/png");
     expect(fetchMock).toHaveBeenCalledTimes(1);
