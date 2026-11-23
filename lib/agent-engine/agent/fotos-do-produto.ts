@@ -21,7 +21,7 @@ import type { Queryable } from '../queue/queue';
 import { OK_KINDS, type BubbleOutcome } from './split-message';
 import { solicitaFoto } from './pedido-de-foto';
 
-/** Teto de legenda de imagem do WhatsApp. Texto maior sai como texto, antes das fotos. */
+/** Limite do WhatsApp para legenda, mantido para compatibilidade com consumidores existentes. */
 export const LIMITE_DA_LEGENDA = 1024;
 
 const BUCKET_DA_CONVERSA = 'whatsapp-media';
@@ -155,17 +155,13 @@ export async function prepararFotosDoProduto(
 }
 
 /**
- * Manda o texto com as fotos. O texto vira a LEGENDA da primeira foto — uma
- * mensagem só, que é como uma pessoa apresenta um produto no WhatsApp. Texto
- * acima do teto de legenda sai primeiro, como texto, e as fotos depois sem
- * legenda. Entre uma e outra, o mesmo jitter anti-ban das bolhas; para no
- * primeiro desfecho que não seja de sucesso, como `sendInBubbles`.
+ * Envia o texto como mensagem independente e depois manda cada foto sem legenda.
+ * Assim, o estado do texto fica separado do estado de cada mídia no send ledger:
+ * se uma foto falhar e o job for reexecutado, a mensagem de texto já aceita é
+ * reconhecida pela sua sequência e só as mídias pendentes voltam a ser tentadas.
  *
- * `restantes` é quantas mensagens físicas o turno ainda pode mandar
- * (`max_sends_per_turn`), consultado ANTES de cada foto. Consultar uma vez só,
- * antes de tudo, não contava o texto que sai à parte quando passa do teto de
- * legenda (uma ou mais bolhas): com teto 3, um produto de 3 fotos e descrição
- * longa mandava 4 mensagens. Sem `restantes`, nenhum teto (quem chama decide).
+ * Cada foto é uma mensagem física: consulta o teto antes de enviá-la e aplica o
+ * jitter entre o texto e as fotos, e também entre as próprias fotos.
  */
 export async function enviarComFotos<T extends BubbleOutcome>(
   body: string,
@@ -179,15 +175,14 @@ export async function enviarComFotos<T extends BubbleOutcome>(
   },
 ): Promise<T> {
   const cabeMaisUma = () => (opts.restantes?.() ?? Number.POSITIVE_INFINITY) > 0;
-  const [capa, ...demais] = fotos;
-  if (!capa || !cabeMaisUma()) return opts.enviarTexto(body);
-  const legendaCabe = body.length <= LIMITE_DA_LEGENDA;
-  let ultimo = legendaCabe ? await opts.enviarFoto(capa, body) : await opts.enviarTexto(body);
-  for (const foto of legendaCabe ? demais : fotos) {
-    if (!OK_KINDS.has(ultimo.kind)) return ultimo;
+  let ultimo = await opts.enviarTexto(body);
+  if (!OK_KINDS.has(ultimo.kind)) return ultimo;
+
+  for (const foto of fotos) {
     if (!cabeMaisUma()) return ultimo;
     await opts.sleep(opts.jitter());
     ultimo = await opts.enviarFoto(foto, '');
+    if (!OK_KINDS.has(ultimo.kind)) return ultimo;
   }
   return ultimo;
 }
