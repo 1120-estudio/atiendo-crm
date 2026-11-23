@@ -43,7 +43,8 @@ describe("prepararFotosDoProduto — a foto do catálogo vai para a pasta da con
     await enviarComFotos("Incluye dos baterías y cargador", segundo.fotos, opts);
 
     expect(enviarFoto).toHaveBeenCalledTimes(2);
-    expect(enviarTexto).toHaveBeenCalledExactlyOnceWith("Incluye dos baterías y cargador");
+    expect(enviarTexto).toHaveBeenNthCalledWith(1, "Sí, lo tenemos disponible");
+    expect(enviarTexto).toHaveBeenNthCalledWith(2, "Incluye dos baterías y cargador");
     expect(copiar).toHaveBeenCalledTimes(2);
     expect(segundo).toEqual({ ok: true, fotos: [], tinha: 0, jaEnviadas: 2 });
     const consulta = query.mock.calls.find(([sql]) => sql.includes("from messages m"));
