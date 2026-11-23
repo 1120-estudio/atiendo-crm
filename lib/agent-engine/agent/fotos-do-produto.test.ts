@@ -43,7 +43,8 @@ describe("prepararFotosDoProduto — a foto do catálogo vai para a pasta da con
     await enviarComFotos("Incluye dos baterías y cargador", segundo.fotos, opts);
 
     expect(enviarFoto).toHaveBeenCalledTimes(2);
-    expect(enviarTexto).toHaveBeenCalledExactlyOnceWith("Incluye dos baterías y cargador");
+    expect(enviarTexto).toHaveBeenNthCalledWith(1, "Sí, lo tenemos disponible");
+    expect(enviarTexto).toHaveBeenNthCalledWith(2, "Incluye dos baterías y cargador");
     expect(copiar).toHaveBeenCalledTimes(2);
     expect(segundo).toEqual({ ok: true, fotos: [], tinha: 0, jaEnviadas: 2 });
     const consulta = query.mock.calls.find(([sql]) => sql.includes("from messages m"));
@@ -132,7 +133,7 @@ describe("prepararFotosDoProduto — a foto do catálogo vai para a pasta da con
   });
 });
 
-describe("enviarComFotos — o texto é a legenda da primeira foto", () => {
+describe("enviarComFotos — texto e fotos têm envios independentes", () => {
   const FOTO_1: FotoParaEnvio = { storagePath: `${ORG}/${CONVERSA}/catalogo-1.jpg`, mime: "image/jpeg" };
   const FOTO_2: FotoParaEnvio = { storagePath: `${ORG}/${CONVERSA}/catalogo-2.jpg`, mime: "image/jpeg" };
 
@@ -159,14 +160,15 @@ describe("enviarComFotos — o texto é a legenda da primeira foto", () => {
     expect(c.enviados).toEqual([{ tipo: "texto", corpo: "Custa R$ 10" }]);
   });
 
-  it("com fotos: a capa leva o texto, as demais vão sem legenda, com a pausa anti-ban entre elas", async () => {
+  it("envia primeiro o texto e depois cada foto sem legenda, com pausa entre mensagens", async () => {
     const c = canal();
     await enviarComFotos("iPhone 15 por R$ 5.499", [FOTO_1, FOTO_2], c.opts);
     expect(c.enviados).toEqual([
-      { tipo: "foto", corpo: "iPhone 15 por R$ 5.499", foto: FOTO_1.storagePath },
+      { tipo: "texto", corpo: "iPhone 15 por R$ 5.499" },
+      { tipo: "foto", corpo: "", foto: FOTO_1.storagePath },
       { tipo: "foto", corpo: "", foto: FOTO_2.storagePath },
     ]);
-    expect(c.opts.sleep).toHaveBeenCalledTimes(1);
+    expect(c.opts.sleep).toHaveBeenCalledTimes(2);
   });
 
   it("texto maior que a legenda do WhatsApp sai como texto, e as fotos depois", async () => {
@@ -197,10 +199,10 @@ describe("enviarComFotos — o texto é a legenda da primeira foto", () => {
       expect(c.enviados.map((e) => e.tipo)).toEqual(["texto", "foto", "foto"]);
     });
 
-    it("legenda que cabe + 3 fotos com teto 3: as 3 saem, a capa com o texto", async () => {
+    it("texto + 3 fotos com teto 3: o texto e só as 2 primeiras fotos saem", async () => {
       const c = canal();
       await enviarComFotos("Caneca por R$ 49", [FOTO_1, FOTO_2, FOTO_3], comTeto(c, 3));
-      expect(c.enviados.map((e) => e.tipo)).toEqual(["foto", "foto", "foto"]);
+      expect(c.enviados.map((e) => e.tipo)).toEqual(["texto", "foto", "foto"]);
     });
 
     it("teto já gasto: só o texto sai, sem foto", async () => {
@@ -210,11 +212,21 @@ describe("enviarComFotos — o texto é a legenda da primeira foto", () => {
     });
   });
 
-  it("para no primeiro desfecho que não é sucesso — contato bloqueado não recebe a segunda foto", async () => {
+  it("se o texto falha, nenhuma foto é tentada", async () => {
     const c = canal(["blocked"]);
     const r = await enviarComFotos("oi", [FOTO_1, FOTO_2], c.opts);
     expect(r.kind).toBe("blocked");
-    expect(c.enviados).toHaveLength(1);
+    expect(c.enviados).toEqual([{ tipo: "texto", corpo: "oi" }]);
+  });
+
+  it("se uma foto falha, o texto já foi enviado como mensagem separada", async () => {
+    const c = canal(["sent", "blocked"]);
+    const r = await enviarComFotos("oi", [FOTO_1, FOTO_2], c.opts);
+    expect(r.kind).toBe("blocked");
+    expect(c.enviados).toEqual([
+      { tipo: "texto", corpo: "oi" },
+      { tipo: "foto", corpo: "", foto: FOTO_1.storagePath },
+    ]);
   });
 });
 
