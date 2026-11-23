@@ -50,7 +50,7 @@ export async function sincronizarWoo(orgId: string): Promise<boolean> {
       mapped.ficha_woocommerce.images = images;
       let fotos: string[] = old?.fotos ?? [];
       const previous = old?.ficha_woocommerce as { images?: unknown } | null;
-      if (!(old && c.preservar_conteudo && fotos.length) && JSON.stringify(previous?.images) !== JSON.stringify(images)) {
+      if (JSON.stringify(previous?.images) !== JSON.stringify(images) || (!fotos.length && images.length > 0)) {
         fotos = [];
         for (const image of images) {
           const response = await buscarSeguro(image.src);
