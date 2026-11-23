@@ -34,11 +34,11 @@ it('pedido com SKU sem produto_codigo prepara e envia imagem, não só a frase d
     enviarTexto, enviarFoto, sleep: async () => undefined, jitter: () => 0,
   });
   expect(copiar).toHaveBeenCalledOnce();
-  expect(enviarTexto).not.toHaveBeenCalled();
+  expect(enviarTexto).toHaveBeenCalledExactlyOnceWith(body);
   expect(enviarFoto).toHaveBeenCalledExactlyOnceWith({
     storagePath: `${org}/${conv}/catalogo-11111111-2222-4333-8444-555555555555.jpg`,
     mime: 'image/jpeg',
-  }, body);
+  }, '');
 });
 
 it.each([
