@@ -30,11 +30,11 @@ export const TOOLS_COMERCIO = declararTools([
   {
     name: "crm_quote_shipping_cr",
     category: "read",
-    rotulo: "Cotizar envío en Costa Rica",
-    explicacao: "Calcula el total con el catálogo y el tarifario vigente para una entrega en Costa Rica.",
-    oQueToca: "Catálogo y tarifas de envío",
+    rotulo: "Cotar frete na Costa Rica",
+    explicacao: "Calcula o total com o catálogo e a tabela de frete vigente para uma entrega na Costa Rica.",
+    oQueToca: "Catálogo e tarifas de frete",
     risco: "seguro",
-    pacotes: ["vender"],
+    pacotes: ["atender"],
   },
   {
     name: "crm_list_privacy_requests",

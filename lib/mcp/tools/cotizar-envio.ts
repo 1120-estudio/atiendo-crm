@@ -22,6 +22,11 @@ const entrada = {
 // Una versión del índice es inmutable. Sólo se retienen las últimas ocho por proceso.
 const porVersion = new Map<string, ReturnType<typeof leerTarifas>>();
 
+function guardarTarifas(clave: string, zonas: ReturnType<typeof leerTarifas>) {
+  if (porVersion.size >= 8) porVersion.delete(porVersion.keys().next().value!);
+  porVersion.set(clave, zonas);
+}
+
 export const crmCotizarEnvio: McpToolDefinition<typeof entrada> = {
   name: "crm_quote_shipping_cr",
   description:
@@ -83,8 +88,7 @@ export const crmCotizarEnvio: McpToolDefinition<typeof entrada> = {
       } catch {
         return { estado: "revision_interna", motivo: "tarifario_en_conflicto" };
       }
-      if (porVersion.size >= 8) porVersion.delete(porVersion.keys().next().value!);
-      porVersion.set(clave, zonas);
+      guardarTarifas(clave, zonas);
     }
     const productos = await db
       .from("catalog_products")
