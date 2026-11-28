@@ -1,12 +1,19 @@
+import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
 
 import { corpoDoEnvio } from "../edge/crm/send-message";
 import {
+  copiarFotoNoStorage,
   enviarComFotos,
   LIMITE_DA_LEGENDA,
   prepararFotosDoProduto,
   type FotoParaEnvio,
 } from "./fotos-do-produto";
+
+const { storageFrom } = vi.hoisted(() => ({ storageFrom: vi.fn() }));
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({ storage: { from: storageFrom } }),
+}));
 
 const ORG = "aaaaaaaa-0000-4000-8000-000000000001";
 const OUTRA_ORG = "aaaaaaaa-0000-4000-8000-000000000002";
@@ -98,6 +105,52 @@ describe("prepararFotosDoProduto — a foto do catálogo vai para a pasta da con
         { storagePath: `${ORG}/${CONVERSA}/catalogo-11111111-2222-4333-8444-555555555555.jpg`, mime: "image/jpeg" },
         { storagePath: `${ORG}/${CONVERSA}/catalogo-66666666-7777-4888-8999-000000000000.png`, mime: "image/png" },
       ],
+    });
+  });
+
+  it("converte os bytes WebP do catálogo e envia a cópia JPEG na pasta da conversa", async () => {
+    const origem = CAPA.replace(/\.jpg$/, ".webp");
+    const destino = `${ORG}/${CONVERSA}/catalogo-${origem.split("/").pop()}.jpg`;
+    const webp = await sharp({
+      create: { width: 16, height: 12, channels: 4, background: "#ff000080" },
+    }).webp().toBuffer();
+    const download = vi.fn(async () => ({ data: new Blob([new Uint8Array(webp)]), error: null }));
+    const upload = vi.fn(async (_path: string, _bytes: Buffer, _options: unknown) => ({ error: null }));
+    storageFrom.mockImplementation((bucket: string) =>
+      bucket === "catalog-photos" ? { download } : { upload });
+    const log = { warn: vi.fn() };
+    const { db } = banco({ id: PRODUTO, fotos: [origem] });
+
+    const r = await prepararFotosDoProduto(db, copiarFotoNoStorage(log), {
+      tenantId: ORG, conversationId: CONVERSA, codigo: "SF340",
+    });
+
+    expect(r).toEqual({ ok: true, tinha: 1, fotos: [{ storagePath: destino, mime: "image/jpeg" }] });
+    expect(download).toHaveBeenCalledExactlyOnceWith(origem);
+    expect(storageFrom).toHaveBeenCalledWith("whatsapp-media");
+    const [path, bytes, options] = upload.mock.calls[0]!;
+    expect(path).toBe(destino);
+    expect(options).toEqual({ contentType: "image/jpeg", upsert: false });
+    expect(await sharp(bytes).metadata()).toMatchObject({ format: "jpeg", width: 16, height: 12, hasAlpha: false });
+    expect(log.warn).not.toHaveBeenCalled();
+  });
+
+  it("reconhece o WebP já enviado antes da atualização e ainda permite reenvio em JPEG", async () => {
+    const origem = CAPA.replace(/\.jpg$/, ".webp");
+    const anterior = `${ORG}/${CONVERSA}/catalogo-${origem.split("/").pop()}`;
+    const atual = `${anterior}.jpg`;
+    const { db, query } = banco({ id: PRODUTO, fotos: [origem] }, [anterior, atual]);
+    const copiar = vi.fn(async () => true);
+    const entrada = { tenantId: ORG, conversationId: CONVERSA, codigo: "SF340" };
+
+    expect(await prepararFotosDoProduto(db, copiar, entrada)).toEqual({
+      ok: true, tinha: 0, jaEnviadas: 1, fotos: [],
+    });
+    expect(query.mock.calls[1]?.[1]).toEqual([ORG, CONVERSA, [anterior, atual], null]);
+    expect(copiar).not.toHaveBeenCalled();
+
+    expect(await prepararFotosDoProduto(db, copiar, { ...entrada, reenviar: true })).toEqual({
+      ok: true, tinha: 1, fotos: [{ storagePath: atual, mime: "image/jpeg" }],
     });
   });
 
