@@ -51,6 +51,7 @@ import {
   crmSaveOrgMemory,
 } from "./evolucao";
 import { crmListContactOrders, crmSearchProducts } from "./comercio";
+import { crmCotizarEnvio } from "./cotizar-envio";
 import { crmDescribeExternalData, crmQueryExternalData } from "./dados-externos";
 import { crmListPrivacyRequests } from "./privacidade";
 import {
@@ -119,6 +120,7 @@ export const allTools: ReadonlyArray<McpToolDefinition> = [
   crmSaveOrgMemory,
   crmListContactOrders,
   crmSearchProducts,
+  crmCotizarEnvio,
   crmDescribeExternalData,
   crmQueryExternalData,
   crmListPrivacyRequests,

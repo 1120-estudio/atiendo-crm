@@ -28,6 +28,15 @@ export const TOOLS_COMERCIO = declararTools([
     pacotes: ["vender", "atender"],
   },
   {
+    name: "crm_quote_shipping_cr",
+    category: "read",
+    rotulo: "Cotar frete na Costa Rica",
+    explicacao: "Calcula o total com o catálogo e a tabela de frete vigente para uma entrega na Costa Rica.",
+    oQueToca: "Catálogo e tarifas de frete",
+    risco: "seguro",
+    pacotes: ["atender"],
+  },
+  {
     name: "crm_list_privacy_requests",
     category: "read",
     rotulo: "Ver pedidos de privacidade",

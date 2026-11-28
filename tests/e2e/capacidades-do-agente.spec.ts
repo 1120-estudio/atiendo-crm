@@ -69,34 +69,12 @@ const TOOLS_DO_SEED = [
   "crm_get_lead",
   "crm_move_lead_stage",
   "crm_list_leads",
-  // ⚠️ AS SEIS ABAIXO NÃO SÃO ENFEITE: elas existem para o cenário ESTOURAR.
-  //
-  // A jornada do teto (issue #162) só existe se a soma passar do teto: eram 3
-  // do seed + 18 de "Atender" = 21 contra teto 20, e a tela recusava dizendo
-  // "faltam 1 vaga". Com teto 25 essas mesmas 21 passam, a recusa nunca acontece
-  // e o caso vira um clique que sempre dá certo — verde sem medir nada.
-  //
-  // Nove reproduzem a MESMA aritmética no teto novo: 9 + 17 = 26 > 25, recusa
-  // por 1 vaga; desligar uma deixa 8 + 17 = 25, que é o teto exato e passa.
-  //
-  // Os 17 são o pacote "Atender" DEPOIS da #528, e foi ela que mudou o número:
-  // a crítica que o pacote contava (o envio de WhatsApp, que o motor descarta
-  // em todo turno) deixou de ser oferecida, e com ela saiu uma vaga da conta.
-  // Com as oito antigas, 8 + 17 = 25 exatas — o pacote passaria a caber e o
-  // caso de recusa morreria calado, que é o desfecho que se quer evitar.
-  //
-  // As escolhidas ficam FORA do pacote "Atender" de propósito — se alguma
-  // estivesse dentro, a união seria menor que a soma e a conta acima não valeria.
-  // Quatro são a família de agenda, que é o assunto do defeito que subiu o teto.
+  // As oito ficam fora de Atender: com as 18 do pacote, falta uma vaga.
   "crm_find_free_slots",
   "crm_list_appointments",
   "crm_book_appointment",
   "crm_reschedule_appointment",
   "crm_list_pipelines",
-  // A NONA: leitura pura, fora de "Atender" — que é o que a conta acima exige.
-  // Existe para a aritmética continuar estourando depois da #528; sem ela o
-  // cenário de recusa vira um clique que sempre dá certo.
-  "crm_list_knowledge_sources",
 ];
 
 /**
@@ -224,24 +202,7 @@ test.describe("Configurar o que o agente pode fazer", () => {
     // por que o número mudou.
     expect(antes).toMatch(new RegExp(`de ${TETO_TOOLS_POR_AGENTE}$`));
 
-    // O TETO ENTRA NA JORNADA (issue #162), e entra antes do clique.
-    //
-    // "Atender" exige 17 vagas: 17 automáticas e nenhuma crítica — a única que
-    // ele tinha (o envio de WhatsApp) deixou de ser oferecida na #528, e com ela
-    // saiu uma vaga da conta. Com as 9 do seed dá 26, acima do teto de 25.
-    //
-    // ⚠️ AS 9 SÃO O QUE MANTÉM ESTE CASO VIVO. Eram 3, e 3 + 18 = 21 estourava o
-    // teto de 20. Quando o teto foi para 25 essas mesmas 21 passaram a caber: a
-    // recusa nunca aconteceria e o caso viraria um clique que sempre dá certo —
-    // verde sem medir nada, que é o pior desfecho para um teste de recusa. As 5
-    // novas entraram aí; a NONA entrou com a #528, que tirou uma vaga do pacote
-    // (8 + 17 = 25 exatas: o pacote caberia e a recusa sumiria de novo).
-    // Todas estão FORA de "Atender", senão a união seria menor que a soma.
-    //
-    // Antes da correção a tela aceitava o pacote, chegava a 20 exatas e deixava
-    // o checkbox da crítica DESABILITADO — prometia uma escolha que o produto
-    // não permitia fazer, sem dizer por quê. Agora recusa e diz quantas vagas
-    // faltam, e o operador faz o que a própria tela manda.
+    // O pacote exige uma vaga além do teto. Após liberar uma, cabe exatamente.
     await page.getByTestId("switch-pacote-atender").click();
     await expect(page.getByTestId("aviso-teto")).toContainText(/faltam? 1 vaga/);
     // O aviso nasce DENTRO do cartão clicado, não no topo do seletor: com a

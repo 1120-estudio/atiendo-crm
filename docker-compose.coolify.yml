@@ -41,6 +41,9 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
       ZERNIO_API_KEY: ${ZERNIO_API_KEY:-}
+      SHIPPING_CR_DISTRICTS_FILE: /opt/shipping-cr/distritos.geojson
+    volumes:
+    - shipping-cr:/opt/shipping-cr:ro
     expose:
     - '3000'
     depends_on:
@@ -98,6 +101,9 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
       ZERNIO_API_KEY: ${ZERNIO_API_KEY:-}
+      SHIPPING_CR_DISTRICTS_FILE: /opt/shipping-cr/distritos.geojson
+    volumes:
+    - shipping-cr:/opt/shipping-cr:ro
     healthcheck:
       test:
       - CMD
@@ -190,6 +196,7 @@ services:
     - internal
     mem_limit: 96m
 volumes:
+  shipping-cr: null
   waha-data: null
   waha-media: null
 networks:

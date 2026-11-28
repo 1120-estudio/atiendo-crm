@@ -446,7 +446,7 @@ const HOST_EM_URL = /https?:\/\/([a-z0-9][a-z0-9.-]*\.[a-z]{2,})/gi;
  *    esconde host nenhum.
  */
 const HOST_NU_EM_STRING =
-  /["'`](?:https?:\/\/)?((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:com\.br|com|net|org|io|app|dev|ai|co|cloud|br|me|tv|edu|gov|info|xyz|site|online|shop|store))(?![a-z0-9_-])/gi;
+  /["'`](?:https?:\/\/)?((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:co\.cr|com\.br|gl|com|net|org|io|app|dev|ai|co|cloud|br|me|tv|edu|gov|info|xyz|site|online|shop|store))(?![a-z0-9_-])/gi;
 
 /**
  * Host que não é terceiro porque não resolve para ninguém: TLD reservado para
@@ -818,6 +818,15 @@ const HOSTS_DECLARADOS: Record<string, EntradaDeHost> = {
     motivo: "endpoint oficial da Google Data Manager API: recebe conversões e consulta o processamento na conta autorizada pela própria organização. O destino pertence ao fornecedor e não à instalação do CRM.",
   },
   // ── localização compartilhada: o link que abre o pino do cliente ──
+  "google.co.cr": { categoria: "PLATAFORMA", motivo: "domínio reconhecido no link de localização enviado pelo cliente; o cotizador lê o marcador sem consultar esse servidor." },
+  "google.com": { categoria: "PLATAFORMA", motivo: "domínio reconhecido no link de localização enviado pelo cliente; o cotizador lê o marcador sem consultar esse servidor." },
+  "maps.google.co.cr": { categoria: "PLATAFORMA", motivo: "domínio reconhecido no link de localização enviado pelo cliente; o cotizador lê o marcador sem consultar esse servidor." },
+  "waze.com": { categoria: "PLATAFORMA", motivo: "domínio reconhecido no link de localização enviado pelo cliente; o cotizador lê o marcador sem consultar esse servidor." },
+  "www.google.co.cr": { categoria: "PLATAFORMA", motivo: "domínio reconhecido no link de localização enviado pelo cliente; o cotizador lê o marcador sem consultar esse servidor." },
+  "www.google.com": { categoria: "PLATAFORMA", motivo: "domínio reconhecido no link de localização enviado pelo cliente; o cotizador lê o marcador sem consultar esse servidor." },
+  "www.waze.com": { categoria: "PLATAFORMA", motivo: "domínio reconhecido no link de localização enviado pelo cliente; o cotizador lê o marcador sem consultar esse servidor." },
+  "goo.gl": { categoria: "FORNECEDOR", motivo: "encurtador oficial consultado pelo cotizador para expandir links de localização antes de identificar o distrito." },
+  "maps.app.goo.gl": { categoria: "FORNECEDOR", motivo: "encurtador oficial consultado pelo cotizador para expandir links de localização antes de identificar o distrito." },
   "maps.google.com": {
     categoria: "PLATAFORMA",
     motivo:
@@ -1142,6 +1151,9 @@ describe("catraca de host de terceiro no código que embarca", () => {
       // Link que abre o pino que o CLIENTE mandou (`lib/messaging/localizacao.ts`).
       // Mesma natureza do `wa.me` abaixo: o produto não fala com o host, quem
       // abre é o celular do atendente. Crescimento escrito, como a regra pede.
+      "google.co.cr",
+      "google.com",
+      "maps.google.co.cr",
       "maps.google.com",
       "meet.google.com",
       "meusistema.com",
@@ -1161,6 +1173,10 @@ describe("catraca de host de terceiro no código que embarca", () => {
       // aqui, e não em FORNECEDOR, porque o produto NÃO fala com esse host: quem
       // abre o link é o visitante do site. Crescimento escrito, como a regra pede.
       "wa.me",
+      "waze.com",
+      "www.google.co.cr",
+      "www.google.com",
+      "www.waze.com",
     ]);
   });
 
