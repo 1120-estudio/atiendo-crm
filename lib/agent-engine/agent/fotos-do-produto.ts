@@ -14,6 +14,8 @@
  * mesma conversa, ou o replay de um job que caiu depois da cópia, reaproveita o
  * arquivo em vez de encher a cota de Storage do cliente com duplicatas.
  */
+import sharp from 'sharp';
+
 import { BUCKET_DAS_FOTOS, fotoPertenceAoProduto, mimeDaFoto } from '@/lib/catalogo/fotos';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -25,6 +27,7 @@ import { solicitaFoto } from './pedido-de-foto';
 export const LIMITE_DA_LEGENDA = 1024;
 
 const BUCKET_DA_CONVERSA = 'whatsapp-media';
+const TAMANHO_MAXIMO_JPEG = 5_000_000;
 
 export interface FotoParaEnvio {
   /** caminho em `whatsapp-media`, dentro da pasta da conversa */
@@ -39,17 +42,44 @@ interface Log {
   warn(msg: string, fields?: Record<string, unknown>): void;
 }
 
+/** O catálogo mantém o WebP. Só a cópia enviada à conversa vira JPEG. */
+async function guardarFotoComoJpeg(origem: string, destino: string) {
+  const storage = createAdminClient().storage;
+  const { data, error } = await storage.from(BUCKET_DAS_FOTOS).download(origem);
+  if (error) return error;
+  const jpeg = await sharp(Buffer.from(await data.arrayBuffer()), { limitInputPixels: 25_000_000 })
+    .autoOrient()
+    .resize({ width: 2048, height: 2048, fit: 'inside', withoutEnlargement: true })
+    .flatten({ background: '#ffffff' })
+    .jpeg({ quality: 90 })
+    .toBuffer();
+  if (jpeg.length > TAMANHO_MAXIMO_JPEG) {
+    throw new Error('JPEG ultrapassa o limite de tamanho da foto');
+  }
+  const resultado = await storage.from(BUCKET_DA_CONVERSA).upload(destino, jpeg, {
+    contentType: 'image/jpeg',
+    upsert: false,
+  });
+  return resultado.error;
+}
+
 export function copiarFotoNoStorage(log: Log): CopiarFoto {
   return async (origem, destino) => {
-    const { error } = await createAdminClient()
-      .storage.from(BUCKET_DAS_FOTOS)
-      .copy(origem, destino, { destinationBucket: BUCKET_DA_CONVERSA });
-    if (!error) return true;
-    // Já copiada antes para esta conversa: o arquivo que precisamos está lá.
-    if (/already exists/i.test(error.message) || (error as { statusCode?: string }).statusCode === '409') {
-      return true;
+    try {
+      const error = mimeDaFoto(origem) === 'image/webp'
+        ? await guardarFotoComoJpeg(origem, destino)
+        : (await createAdminClient()
+          .storage.from(BUCKET_DAS_FOTOS)
+          .copy(origem, destino, { destinationBucket: BUCKET_DA_CONVERSA })).error;
+      if (!error) return true;
+      // A foto já ficou pronta em uma tentativa anterior ou concorrente.
+      if (/already exists/i.test(error.message) || String((error as { statusCode?: string | number }).statusCode) === '409') return true;
+      log.warn('foto do catálogo não copiada para a conversa', { detalhe: error.message.slice(0, 120) });
+    } catch (error) {
+      log.warn('foto do catálogo não preparada para a conversa', {
+        detalhe: error instanceof Error ? error.message.slice(0, 120) : 'erro desconhecido',
+      });
     }
-    log.warn('foto do catálogo não copiada para a conversa', { detalhe: error.message.slice(0, 120) });
     return false;
   };
 }
@@ -114,9 +144,15 @@ export async function prepararFotosDoProduto(
   const deste = (produto.fotos ?? []).filter((c) =>
     fotoPertenceAoProduto(c, input.tenantId, produto.id),
   );
-  const destinos = deste.map((origem) =>
-    `${input.tenantId}/${input.conversationId}/catalogo-${origem.split('/').pop()}`,
-  );
+  const destinos = deste.map((origem) => {
+    const anterior = `${input.tenantId}/${input.conversationId}/catalogo-${origem.split('/').pop()}`;
+    const atual = mimeDaFoto(origem) === 'image/webp' ? `${anterior}.jpg` : anterior;
+    return { origem, anterior, atual };
+  });
+  // Reconhece também as fotos WebP que já saíram antes da conversão.
+  const caminhos = new Map(destinos.flatMap(({ anterior, atual }) => [
+    [anterior, atual] as const, [atual, atual] as const,
+  ]));
   // Reusar o objeto no Storage não impede um novo envio no WhatsApp. Só uma
   // saída efetivamente enviada/aceita neste atendimento evita a repetição;
   // tentativas falhas não consomem a foto. O pedido explícito permite reenviar.
@@ -138,15 +174,17 @@ export async function prepararFotosDoProduto(
           and (m.status in ('sent', 'delivered', 'read') or exists (
             select 1 from send_ledger s where s.organization_id = $1
               and s.crm_message_id = m.id and s.status in ('accepted', 'queued')))`,
-      [input.tenantId, input.conversationId, destinos, input.jobId ?? null],
+      [input.tenantId, input.conversationId, [...caminhos.keys()], input.jobId ?? null],
     );
-    for (const anterior of anteriores) enviadas.add(anterior.media_storage_path);
+    for (const { media_storage_path } of anteriores) {
+      const atual = caminhos.get(media_storage_path);
+      if (atual) enviadas.add(atual);
+    }
   }
   const fotos: FotoParaEnvio[] = [];
-  for (const origem of deste) {
-    const destino = `${input.tenantId}/${input.conversationId}/catalogo-${origem.split('/').pop()}`;
-    if (enviadas.has(destino)) continue;
-    if (await copiar(origem, destino)) fotos.push({ storagePath: destino, mime: mimeDaFoto(origem) });
+  for (const { origem, atual } of destinos) {
+    if (enviadas.has(atual)) continue;
+    if (await copiar(origem, atual)) fotos.push({ storagePath: atual, mime: mimeDaFoto(atual) });
   }
   return {
     ok: true, fotos, tinha: deste.length - enviadas.size,

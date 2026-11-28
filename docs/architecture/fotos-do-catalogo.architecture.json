@@ -89,7 +89,7 @@
       "lane": "agent",
       "col": 4,
       "type": "service",
-      "label": "cópia para whatsapp-media/<org>/<conversa>"
+      "label": "cópia para whatsapp-media/<org>/<conversa> (WebP convertido a JPEG)"
     },
     {
       "id": "handler",
@@ -165,7 +165,7 @@
       "id": "9",
       "from": "copia",
       "to": "handler",
-      "label": "media_storage_path"
+      "label": "media_storage_path e MIME da cópia"
     },
     {
       "id": "10",
